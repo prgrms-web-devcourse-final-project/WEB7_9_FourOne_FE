@@ -1,0 +1,249 @@
+@import 'tailwindcss';
+
+/* 세련된 애니메이션 정의 */
+@keyframes slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+@keyframes pulse-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+  }
+}
+
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.3s ease-out;
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200px 100%;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s infinite;
+}
+
+:root {
+  --font-noto-sans-kr: var(--font-noto-sans-kr);
+}
+
+@theme {
+  /* 블랙앤화이트 미니멀 색상 팔레트 */
+  --primary: #000000;
+  --secondary: #ffffff;
+
+  /* Primary Colors - 블랙 계열 */
+  --color-primary: #000000;
+  --color-primary-50: #f9fafb;
+  --color-primary-100: #f3f4f6;
+  --color-primary-200: #e5e7eb;
+  --color-primary-300: #d1d5db;
+  --color-primary-400: #9ca3af;
+  --color-primary-500: #000000;
+  --color-primary-600: #111827;
+  --color-primary-700: #1f2937;
+  --color-primary-800: #111827;
+  --color-primary-900: #000000;
+
+  /* Secondary Colors - 화이트 계열 */
+  --color-secondary: #ffffff;
+  --color-secondary-50: #ffffff;
+  --color-secondary-100: #fafafa;
+  --color-secondary-200: #f5f5f5;
+  --color-secondary-300: #f0f0f0;
+  --color-secondary-400: #e5e5e5;
+  --color-secondary-500: #ffffff;
+  --color-secondary-600: #f9fafb;
+  --color-secondary-700: #f3f4f6;
+  --color-secondary-800: #e5e7eb;
+  --color-secondary-900: #d1d5db;
+
+  /* Success Colors - 생기있는 에메랄드 */
+  --color-success-50: #f0fdf4;
+  --color-success-100: #dcfce7;
+  --color-success-200: #bbf7d0;
+  --color-success-300: #86efac;
+  --color-success-400: #4ade80;
+  --color-success-500: #10b981;
+  --color-success-600: #059669;
+  --color-success-700: #047857;
+  --color-success-800: #065f46;
+  --color-success-900: #064e3b;
+
+  /* Warning Colors - 따뜻한 앰버 */
+  --color-warning-50: #fffbeb;
+  --color-warning-100: #fef3c7;
+  --color-warning-200: #fde68a;
+  --color-warning-300: #fcd34d;
+  --color-warning-400: #fbbf24;
+  --color-warning-500: #f59e0b;
+  --color-warning-600: #d97706;
+  --color-warning-700: #b45309;
+  --color-warning-800: #92400e;
+  --color-warning-900: #78350f;
+
+  /* Error Colors - 세련된 레드 */
+  --color-error-50: #fef2f2;
+  --color-error-100: #fee2e2;
+  --color-error-200: #fecaca;
+  --color-error-300: #fca5a5;
+  --color-error-400: #f87171;
+  --color-error-500: #dc2626;
+  --color-error-600: #b91c1c;
+  --color-error-700: #991b1b;
+  --color-error-800: #7f1d1d;
+  --color-error-900: #450a0a;
+
+  /* Neutral Colors - 세련된 그레이스케일 */
+  --color-neutral-50: #fafafa;
+  --color-neutral-100: #f5f5f5;
+  --color-neutral-200: #e5e5e5;
+  --color-neutral-300: #d4d4d4;
+  --color-neutral-400: #a3a3a3;
+  --color-neutral-500: #737373;
+  --color-neutral-600: #525252;
+  --color-neutral-700: #404040;
+  --color-neutral-800: #262626;
+  --color-neutral-900: #171717;
+
+  /* Background Colors - 블랙앤화이트 테마 */
+  --color-background-primary: #ffffff;
+  --color-background-secondary: #fafafa;
+  --color-background-tertiary: #f5f5f5;
+
+  /* Text Colors - 블랙앤화이트 테마 */
+  --color-text-primary: #000000;
+  --color-text-secondary: #525252;
+  --color-text-tertiary: #737373;
+  --color-text-inverse: #ffffff;
+
+  /* Breakpoints */
+  --breakpoint-mob-sm: 320px;
+  --breakpoint-mob-md: 375px;
+  --breakpoint-mob-lg: 425px;
+  --breakpoint-tab: 768px;
+  --breakpoint-desk: 1024px;
+  --breakpoint-desk-lg: 1440px;
+
+  /* Legacy support */
+  --color-primary-pale: var(--color-primary-50);
+  --color-primary-pale-border: var(--primary);
+  --color-primary-border-hover: var(--primary);
+  --color-primary-light: var(--primary);
+  --color-black-pale: var(--color-neutral-600);
+  --color-gray-pale: var(--color-neutral-100);
+  --color-gray-pale-border: var(--color-neutral-200);
+  --color-gray-dark: var(--color-neutral-800);
+}
+
+@theme inline {
+  --font-noto-sans-kr: var(--font-noto-sans-kr);
+  --font-sans: var(--font-noto-sans-kr);
+}
+
+/* 기본 스타일 개선 */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Noto Sans KR', system-ui, sans-serif;
+  line-height: 1.6;
+  color: var(--color-text-primary);
+  background-color: var(--color-background-secondary);
+}
+
+button {
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+/* 커스텀 스크롤바 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-neutral-100);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-neutral-300);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-neutral-400);
+}
+
+/* 포커스 스타일 개선 - 블랙앤화이트 테마 */
+:focus-visible {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
+}
+
+/* 선택 텍스트 스타일 - 블랙앤화이트 테마 */
+::selection {
+  background-color: var(--color-primary-500);
+  color: var(--color-text-inverse);
+}
+
+@plugin "tailwind-scrollbar-hide";
