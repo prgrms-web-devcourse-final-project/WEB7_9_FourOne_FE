@@ -12,7 +12,6 @@ import {
 import { useAuth } from '@/contexts/AuthContext'
 import { usePagination } from '@/hooks/usePagination'
 import { useWebSocketHome } from '@/hooks/useWebSocketHome'
-import { productApi } from '@/lib/api'
 import {
   CATEGORY_FILTER_OPTIONS,
   type CategoryValue,
@@ -130,26 +129,47 @@ export function HomeClient({ stats }: HomeClientProps) {
 
       console.log('🔍 검색 파라미터:', requestParams)
 
-      // 검색어가 있으면 Elasticsearch 먼저 시도, 실패하면 일반 DB 조회
-      if (searchQuery.trim()) {
-        console.log('🔍 Elasticsearch 검색 시도...')
-        try {
-          const response = await productApi.searchProducts(requestParams)
-          console.log('🔍 Elasticsearch 응답:', response)
+      // ❌ Swagger에 상품 목록 조회 API가 없어서 임시로 빈 데이터 반환
+      // API가 준비되면 아래 주석을 해제하고 사용하세요
+      try {
+        // const response = await productApi.getProducts(requestParams)
+        // return response
 
-          // ES 검색 결과가 비어있으면 일반 DB 검색으로 fallback
-          if (response.success && response.data?.content?.length === 0) {
-            console.log('🔍 ES 검색 결과 없음, 일반 DB 검색으로 fallback...')
-            return await productApi.getProducts(requestParams)
-          }
-          return response
-        } catch (error) {
-          console.log('🔍 ES 검색 실패, 일반 DB 검색으로 fallback...', error)
-          return await productApi.getProducts(requestParams)
+        // 임시: 빈 데이터 반환
+        return {
+          success: true,
+          data: {
+            content: [],
+            totalElements: 0,
+            totalPages: 0,
+            size: size,
+            number: page - 1,
+            first: true,
+            last: true,
+          },
+          resultCode: '200',
+          msg: '상품 목록 조회 API가 준비 중입니다.',
         }
-      } else {
-        console.log('🔍 일반 DB 검색...')
-        return await productApi.getProducts(requestParams)
+      } catch (error) {
+        console.error('상품 조회 에러:', error)
+        // 에러 발생 시에도 빈 데이터 반환
+        return {
+          success: false,
+          data: {
+            content: [],
+            totalElements: 0,
+            totalPages: 0,
+            size: size,
+            number: page - 1,
+            first: true,
+            last: true,
+          },
+          resultCode: '500',
+          msg:
+            error instanceof Error
+              ? error.message
+              : '상품 조회 중 오류가 발생했습니다.',
+        }
       }
     },
     [selectedCategory, searchQuery, filters],

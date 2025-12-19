@@ -135,14 +135,10 @@ export const handleLogout = async (): Promise<void> => {
   }
 }
 
-// 401 에러 시 자동 로그아웃 처리
+// 401 에러 시 로그아웃 처리 (리다이렉트는 하지 않음)
 export const handle401Error = async (): Promise<void> => {
   await handleLogout()
-
-  if (typeof window !== 'undefined') {
-    alert('로그인이 만료되었습니다. 다시 로그인해주세요.')
-    window.location.href = '/login'
-  }
+  // 리다이렉트는 각 컴포넌트에서 필요할 때만 처리
 }
 
 // 표준화된 fetch 래퍼
@@ -161,8 +157,8 @@ export const apiRequest = async <T = any>(
     })
 
     if (response.status === 401) {
-      await handle401Error()
-      throw new Error('Unauthorized')
+      // 401 에러는 그대로 throw하여 각 컴포넌트에서 처리하도록 함
+      // handle401Error()는 명시적으로 호출할 때만 사용
     }
 
     const data = await response.json()

@@ -79,19 +79,36 @@ class ApiClient {
           // 자동 알림을 제거하고 각 컴포넌트에서 에러를 처리하도록 함
         }
 
-        // 403 에러 시 로그인 필요 알림
-        if (error.response?.status === 403) {
+        // 401 에러 시 인증 만료 - 자동 리다이렉트 제거, 각 컴포넌트에서 처리
+        if (error.response?.status === 401) {
+          // 토큰 정리만 수행하고 리다이렉트는 하지 않음
           if (typeof window !== 'undefined') {
-            alert('로그인이 필요합니다. 로그인 페이지로 이동하시겠습니까?')
+            // 로컬 스토리지 정리
+            localStorage.removeItem('auth_state')
+            localStorage.removeItem('user')
+            localStorage.removeItem('last_login_time')
+            localStorage.removeItem('accessToken')
+            localStorage.removeItem('refreshToken')
+            // 쿠키 정리
+            document.cookie =
+              'accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+            document.cookie =
+              'refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
           }
+          // 에러를 reject하여 각 컴포넌트에서 처리하도록 함
         }
 
-        // 500 에러 시 서버 오류 알림
-        if (error.response?.status === 500) {
-          if (typeof window !== 'undefined') {
-            alert('서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.')
-          }
+        // 403 에러 시 권한 없음 - 자동 리다이렉트 제거, 각 컴포넌트에서 처리
+        if (error.response?.status === 403) {
+          // 에러만 reject하여 각 컴포넌트에서 처리하도록 함
         }
+
+        // 500 에러 시 서버 오류 알림 제거 (각 컴포넌트에서 처리)
+        // if (error.response?.status === 500) {
+        //   if (typeof window !== 'undefined') {
+        //     alert('서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.')
+        //   }
+        // }
 
         // 네트워크 에러 처리
         if (!error.response) {
@@ -104,23 +121,6 @@ class ApiClient {
     )
   }
 
-  private handleUnauthorized() {
-    if (typeof window !== 'undefined') {
-      // 로컬 스토리지 정리
-      localStorage.removeItem('auth_state')
-      localStorage.removeItem('user')
-      localStorage.removeItem('last_login_time')
-
-      // 쿠키 정리
-      document.cookie =
-        'accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
-      document.cookie =
-        'refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
-
-      alert('로그인이 만료되었습니다. 다시 로그인해주세요.')
-      window.location.href = '/login'
-    }
-  }
 
   async get<T>(
     url: string,

@@ -248,6 +248,25 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        User: {
+            /** Format: int64 */
+            id?: number;
+            email?: string;
+            nickname?: string;
+            password?: string;
+            /** @enum {string} */
+            loginType?: "LOCAL" | "KAKAO";
+            userProfile?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** @enum {string} */
+            role?: "USER" | "ADMIN";
+            kakaoId?: string;
+            /** Format: int32 */
+            penaltyCount?: number;
+            /** Format: date-time */
+            deletedAt?: string;
+        };
         ProductCreateRequest: {
             name: string;
             description: string;
@@ -413,25 +432,6 @@ export interface components {
             message?: string;
             data?: components["schemas"]["EmailSendResponse"];
         };
-        User: {
-            /** Format: int64 */
-            id?: number;
-            email?: string;
-            nickname?: string;
-            password?: string;
-            /** @enum {string} */
-            loginType?: "LOCAL" | "KAKAO";
-            userProfile?: string;
-            /** Format: date-time */
-            createdAt?: string;
-            /** @enum {string} */
-            role?: "USER" | "ADMIN";
-            kakaoId?: string;
-            /** Format: int32 */
-            penaltyCount?: number;
-            /** Format: date-time */
-            deletedAt?: string;
-        };
         UserDeleteRequest: {
             password: string;
         };
@@ -544,7 +544,9 @@ export type $defs = Record<string, never>;
 export interface operations {
     updateProduct: {
         parameters: {
-            query?: never;
+            query: {
+                actor: components["schemas"]["User"];
+            };
             header?: never;
             path: {
                 productId: number;
@@ -570,7 +572,9 @@ export interface operations {
     };
     deleteProduct: {
         parameters: {
-            query?: never;
+            query: {
+                actor: components["schemas"]["User"];
+            };
             header?: never;
             path: {
                 productId: number;
@@ -592,7 +596,9 @@ export interface operations {
     };
     addProduct: {
         parameters: {
-            query?: never;
+            query: {
+                actor: components["schemas"]["User"];
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -640,7 +646,9 @@ export interface operations {
     };
     addQna: {
         parameters: {
-            query?: never;
+            query: {
+                actor: components["schemas"]["User"];
+            };
             header?: never;
             path: {
                 productId: number;
@@ -666,7 +674,9 @@ export interface operations {
     };
     addAnswer: {
         parameters: {
-            query?: never;
+            query: {
+                actor: components["schemas"]["User"];
+            };
             header?: never;
             path: {
                 productId: number;
@@ -693,7 +703,9 @@ export interface operations {
     };
     deleteAnswer: {
         parameters: {
-            query?: never;
+            query: {
+                actor: components["schemas"]["User"];
+            };
             header?: never;
             path: {
                 qnaId: number;
@@ -715,7 +727,9 @@ export interface operations {
     };
     addBookmark: {
         parameters: {
-            query?: never;
+            query: {
+                actor: components["schemas"]["User"];
+            };
             header?: never;
             path: {
                 productId: number;
@@ -737,7 +751,9 @@ export interface operations {
     };
     deleteBookmark: {
         parameters: {
-            query?: never;
+            query: {
+                actor: components["schemas"]["User"];
+            };
             header?: never;
             path: {
                 productId: number;
@@ -921,7 +937,9 @@ export interface operations {
     };
     addProduct_1: {
         parameters: {
-            query?: never;
+            query: {
+                actor: components["schemas"]["User"];
+            };
             header?: never;
             path?: never;
             cookie?: never;

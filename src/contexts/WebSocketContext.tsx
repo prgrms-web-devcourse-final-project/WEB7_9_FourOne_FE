@@ -7,7 +7,6 @@ import React, {
   useRef,
   useState,
 } from 'react'
-import SockJS from 'sockjs-client'
 import { Client, Message } from 'stompjs'
 
 // WebSocket 메시지 타입 정의
@@ -76,8 +75,16 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
   >(new Map())
   const isConnectingRef = useRef(false)
 
-  // WebSocket 연결 함수
+  // WebSocket 연결 함수 (현재 비활성화 - api.p-14626.khee.store/ws 사용 안 함)
   const connect = () => {
+    // WebSocket은 현재 사용하지 않음
+    console.log(
+      '🔌 WebSocket 연결 비활성화됨 (api.p-14626.khee.store/ws 사용 안 함)',
+    )
+    return
+
+    // 아래 코드는 WebSocket이 준비되면 사용
+    /*
     if (stompClientRef.current?.connected || isConnectingRef.current) {
       console.log('🔌 WebSocket 이미 연결됨 또는 연결 중')
       return
@@ -97,9 +104,9 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
 
       // 백엔드 API 엔드포인트 가져오기
       const getBackendUrl = () => {
-        // 환경변수에서 백엔드 URL 가져오기 (기본값: localhost:8080)
+        // 환경변수에서 백엔드 URL 가져오기 (기본값: 배포된 백엔드 URL)
         const apiBaseUrl =
-          process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080'
+          process.env.NEXT_PUBLIC_API_BASE_URL || 'https://api.p-14626.khee.store'
         return `${apiBaseUrl}/ws`
       }
 
@@ -172,6 +179,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
       isConnectingRef.current = false
       handleReconnect()
     }
+    */
   }
 
   // 재연결 처리

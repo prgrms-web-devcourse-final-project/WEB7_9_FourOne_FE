@@ -24,9 +24,7 @@ export default async function ProductEditPage({
     const cookieStore = await cookies()
     const accessToken = cookieStore.get('accessToken')?.value
 
-    if (!accessToken) {
-      redirect('/login')
-    }
+    // 토큰이 없어도 페이지는 렌더링하고, 클라이언트에서 처리하도록 함
 
     // 서버 API로 상품 정보 가져오기
     const response = await serverApi.getProduct(productId)

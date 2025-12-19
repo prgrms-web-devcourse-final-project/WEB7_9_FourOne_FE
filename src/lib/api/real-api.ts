@@ -28,11 +28,14 @@ import { apiClient } from './api-client'
 
 // API 응답을 표준화하는 헬퍼 함수 (새로운 백엔드 구조: { code, status, message, data })
 function normalizeApiResponse<T>(response: any) {
-  // 새로운 응답 구조 지원: { code, status, message, data }
-  if (response.code !== undefined || response.status !== undefined) {
+  // 새로운 응답 구조 지원: { code, status/httpStatus, message, data }
+  if (response.code !== undefined || response.status !== undefined || response.httpStatus !== undefined) {
     const code = String(response.code || '')
-    const status = response.status || 0
-    const success = status === 200 || code === '200' || code.startsWith('200')
+    const status = response.status || response.httpStatus || 0
+    // HTTP 상태 코드가 2xx 범위이고, code가 SUCCESS이거나 에러 코드가 아닌 경우 성공으로 처리
+    const isHttpSuccess = status >= 200 && status < 300
+    const isCodeSuccess = code === 'SUCCESS' || (!code.includes('FAILED') && !code.includes('ERROR'))
+    const success = isHttpSuccess && isCodeSuccess
 
     return {
       data: response.data,
@@ -42,6 +45,7 @@ function normalizeApiResponse<T>(response: any) {
       // 새로운 구조 필드도 포함 (호환성)
       code: code,
       status: status,
+      httpStatus: response.httpStatus || status,
       message: response.message || '',
     }
   }
@@ -254,37 +258,34 @@ export const authApi = {
 
 // 상품 관련 API (새로운 백엔드 구조)
 export const productApi = {
-  // 상품 목록 조회
-  // TODO: 새로운 백엔드에서 GET /api/v1/products 엔드포인트 확인 필요 (현재 Swagger에 없음)
+  // ❌ Swagger에 없음 - API 호출 비활성화 (UI는 유지)
   getProducts: async (params?: ProductListParams) => {
-    // TODO: 새로운 백엔드의 상품 목록 조회 API 확인 필요
-    const response = await apiClient.get<ApiResponse<any>>('/api/v1/products', {
-      params,
-    })
-    return normalizeApiResponse(response.data)
+    throw new Error('GET /api/v1/products는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    // const response = await apiClient.get<ApiResponse<any>>('/api/v1/products', {
+    //   params,
+    // })
+    // return normalizeApiResponse(response.data)
   },
 
-  // 상품 검색 (Elasticsearch)
-  // TODO: 새로운 백엔드에서 Elasticsearch 검색 API 확인 필요
+  // ❌ Swagger에 없음 - API 호출 비활성화 (UI는 유지)
   searchProducts: async (params?: ProductListParams) => {
-    // TODO: 새로운 백엔드의 Elasticsearch 검색 API 확인 필요
-    const response = await apiClient.get<ApiResponse<any>>(
-      '/api/v1/products/es', // TODO: 실제 엔드포인트 확인 필요
-      {
-        params,
-      },
-    )
-    return normalizeApiResponse(response.data)
+    throw new Error('GET /api/v1/products/es는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    // const response = await apiClient.get<ApiResponse<any>>(
+    //   '/api/v1/products/es',
+    //   {
+    //     params,
+    //   },
+    // )
+    // return normalizeApiResponse(response.data)
   },
 
-  // 상품 상세 조회
-  // TODO: 새로운 백엔드에서 GET /api/v1/products/{productId} 엔드포인트 확인 필요 (현재 Swagger에 없음)
+  // ❌ Swagger에 없음 - API 호출 비활성화 (UI는 유지)
   getProduct: async (productId: number) => {
-    // TODO: 새로운 백엔드의 상품 상세 조회 API 확인 필요
-    const response = await apiClient.get<ApiResponse<any>>(
-      `/api/v1/products/${productId}`,
-    )
-    return normalizeApiResponse(response.data)
+    throw new Error('GET /api/v1/products/{productId}는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    // const response = await apiClient.get<ApiResponse<any>>(
+    //   `/api/v1/products/${productId}`,
+    // )
+    // return normalizeApiResponse(response.data)
   },
 
   // 상품 등록 (새로운 백엔드: POST /api/v1/products)
@@ -325,30 +326,28 @@ export const productApi = {
     return normalizeApiResponse(response.data)
   },
 
-  // 내 상품 목록 조회
-  // TODO: 새로운 백엔드에서 내 상품 목록 조회 API 확인 필요
+  // ❌ Swagger에 없음 - API 호출 비활성화 (UI는 유지)
   getMyProducts: async (params?: MyProductsParams) => {
-    // TODO: 새로운 백엔드의 내 상품 목록 조회 API 확인 필요
-    const response = await apiClient.get<ApiResponse<any>>(
-      '/api/v1/products/me', // TODO: 실제 엔드포인트 확인 필요
-      {
-        params,
-      },
-    )
-    return normalizeApiResponse(response.data)
+    throw new Error('GET /api/v1/products/me는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    // const response = await apiClient.get<ApiResponse<any>>(
+    //   '/api/v1/products/me',
+    //   {
+    //     params,
+    //   },
+    // )
+    // return normalizeApiResponse(response.data)
   },
 
-  // 특정 회원의 상품 목록 조회
-  // TODO: 새로운 백엔드에서 특정 회원의 상품 목록 조회 API 확인 필요
+  // ❌ Swagger에 없음 - API 호출 비활성화 (UI는 유지)
   getProductsByMember: async (memberId: number, params?: ProductListParams) => {
-    // TODO: 새로운 백엔드의 특정 회원 상품 목록 조회 API 확인 필요
-    const response = await apiClient.get<ApiResponse<any>>(
-      `/api/v1/products/members/${memberId}`, // TODO: 실제 엔드포인트 확인 필요
-      {
-        params,
-      },
-    )
-    return normalizeApiResponse(response.data)
+    throw new Error('GET /api/v1/products/members/{memberId}는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    // const response = await apiClient.get<ApiResponse<any>>(
+    //   `/api/v1/products/members/${memberId}`,
+    //   {
+    //     params,
+    //   },
+    // )
+    // return normalizeApiResponse(response.data)
   },
 
   // 상품 삭제 (새로운 백엔드: DELETE /api/v1/products/{productId})
@@ -421,343 +420,173 @@ export const productApi = {
   },
 }
 
-// 입찰 관련 API
-// TODO: 새로운 백엔드에서 입찰 관련 API 확인 필요 (현재 Swagger에 없음)
+// ❌ 입찰 관련 API - Swagger에 없음 (UI는 유지)
 export const bidApi = {
-  // 입찰하기
-  // TODO: 새로운 백엔드의 입찰 생성 API 확인 필요
+  // ❌ Swagger에 없음
   createBid: async (productId: number, bidData: BidRequest) => {
-    // TODO: 새로운 백엔드의 입찰 생성 엔드포인트 확인 필요
-    const response = await apiClient.post<ApiResponse<any>>(
-      `/api/v1/bids/products/${productId}`, // TODO: 실제 엔드포인트 확인 필요
-      bidData,
-    )
-    return normalizeApiResponse(response.data)
+    throw new Error('입찰 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
   },
 
-  // 내 입찰 현황 조회
-  // TODO: 새로운 백엔드의 내 입찰 현황 조회 API 확인 필요
+  // ❌ Swagger에 없음
   getMyBids: async (params?: {
     page?: number
     size?: number
     status?: string
   }) => {
-    // TODO: 새로운 백엔드의 내 입찰 현황 조회 엔드포인트 확인 필요
-    const searchParams = new URLSearchParams()
-    if (params?.page) searchParams.append('page', params.page.toString())
-    if (params?.size) searchParams.append('size', params.size.toString())
-    if (params?.status) searchParams.append('status', params.status)
-
-    const queryString = searchParams.toString()
-    const endpoint = queryString
-      ? `/api/v1/bids/me?${queryString}` // TODO: 실제 엔드포인트 확인 필요
-      : '/api/v1/bids/me' // TODO: 실제 엔드포인트 확인 필요
-
-    const response = await apiClient.get<ApiResponse<any>>(endpoint)
-    return normalizeApiResponse(response.data)
+    throw new Error('내 입찰 현황 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
   },
 
-  // 특정 상품의 입찰 현황 조회
-  // TODO: 새로운 백엔드의 특정 상품 입찰 현황 조회 API 확인 필요
+  // ❌ Swagger에 없음
   getBidStatus: async (productId: number) => {
-    // TODO: 새로운 백엔드의 특정 상품 입찰 현황 조회 엔드포인트 확인 필요
-    const response = await apiClient.get<ApiResponse<any>>(
-      `/api/v1/bids/products/${productId}`, // TODO: 실제 엔드포인트 확인 필요
-    )
-    return normalizeApiResponse(response.data)
+    throw new Error('입찰 현황 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
   },
 
-  // 입찰 취소
-  // TODO: 새로운 백엔드의 입찰 취소 API 확인 필요
+  // ❌ Swagger에 없음
   cancelBid: async (bidId: number) => {
-    // TODO: 새로운 백엔드의 입찰 취소 엔드포인트 확인 필요
-    const response = await apiClient.delete<ApiResponse<any>>(
-      `/api/v1/bids/${bidId}`, // TODO: 실제 엔드포인트 확인 필요
-    )
-    return normalizeApiResponse(response.data)
+    throw new Error('입찰 취소 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
   },
 
-  // 낙찰 결제
-  // TODO: 새로운 백엔드의 낙찰 결제 API 확인 필요
+  // ❌ Swagger에 없음
   payBid: async (bidId: number) => {
-    // TODO: 새로운 백엔드의 낙찰 결제 엔드포인트 확인 필요
-    const response = await apiClient.post<ApiResponse<BidPayResponseDto>>(
-      `/api/v1/bids/${bidId}/pay`, // TODO: 실제 엔드포인트 확인 필요
-    )
-    return normalizeApiResponse(response.data)
+    throw new Error('낙찰 결제 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
   },
 }
 
-// 리뷰 관련 API
-// TODO: 새로운 백엔드에서 리뷰 관련 API 확인 필요 (현재 Swagger에 없음)
+// ❌ 리뷰 관련 API - Swagger에 없음 (UI는 유지)
 export const reviewApi = {
-  // 리뷰 작성
-  // TODO: 새로운 백엔드의 리뷰 작성 API 확인 필요
+  // ❌ Swagger에 없음
   createReview: async (data: ReviewWriteRequest) => {
-    // TODO: 새로운 백엔드의 리뷰 작성 엔드포인트 확인 필요
-    const response = await apiClient.post<ApiResponse<any>>(
-      '/api/v1/reviews', // TODO: 실제 엔드포인트 확인 필요
-      data,
-    )
-    return normalizeApiResponse(response.data)
+    throw new Error('리뷰 작성 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
   },
 
-  // 리뷰 조회
-  // TODO: 새로운 백엔드의 리뷰 조회 API 확인 필요
+  // ❌ Swagger에 없음
   getReview: async (reviewId: number) => {
-    // TODO: 새로운 백엔드의 리뷰 조회 엔드포인트 확인 필요
-    const response = await apiClient.get<ApiResponse<any>>(
-      `/api/v1/reviews/${reviewId}`, // TODO: 실제 엔드포인트 확인 필요
-    )
-    return normalizeApiResponse(response.data)
+    throw new Error('리뷰 조회 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
   },
 
-  // 리뷰 수정
-  // TODO: 새로운 백엔드의 리뷰 수정 API 확인 필요
+  // ❌ Swagger에 없음
   updateReview: async (reviewId: number, data: ReviewUpdateRequest) => {
-    // TODO: 새로운 백엔드의 리뷰 수정 엔드포인트 확인 필요
-    const response = await apiClient.put<ApiResponse<any>>(
-      `/api/v1/reviews/${reviewId}`, // TODO: 실제 엔드포인트 확인 필요
-      data,
-    )
-    return normalizeApiResponse(response.data)
+    throw new Error('리뷰 수정 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
   },
 
-  // 리뷰 삭제
-  // TODO: 새로운 백엔드의 리뷰 삭제 API 확인 필요
+  // ❌ Swagger에 없음
   deleteReview: async (reviewId: number) => {
-    // TODO: 새로운 백엔드의 리뷰 삭제 엔드포인트 확인 필요
-    const response = await apiClient.delete<ApiResponse<any>>(
-      `/api/v1/reviews/${reviewId}`, // TODO: 실제 엔드포인트 확인 필요
-    )
-    return normalizeApiResponse(response.data)
+    throw new Error('리뷰 삭제 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
   },
 
-  // 상품별 리뷰 목록 조회
-  // TODO: 새로운 백엔드의 상품별 리뷰 목록 조회 API 확인 필요
+  // ❌ Swagger에 없음
   getReviewsByProduct: async (productId: number) => {
-    // TODO: 새로운 백엔드의 상품별 리뷰 목록 조회 엔드포인트 확인 필요
-    const response = await apiClient.get<ApiResponse<any>>(
-      `/api/v1/reviews/products/${productId}`, // TODO: 실제 엔드포인트 확인 필요
-    )
-    return normalizeApiResponse(response.data)
+    throw new Error('상품별 리뷰 목록 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
   },
 }
 
-// 알림 관련 API
-// TODO: 새로운 백엔드에서 알림 관련 API 확인 필요 (현재 Swagger에 일부만 있음)
+// ❌ 알림 관련 API - Swagger에 없음 (UI는 유지)
 export const notificationApi = {
-  // 알림 목록 조회
-  // TODO: 새로운 백엔드의 알림 목록 조회 API 확인 필요
+  // ❌ Swagger에 없음
   getNotifications: async (params?: { page?: number; size?: number }) => {
-    // TODO: 새로운 백엔드의 알림 목록 조회 엔드포인트 확인 필요
-    const response = await apiClient.get<ApiResponse<any>>('/notifications', {
-      params,
-    })
-    return normalizeApiResponse(response.data)
+    throw new Error('알림 목록 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
   },
 
-  // 읽지 않은 알림 개수 조회
-  // TODO: 새로운 백엔드의 읽지 않은 알림 개수 조회 API 확인 필요
+  // ❌ Swagger에 없음
   getUnreadCount: async () => {
-    // TODO: 새로운 백엔드의 읽지 않은 알림 개수 조회 엔드포인트 확인 필요
-    const response = await apiClient.get<ApiResponse<any>>(
-      '/notifications/unread-count', // TODO: 실제 엔드포인트 확인 필요
-    )
-    return normalizeApiResponse(response.data)
+    throw new Error('읽지 않은 알림 개수 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
   },
 
-  // 모든 알림 읽음 처리 (새로운 백엔드: PUT /notifications/read-all)
+  // ❌ Swagger에 없음
   markAllAsRead: async () => {
-    const response = await apiClient.put<ApiResponse<any>>(
-      '/notifications/read-all',
-    )
-    return normalizeApiResponse(response.data)
+    throw new Error('모든 알림 읽음 처리 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
   },
 
-  // 특정 알림 읽음 처리 (새로운 백엔드: PUT /notifications/{id}/read)
+  // ❌ Swagger에 없음
   markAsRead: async (notificationId: number) => {
-    const response = await apiClient.put<ApiResponse<any>>(
-      `/notifications/${notificationId}/read`,
-    )
-    return normalizeApiResponse(response.data)
+    throw new Error('알림 읽음 처리 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
   },
 }
 
-// 결제 수단 관련 API
-// TODO: 새로운 백엔드에서 결제 수단 관련 API 확인 필요 (현재 Swagger에 없음)
+// ❌ 결제 수단 관련 API - Swagger에 없음 (UI는 유지)
 export const paymentMethodApi = {
-  // 결제 수단 등록
-  // TODO: 새로운 백엔드의 결제 수단 등록 API 확인 필요
+  // ❌ Swagger에 없음
   createPaymentMethod: async (data: PaymentMethodCreateRequest) => {
-    // TODO: 새로운 백엔드의 결제 수단 등록 엔드포인트 확인 필요
-    const response = await apiClient.post<ApiResponse<any>>(
-      '/api/v1/paymentMethods', // TODO: 실제 엔드포인트 확인 필요
-      data,
-    )
-    return normalizeApiResponse(response.data)
+    throw new Error('결제 수단 등록 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
   },
 
-  // 결제 수단 목록 조회
-  // TODO: 새로운 백엔드의 결제 수단 목록 조회 API 확인 필요
+  // ❌ Swagger에 없음
   getPaymentMethods: async () => {
-    // TODO: 새로운 백엔드의 결제 수단 목록 조회 엔드포인트 확인 필요
-    const response = await apiClient.get<ApiResponse<any>>(
-      '/api/v1/paymentMethods', // TODO: 실제 엔드포인트 확인 필요
-    )
-    return normalizeApiResponse(response.data)
+    throw new Error('결제 수단 목록 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
   },
 
-  // 결제 수단 수정
-  // TODO: 새로운 백엔드의 결제 수단 수정 API 확인 필요
+  // ❌ Swagger에 없음
   updatePaymentMethod: async (
     paymentMethodId: number,
     data: PaymentMethodEditRequest,
   ) => {
-    // TODO: 새로운 백엔드의 결제 수단 수정 엔드포인트 확인 필요
-    const response = await apiClient.put<ApiResponse<any>>(
-      `/api/v1/paymentMethods/${paymentMethodId}`, // TODO: 실제 엔드포인트 확인 필요
-      data,
-    )
-    return normalizeApiResponse(response.data)
+    throw new Error('결제 수단 수정 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
   },
 
-  // 결제 수단 삭제
-  // TODO: 새로운 백엔드의 결제 수단 삭제 API 확인 필요
+  // ❌ Swagger에 없음
   deletePaymentMethod: async (paymentMethodId: number) => {
-    // TODO: 새로운 백엔드의 결제 수단 삭제 엔드포인트 확인 필요
-    const response = await apiClient.delete<ApiResponse<any>>(
-      `/api/v1/paymentMethods/${paymentMethodId}`, // TODO: 실제 엔드포인트 확인 필요
-    )
-    return normalizeApiResponse(response.data)
+    throw new Error('결제 수단 삭제 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
   },
 }
 
-// 캐시/지갑 관련 API
-// TODO: 새로운 백엔드에서 지갑 관련 API 확인 필요 (현재 Swagger에 없음)
+// ❌ 캐시/지갑 관련 API - Swagger에 없음 (UI는 유지)
 export const cashApi = {
-  // 지갑 잔액 조회
-  // TODO: 새로운 백엔드의 지갑 잔액 조회 API 확인 필요
+  // ❌ Swagger에 없음
   getMyCash: async () => {
-    // TODO: 새로운 백엔드의 지갑 잔액 조회 엔드포인트 확인 필요
-    const response = await apiClient.get<ApiResponse<any>>('/api/v1/cash') // TODO: 실제 엔드포인트 확인 필요
-    return normalizeApiResponse(response.data)
+    throw new Error('지갑 잔액 조회 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
   },
 
-  // 거래 내역 조회
-  // TODO: 새로운 백엔드의 거래 내역 조회 API 확인 필요
+  // ❌ Swagger에 없음
   getCashTransactions: async (params?: { page?: number; size?: number }) => {
-    // TODO: 새로운 백엔드의 거래 내역 조회 엔드포인트 확인 필요
-    const response = await apiClient.get<ApiResponse<any>>(
-      '/api/v1/cash/transactions', // TODO: 실제 엔드포인트 확인 필요
-      {
-        params,
-      },
-    )
-    return normalizeApiResponse(response.data)
+    throw new Error('거래 내역 조회 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
   },
 
-  // 거래 상세 조회
-  // TODO: 새로운 백엔드의 거래 상세 조회 API 확인 필요
+  // ❌ Swagger에 없음
   getTransactionDetail: async (transactionId: number) => {
-    // TODO: 새로운 백엔드의 거래 상세 조회 엔드포인트 확인 필요
-    const response = await apiClient.get<ApiResponse<any>>(
-      `/api/v1/cash/transactions/${transactionId}`, // TODO: 실제 엔드포인트 확인 필요
-    )
-    return normalizeApiResponse(response.data)
+    throw new Error('거래 상세 조회 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
   },
 }
 
-// 토스 결제 관련 API
-// TODO: 새로운 백엔드에서 토스 결제 관련 API 확인 필요 (현재 Swagger에 없음)
+// ❌ 토스 결제 관련 API - Swagger에 없음 (UI는 유지)
 export const tossApi = {
-  // 토스 빌링 인증 파라미터 조회
-  // TODO: 새로운 백엔드의 토스 빌링 인증 파라미터 조회 API 확인 필요
+  // ❌ Swagger에 없음
   getBillingAuthParams: async () => {
-    // TODO: 새로운 백엔드의 토스 빌링 인증 파라미터 조회 엔드포인트 확인 필요
-    const response = await apiClient.get<TossBillingAuthParams>(
-      '/api/v1/payments/toss/billing-auth-params', // TODO: 실제 엔드포인트 확인 필요
-    )
-    return normalizeApiResponse(response.data)
+    throw new Error('토스 빌링 인증 파라미터 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
   },
 
-  // 토스 빌링키 발급
-  // TODO: 새로운 백엔드의 토스 빌링키 발급 API 확인 필요
+  // ❌ Swagger에 없음
   issueBillingKey: async (authKey: string) => {
-    // TODO: 새로운 백엔드의 토스 빌링키 발급 엔드포인트 확인 필요
-    const response = await apiClient.post<ApiResponse<any>>(
-      '/api/v1/payments/toss/issue-billing-key', // TODO: 실제 엔드포인트 확인 필요
-      { authKey },
-    )
-    return normalizeApiResponse(response.data)
+    throw new Error('토스 빌링키 발급 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
   },
 
-  // 멱등키 발급
-  // TODO: 새로운 백엔드의 멱등키 발급 API 확인 필요
+  // ❌ Swagger에 없음
   getIdempotencyKey: async () => {
-    // TODO: 새로운 백엔드의 멱등키 발급 엔드포인트 확인 필요
-    const response = await apiClient.get<IdempotencyKey>(
-      '/api/v1/payments/idempotency-key', // TODO: 실제 엔드포인트 확인 필요
-    )
-    return normalizeApiResponse(response.data)
+    throw new Error('멱등키 발급 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
   },
 
-  // 지갑 충전 (토스 결제)
-  // TODO: 새로운 백엔드의 지갑 충전 API 확인 필요
+  // ❌ Swagger에 없음
   chargeWallet: async (data: WalletChargeRequest) => {
-    // TODO: 새로운 백엔드의 지갑 충전 엔드포인트 확인 필요
-    const response = await apiClient.post<WalletChargeResponse>(
-      '/api/v1/payments', // TODO: 실제 엔드포인트 확인 필요
-      data,
-    )
-    return normalizeApiResponse(response.data)
+    throw new Error('지갑 충전 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
   },
 }
 
-// 결제 내역 API
-// TODO: 새로운 백엔드에서 결제 내역 관련 API 확인 필요 (현재 Swagger에 없음)
+// ❌ 결제 내역 API - Swagger에 없음 (UI는 유지)
 export const paymentApi = {
-  // 내 결제 내역 목록 조회
-  // TODO: 새로운 백엔드의 결제 내역 목록 조회 API 확인 필요
+  // ❌ Swagger에 없음
   getMyPayments: async (params?: { page?: number; size?: number }) => {
-    // TODO: 새로운 백엔드의 결제 내역 목록 조회 엔드포인트 확인 필요
-    const response = await apiClient.get<MyPaymentListResponse>(
-      '/api/v1/payments/me', // TODO: 실제 엔드포인트 확인 필요
-      {
-        params,
-      },
-    )
-    return normalizeApiResponse(response.data)
+    throw new Error('결제 내역 목록 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
   },
 
-  // 결제 상세 정보 조회
-  // TODO: 새로운 백엔드의 결제 상세 정보 조회 API 확인 필요
+  // ❌ Swagger에 없음
   getPaymentDetail: async (paymentId: number) => {
-    // TODO: 새로운 백엔드의 결제 상세 정보 조회 엔드포인트 확인 필요
-    const response = await apiClient.get<MyPaymentDetail>(
-      `/api/v1/payments/me/${paymentId}`, // TODO: 실제 엔드포인트 확인 필요
-    )
-    return normalizeApiResponse(response.data)
+    throw new Error('결제 상세 정보 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
   },
 }
 
-// 게시판 관련 API
-// TODO: 새로운 백엔드에서 게시판 관련 API 확인 필요 (현재 Swagger에 없음)
+// ❌ 게시판 관련 API - Swagger에 없음 (UI는 유지)
 export const boardApi = {
-  // 게시글 작성
-  // TODO: 새로운 백엔드의 게시글 작성 API 확인 필요
+  // ❌ Swagger에 없음
   createPost: async (data: BoardWriteRequest) => {
-    // TODO: 새로운 백엔드의 게시글 작성 엔드포인트 확인 필요
-    const response = await apiClient.post<ApiResponse<BoardWriteResponse>>(
-      '/api/v1/boards', // TODO: 실제 엔드포인트 확인 필요
-      data,
-    )
-    return normalizeApiResponse(response.data)
+    throw new Error('게시글 작성 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
   },
-
-  // ❌ 제거된 API들 (백엔드에 구현되지 않음)
-  // getPosts: async (params?: { page?: number; size?: number; category?: string }) => { ... }
-  // getPost: async (postId: number) => { ... }
-  // updatePost: async (postId: number, data: BoardWriteRequest) => { ... }
-  // deletePost: async (postId: number) => { ... }
 }

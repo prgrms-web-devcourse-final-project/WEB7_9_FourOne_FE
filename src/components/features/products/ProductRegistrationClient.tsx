@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { ErrorAlert } from '@/components/ui/error-alert'
 import { Input } from '@/components/ui/input'
 import { productApi } from '@/lib/api'
-import { handleApiError, getErrorMessage } from '@/lib/api/common'
+import { handleApiError } from '@/lib/api/common'
 import { CATEGORIES, type CategoryValue, type SubCategoryValue } from '@/lib/constants/categories'
 import { ProductForm } from '@/types'
 import { Camera, MapPin, Package } from 'lucide-react'
@@ -31,6 +31,28 @@ export function ProductRegistrationClient() {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isLoading, setIsLoading] = useState(false)
   const [apiError, setApiError] = useState('')
+  
+  // 개발 모드 감지
+  const isDev = process.env.NODE_ENV === 'development'
+  
+  // 개발 모드: 기본값 자동 입력
+  const fillDevDefaults = () => {
+    setFormData({
+      name: '테스트 상품',
+      description: '테스트용 상품 설명입니다. 개발 모드에서 자동으로 입력된 기본값입니다.',
+      categoryId: 1,
+      images: [],
+      initialPrice: 10000,
+      auctionDuration: '24시간',
+      auctionStartTime: new Date().toISOString().slice(0, 16), // 현재 시간
+      deliveryMethod: ['DELIVERY'],
+      location: '서울시 강남구',
+    })
+    setCategory('STARGOODS')
+    setSubCategory('ACC')
+    setErrors({})
+    setApiError('')
+  }
 
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -233,6 +255,20 @@ export function ProductRegistrationClient() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6 sm:px-6 lg:px-8">
+      {/* 개발 모드: 기본값 자동 입력 버튼 */}
+      {isDev && (
+        <div className="mb-6">
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            onClick={fillDevDefaults}
+            className="w-full border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100"
+          >
+            🚀 개발 모드: 기본값 자동 입력
+          </Button>
+        </div>
+      )}
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* API 에러 메시지 */}
         {apiError && (

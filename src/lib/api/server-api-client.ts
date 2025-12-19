@@ -32,7 +32,7 @@ function normalizeApiResponse<T>(response: any) {
 
 // 서버용 API 클라이언트
 class ServerApiClient {
-  private baseURL = `${process.env.API_BASE_URL || 'http://localhost:8080'}/api/v1`
+  private baseURL = `${process.env.API_BASE_URL || 'https://api.p-14626.khee.store'}/api/v1`
 
   private async makeRequest<T>(
     endpoint: string,
@@ -63,11 +63,12 @@ class ServerApiClient {
     return normalizeApiResponse(data)
   }
 
-  // 상품 관련 API
+  // ❌ Swagger에 없음 - API 호출 비활성화 (UI는 유지)
   async getProduct(productId: number) {
-    return this.makeRequest(`/products/${productId}`)
+    throw new Error('GET /api/v1/products/{productId}는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
   }
 
+  // ❌ Swagger에 없음 - API 호출 비활성화 (UI는 유지)
   async getProducts(params?: {
     page?: number
     size?: number
@@ -78,42 +79,16 @@ class ServerApiClient {
     sort?: string
     search?: string
   }) {
-    const searchParams = new URLSearchParams()
-
-    if (params?.page) searchParams.append('page', params.page.toString())
-    if (params?.size) searchParams.append('size', params.size.toString())
-    if (params?.category)
-      searchParams.append('category', params.category.toString())
-    if (params?.status) searchParams.append('status', params.status)
-    if (params?.location) searchParams.append('location', params.location)
-    if (params?.isDelivery !== undefined)
-      searchParams.append('isDelivery', params.isDelivery.toString())
-    if (params?.sort) searchParams.append('sort', params.sort)
-    if (params?.search) searchParams.append('search', params.search)
-
-    const queryString = searchParams.toString()
-    const endpoint = queryString ? `/products?${queryString}` : '/products'
-
-    return this.makeRequest(endpoint)
+    throw new Error('GET /api/v1/products는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
   }
 
+  // ❌ Swagger에 없음 - API 호출 비활성화 (UI는 유지)
   async getMyProducts(params?: {
     page?: number
     size?: number
     status?: string
   }) {
-    const searchParams = new URLSearchParams()
-
-    if (params?.page) searchParams.append('page', params.page.toString())
-    if (params?.size) searchParams.append('size', params.size.toString())
-    if (params?.status) searchParams.append('status', params.status)
-
-    const queryString = searchParams.toString()
-    const endpoint = queryString
-      ? `/products/me?${queryString}`
-      : '/products/me'
-
-    return this.makeRequest(endpoint)
+    throw new Error('GET /api/v1/products/me는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
   }
 
   // 사용자 정보 API (새로운 엔드포인트: /api/v1/auth/me)
@@ -121,69 +96,43 @@ class ServerApiClient {
     return this.makeRequest('/auth/me')
   }
 
-  // 입찰 관련 API
+  // ❌ Swagger에 없음 - API 호출 비활성화 (UI는 유지)
   async getMyBids(params?: { page?: number; size?: number; status?: string }) {
-    const searchParams = new URLSearchParams()
-
-    if (params?.page) searchParams.append('page', params.page.toString())
-    if (params?.size) searchParams.append('size', params.size.toString())
-    if (params?.status) searchParams.append('status', params.status)
-
-    const queryString = searchParams.toString()
-    const endpoint = queryString ? `/bids/me?${queryString}` : '/bids/me'
-
-    return this.makeRequest(endpoint)
+    throw new Error('입찰 관련 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
   }
 
+  // ❌ Swagger에 없음 - API 호출 비활성화 (UI는 유지)
   async getBidStatus(productId: number) {
-    return this.makeRequest(`/bids/products/${productId}`)
+    throw new Error('입찰 현황 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
   }
 
-  // 알림 관련 API
+  // ❌ Swagger에 없음 - API 호출 비활성화 (UI는 유지)
   async getNotifications(params?: { page?: number; size?: number }) {
-    const searchParams = new URLSearchParams()
-
-    if (params?.page) searchParams.append('page', params.page.toString())
-    if (params?.size) searchParams.append('size', params.size.toString())
-
-    const queryString = searchParams.toString()
-    const endpoint = queryString
-      ? `/notifications?${queryString}`
-      : '/notifications'
-
-    return this.makeRequest(endpoint)
+    throw new Error('알림 목록 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
   }
 
+  // ❌ Swagger에 없음 - API 호출 비활성화 (UI는 유지)
   async getUnreadCount() {
-    return this.makeRequest('/notifications/unread-count')
+    throw new Error('읽지 않은 알림 개수 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
   }
 
-  // 결제수단 관련 API
+  // ❌ Swagger에 없음 - API 호출 비활성화 (UI는 유지)
   async getPaymentMethods() {
-    return this.makeRequest('/paymentMethods')
+    throw new Error('결제 수단 목록 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
   }
 
+  // ❌ Swagger에 없음 - API 호출 비활성화 (UI는 유지)
   async getPaymentHistory() {
-    return this.makeRequest('/payments/me')
+    throw new Error('결제 내역 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
   }
 
-  // 리뷰 관련 API
+  // ❌ Swagger에 없음 - API 호출 비활성화 (UI는 유지)
   async getReviews(params?: {
     page?: number
     size?: number
     productId?: number
   }) {
-    const searchParams = new URLSearchParams()
-
-    if (params?.page) searchParams.append('page', params.page.toString())
-    if (params?.size) searchParams.append('size', params.size.toString())
-    if (params?.productId)
-      searchParams.append('productId', params.productId.toString())
-
-    const queryString = searchParams.toString()
-    const endpoint = queryString ? `/reviews?${queryString}` : '/reviews'
-
-    return this.makeRequest(endpoint)
+    throw new Error('리뷰 관련 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
   }
 }
 

@@ -10,7 +10,8 @@
     "lint": "next lint",
     "lint:fix": "next lint --fix",
     "type-check": "tsc --noEmit",
-    "generate-types": "openapi-typescript http://localhost:8080/v3/api-docs -o src/types/swagger-generated.ts"
+    "generate-types": "openapi-typescript https://api.p-14626.khee.store/v3/api-docs -o src/types/swagger-generated.ts",
+    "generate-types:json": "openapi-typescript swagger.json -o src/types/swagger-generated.ts"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.4",
