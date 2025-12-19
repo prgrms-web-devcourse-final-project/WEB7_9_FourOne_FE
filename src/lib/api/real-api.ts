@@ -418,6 +418,84 @@ export const productApi = {
     )
     return normalizeApiResponse(response.data)
   },
+
+  // ❌ 찜 목록 조회 - Swagger에 없음 (UI는 유지)
+  getBookmarks: async (params?: {
+    page?: number
+    size?: number
+  }) => {
+    throw new Error('GET /api/v1/bookmarks는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    // const searchParams = new URLSearchParams()
+    // if (params?.page) searchParams.append('page', params.page.toString())
+    // if (params?.size) searchParams.append('size', params.size.toString())
+    //
+    // const queryString = searchParams.toString()
+    // const endpoint = queryString
+    //   ? `/api/v1/bookmarks?${queryString}`
+    //   : `/api/v1/bookmarks`
+    //
+    // const response = await apiClient.get<ApiResponse<any>>(endpoint)
+    // return normalizeApiResponse(response.data)
+  },
+}
+
+// 경매 관련 API
+export const auctionApi = {
+  // 경매 목록 조회 (키워드 검색)
+  // GET /api/v1/auctions?search={keyword}&cursor={cursor}&limit={limit}&sort={sort}
+  searchAuctions: async (params?: {
+    search?: string
+    cursor?: string
+    limit?: number
+    sort?: 'newest' | 'closing' | 'popular'
+  }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.search) searchParams.append('search', params.search)
+    if (params?.cursor) searchParams.append('cursor', params.cursor)
+    if (params?.limit) searchParams.append('limit', params.limit.toString())
+    if (params?.sort) searchParams.append('sort', params.sort)
+
+    const queryString = searchParams.toString()
+    const endpoint = queryString
+      ? `/api/v1/auctions?${queryString}`
+      : `/api/v1/auctions`
+
+    const response = await apiClient.get<ApiResponse<any>>(endpoint)
+    return normalizeApiResponse(response.data)
+  },
+
+  // 경매 목록 조회 (카테고리/상태 필터)
+  // GET /api/v1/auctions?category={category}&subCategory={subCategory}&status={status}&cursor={cursor}&limit={limit}&sort={sort}
+  getAuctions: async (params?: {
+    category?: 'ALL' | 'STARGOODS' | 'FIGURE' | 'CDLP' | 'GAME'
+    subCategory?: 'ALL' | 'ACC' | 'STATIONARY' | 'DAILY' | 'ELECTRONICS' | 'GAME' | 'ETC'
+    status?: 'ALL' | 'SCHEDULED' | 'LIVE' | 'ENDED'
+    cursor?: string
+    limit?: number
+    sort?: 'newest' | 'closing' | 'popular'
+  }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.category && params.category !== 'ALL') {
+      searchParams.append('category', params.category)
+    }
+    if (params?.subCategory && params.subCategory !== 'ALL') {
+      searchParams.append('subCategory', params.subCategory)
+    }
+    if (params?.status && params.status !== 'ALL') {
+      searchParams.append('status', params.status)
+    }
+    if (params?.cursor) searchParams.append('cursor', params.cursor)
+    if (params?.limit) searchParams.append('limit', params.limit.toString())
+    if (params?.sort) searchParams.append('sort', params.sort)
+
+    const queryString = searchParams.toString()
+    const endpoint = queryString
+      ? `/api/v1/auctions?${queryString}`
+      : `/api/v1/auctions`
+
+    const response = await apiClient.get<ApiResponse<any>>(endpoint)
+    return normalizeApiResponse(response.data)
+  },
 }
 
 // ❌ 입찰 관련 API - Swagger에 없음 (UI는 유지)

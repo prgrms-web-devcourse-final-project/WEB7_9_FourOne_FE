@@ -1,10 +1,20 @@
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
+import axios, {
+  AxiosInstance,
+  AxiosRequestConfig,
+  AxiosResponse,
+  InternalAxiosRequestConfig,
+} from 'axios'
 
 // API 클라이언트 기본 설정 - Next.js proxy를 통한 연결
 const API_BASE_URL = '/api/proxy' // Next.js proxy를 통한 연결
 
 class ApiClient {
   private axiosInstance: AxiosInstance
+  private isRefreshing = false
+  private failedQueue: Array<{
+    resolve: (value?: any) => void
+    reject: (reason?: any) => void
+  }> = []
 
   constructor(baseURL: string) {
     this.axiosInstance = axios.create({
@@ -73,29 +83,150 @@ class ApiClient {
         return response
       },
       async (error) => {
+        const originalRequest = error.config as InternalAxiosRequestConfig & {
+          _retry?: boolean
+        }
+
         // 400 에러 시 잘못된 요청 처리 (자동 알림 비활성화 - 각 컴포넌트에서 처리)
         if (error.response?.status === 400) {
           console.log('400 에러 응답:', error.response.data)
           // 자동 알림을 제거하고 각 컴포넌트에서 에러를 처리하도록 함
         }
 
-        // 401 에러 시 인증 만료 - 자동 리다이렉트 제거, 각 컴포넌트에서 처리
-        if (error.response?.status === 401) {
-          // 토큰 정리만 수행하고 리다이렉트는 하지 않음
-          if (typeof window !== 'undefined') {
-            // 로컬 스토리지 정리
-            localStorage.removeItem('auth_state')
-            localStorage.removeItem('user')
-            localStorage.removeItem('last_login_time')
-            localStorage.removeItem('accessToken')
-            localStorage.removeItem('refreshToken')
-            // 쿠키 정리
-            document.cookie =
-              'accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
-            document.cookie =
-              'refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+        // 401 에러 시 인증 만료 - 토큰 자동 갱신 시도
+        if (error.response?.status === 401 && !originalRequest._retry) {
+          // 이미 재시도 중인 요청이면 무시
+          if (originalRequest._retry) {
+            return Promise.reject(error)
           }
-          // 에러를 reject하여 각 컴포넌트에서 처리하도록 함
+
+          originalRequest._retry = true
+
+          // 이미 토큰 갱신 중이면 대기열에 추가
+          if (this.isRefreshing) {
+            return new Promise((resolve, reject) => {
+              this.failedQueue.push({ resolve, reject })
+            })
+              .then((token) => {
+                if (originalRequest.headers) {
+                  originalRequest.headers.Authorization = `Bearer ${token}`
+                }
+                return this.axiosInstance(originalRequest)
+              })
+              .catch((err) => {
+                return Promise.reject(err)
+              })
+          }
+
+          this.isRefreshing = true
+
+          try {
+            // refresh token 가져오기
+            const refreshToken =
+              typeof window !== 'undefined'
+                ? localStorage.getItem('refreshToken') ||
+                  document.cookie
+                    .split(';')
+                    .find((cookie) => cookie.trim().startsWith('refreshToken='))
+                    ?.split('=')[1]
+                : null
+
+            if (!refreshToken) {
+              throw new Error('Refresh token이 없습니다.')
+            }
+
+            // 토큰 재발급 API 호출
+            const refreshResponse = await axios.post<{
+              code?: string
+              httpStatus?: number
+              status?: number
+              message?: string
+              data?: {
+                accessToken?: string
+                refreshToken?: string
+              }
+            }>(`${baseURL}/api/v1/auth/refresh`, undefined, {
+              headers: {
+                Authorization: `Bearer ${refreshToken as string}`,
+              },
+              withCredentials: true,
+            })
+
+            const normalizedResponse = refreshResponse.data
+
+            // 재발급 성공 확인
+            const isSuccess =
+              (normalizedResponse.httpStatus === 200 ||
+                normalizedResponse.status === 200) &&
+              normalizedResponse.data?.accessToken
+
+            if (isSuccess && normalizedResponse.data?.accessToken) {
+              const newAccessToken = normalizedResponse.data.accessToken
+              const newRefreshToken =
+                normalizedResponse.data.refreshToken || refreshToken
+
+              // 새 토큰 저장
+              if (
+                typeof window !== 'undefined' &&
+                newAccessToken &&
+                newRefreshToken
+              ) {
+                localStorage.setItem('accessToken', newAccessToken)
+                localStorage.setItem('refreshToken', newRefreshToken)
+                document.cookie = `accessToken=${newAccessToken}; path=/; max-age=86400; SameSite=Lax`
+                document.cookie = `refreshToken=${newRefreshToken}; path=/; max-age=604800; SameSite=Lax`
+              }
+
+              // 대기 중인 요청들 재시도
+              this.failedQueue.forEach(({ resolve }) => {
+                resolve(newAccessToken)
+              })
+              this.failedQueue = []
+
+              // 원래 요청 재시도
+              if (originalRequest.headers) {
+                originalRequest.headers.Authorization = `Bearer ${newAccessToken}`
+              }
+
+              this.isRefreshing = false
+              return this.axiosInstance(originalRequest)
+            } else {
+              throw new Error('토큰 재발급 실패')
+            }
+          } catch (refreshError) {
+            // 토큰 재발급 실패 시 로그아웃 처리
+            console.error('토큰 재발급 실패:', refreshError)
+
+            // 대기 중인 요청들 모두 실패 처리
+            this.failedQueue.forEach(({ reject }) => {
+              reject(refreshError)
+            })
+            this.failedQueue = []
+            this.isRefreshing = false
+
+            // 토큰 정리
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('auth_state')
+              localStorage.removeItem('user')
+              localStorage.removeItem('last_login_time')
+              localStorage.removeItem('accessToken')
+              localStorage.removeItem('refreshToken')
+              document.cookie =
+                'accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+              document.cookie =
+                'refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+            }
+
+            // AuthContext의 logout 호출 (가능한 경우)
+            if (
+              typeof window !== 'undefined' &&
+              (window as any).__auth_logout
+            ) {
+              ;(window as any).__auth_logout()
+            }
+
+            return Promise.reject(error)
+          }
         }
 
         // 403 에러 시 권한 없음 - 자동 리다이렉트 제거, 각 컴포넌트에서 처리
@@ -120,7 +251,6 @@ class ApiClient {
       },
     )
   }
-
 
   async get<T>(
     url: string,

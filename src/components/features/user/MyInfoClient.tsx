@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { useAuth } from '@/contexts/AuthContext'
 import { authApi } from '@/lib/api'
 import { handleApiError } from '@/lib/api/common'
-import { AlertTriangle, Edit, Trash2 } from 'lucide-react'
+import { AlertTriangle, Edit, Heart, Package, Trash2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
@@ -228,6 +228,63 @@ export function MyInfoClient({ user: propUser }: MyInfoClientProps) {
             </Button>
           </div>
         </div>
+      </div>
+
+      {/* 빠른 링크 */}
+      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <Card
+          variant="outlined"
+          className="cursor-pointer transition-shadow hover:shadow-md"
+          onClick={() => router.push('/bookmarks')}
+        >
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+                <Heart className="h-6 w-6 text-red-500" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-neutral-900">찜 목록</h3>
+                <p className="text-sm text-neutral-600">관심 상품 확인</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card
+          variant="outlined"
+          className="cursor-pointer transition-shadow hover:shadow-md"
+          onClick={() => router.push('/my-products')}
+        >
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
+                <Package className="h-6 w-6 text-blue-500" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-neutral-900">내 상품</h3>
+                <p className="text-sm text-neutral-600">판매 상품 관리</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card
+          variant="outlined"
+          className="cursor-pointer transition-shadow hover:shadow-md"
+          onClick={() => router.push('/bid-status')}
+        >
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
+                <span className="text-2xl">💰</span>
+              </div>
+              <div>
+                <h3 className="font-semibold text-neutral-900">입찰 현황</h3>
+                <p className="text-sm text-neutral-600">내 입찰 내역</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* 상세 정보 */}

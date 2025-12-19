@@ -12,11 +12,13 @@ import {
 import { useAuth } from '@/contexts/AuthContext'
 import { usePagination } from '@/hooks/usePagination'
 import { useWebSocketHome } from '@/hooks/useWebSocketHome'
+import { auctionApi } from '@/lib/api'
 import {
   CATEGORY_FILTER_OPTIONS,
   type CategoryValue,
+  type SubCategoryValue,
 } from '@/lib/constants/categories'
-import { Clock, Filter, MapPin, Search, User, X } from 'lucide-react'
+import { Clock, MapPin, Search, User } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 
@@ -31,43 +33,24 @@ interface HomeClientProps {
   stats: HomeStats
 }
 
-const locations = [
-  '서울',
-  '경기도',
-  '인천',
-  '부산',
-  '대구',
-  '대전',
-  '광주',
-  '울산',
-  '강원도',
-  '충북',
-  '충남',
-  '전북',
-  '전남',
-  '경북',
-  '경남',
-  '제주',
-]
-
-const sortOptions = [
-  { value: 'LATEST', label: '최신 등록순' },
-  { value: 'PRICE_LOW', label: '가격 낮은 순' },
-  { value: 'PRICE_HIGH', label: '가격 높은 순' },
-  { value: 'ENDING_SOON', label: '마감 임박순' },
-  { value: 'POPULAR', label: '인기순' },
-]
-
+// 새로운 경매 상태 옵션 (새로운 API 스펙에 맞춤)
 const statusOptions = [
-  { value: 'BIDDING', label: '경매 중' },
-  { value: 'BEFORE_START', label: '경매 시작 전' },
-  { value: 'SUCCESSFUL', label: '낙찰' },
-  { value: 'FAILED', label: '유찰' },
+  { value: 'ALL', label: '전체' },
+  { value: 'SCHEDULED', label: '예정' },
+  { value: 'LIVE', label: '진행 중' },
+  { value: 'ENDED', label: '종료' },
 ]
 
-// API 응답의 영어 status를 한국어로 변환
+// API 응답의 영어 status를 한국어로 변환 (새로운 API 스펙에 맞춤)
 const mapApiStatusToKorean = (apiStatus: string): string => {
   switch (apiStatus) {
+    case 'SCHEDULED':
+      return '예정'
+    case 'LIVE':
+      return '진행 중'
+    case 'ENDED':
+      return '종료'
+    // 하위 호환성을 위한 기존 값들
     case 'BEFORE_START':
       return '경매 시작 전'
     case 'BIDDING':
@@ -86,73 +69,117 @@ const mapApiStatusToKorean = (apiStatus: string): string => {
 export function HomeClient({ stats }: HomeClientProps) {
   const router = useRouter()
   const { isLoggedIn } = useAuth()
-  const [selectedCategory, setSelectedCategory] = useState('all')
+  const [selectedCategory, setSelectedCategory] = useState<
+    CategoryValue | 'all'
+  >('all')
+  const [selectedSubCategory, setSelectedSubCategory] = useState<
+    SubCategoryValue | 'all'
+  >('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [error, setError] = useState('')
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
+  const [sortBy, setSortBy] = useState<'newest' | 'closing' | 'popular'>(
+    'newest',
+  )
+  const limit = 20 // 한 번에 가져올 아이템 수
 
   // WebSocket 실시간 홈 데이터 구독
   const { homeData, isSubscribed: isHomeDataSubscribed } = useWebSocketHome()
-  const [showFilters, setShowFilters] = useState(false)
-  const [filters, setFilters] = useState({
-    location: [] as string[],
-    isDelivery: undefined as boolean | undefined,
-    sort: 'LATEST' as
-      | 'LATEST'
-      | 'PRICE_LOW'
-      | 'PRICE_HIGH'
-      | 'ENDING_SOON'
-      | 'POPULAR',
-    status: 'BIDDING' as 'BIDDING' | 'FAILED' | 'BEFORE_START' | 'SUCCESSFUL',
-  })
+  const [statusFilter, setStatusFilter] = useState<
+    'ALL' | 'SCHEDULED' | 'LIVE' | 'ENDED'
+  >('ALL')
 
-  // API 호출 함수
+  // API 호출 함수 (새로운 경매 API 사용 - cursor + limit 방식)
   const fetchProducts = useCallback(
     async ({ page, size }: { page: number; size: number }) => {
-      const selectedCategoryData = CATEGORY_FILTER_OPTIONS.find(
-        (cat) => cat.value === selectedCategory,
-      )
-
-      const requestParams = {
-        page,
-        size,
-        keyword: searchQuery.trim() || undefined,
-        // 새로운 백엔드는 카테고리 필터를 어떻게 받는지 확인 필요
-        // TODO: 백엔드 API 스펙 확인 후 category 필터 타입 조정
-        category: selectedCategoryData?.apiValue
-          ? [selectedCategoryData.apiValue as CategoryValue]
-          : undefined,
-        location: filters.location.length > 0 ? filters.location : undefined,
-        isDelivery: filters.isDelivery,
-        sort: filters.sort,
-        status: filters.status,
-      }
-
-      console.log('🔍 검색 파라미터:', requestParams)
-
-      // ❌ Swagger에 상품 목록 조회 API가 없어서 임시로 빈 데이터 반환
-      // API가 준비되면 아래 주석을 해제하고 사용하세요
       try {
-        // const response = await productApi.getProducts(requestParams)
-        // return response
+        // 키워드 검색이 있는 경우
+        if (searchQuery.trim()) {
+          const response = await auctionApi.searchAuctions({
+            search: searchQuery.trim(),
+            cursor: page > 1 ? nextCursor || undefined : undefined,
+            limit: limit,
+            sort: sortBy,
+          })
 
-        // 임시: 빈 데이터 반환
-        return {
-          success: true,
-          data: {
-            content: [],
-            totalElements: 0,
-            totalPages: 0,
-            size: size,
-            number: page - 1,
-            first: true,
-            last: true,
-          },
-          resultCode: '200',
-          msg: '상품 목록 조회 API가 준비 중입니다.',
+          if (response.success && response.data) {
+            // cursor 기반 페이지네이션 응답 처리
+            const auctions = response.data.content || response.data || []
+            const hasNext = response.data.hasNext || false
+            const nextCursorValue = response.data.nextCursor || null
+            setNextCursor(nextCursorValue)
+
+            // 페이지네이션 호환을 위한 변환
+            return {
+              success: true,
+              data: {
+                content: auctions,
+                totalElements: auctions.length,
+                totalPages: hasNext ? page + 1 : page,
+                size: size,
+                number: page - 1,
+                first: page === 1,
+                last: !hasNext,
+                hasNext,
+                nextCursor: nextCursorValue,
+              },
+              resultCode: '200',
+              msg: '',
+            }
+          } else {
+            throw new Error(
+              response.message || response.msg || '경매 검색 실패',
+            )
+          }
+        } else {
+          // 카테고리/상태 필터 사용
+          const categoryParam =
+            selectedCategory === 'all' ? undefined : selectedCategory
+          const subCategoryParam =
+            selectedSubCategory === 'all' ? undefined : selectedSubCategory
+          const statusParam = statusFilter === 'ALL' ? undefined : statusFilter
+
+          const response = await auctionApi.getAuctions({
+            category: categoryParam,
+            subCategory: subCategoryParam,
+            status: statusParam,
+            cursor: page > 1 ? nextCursor || undefined : undefined,
+            limit: limit,
+            sort: sortBy,
+          })
+
+          if (response.success && response.data) {
+            // cursor 기반 페이지네이션 응답 처리
+            const auctions = response.data.content || response.data || []
+            const hasNext = response.data.hasNext || false
+            const nextCursorValue = response.data.nextCursor || null
+            setNextCursor(nextCursorValue)
+
+            // 페이지네이션 호환을 위한 변환
+            return {
+              success: true,
+              data: {
+                content: auctions,
+                totalElements: auctions.length,
+                totalPages: hasNext ? page + 1 : page,
+                size: size,
+                number: page - 1,
+                first: page === 1,
+                last: !hasNext,
+                hasNext,
+                nextCursor: nextCursorValue,
+              },
+              resultCode: '200',
+              msg: '',
+            }
+          } else {
+            throw new Error(
+              response.message || response.msg || '경매 조회 실패',
+            )
+          }
         }
       } catch (error) {
-        console.error('상품 조회 에러:', error)
-        // 에러 발생 시에도 빈 데이터 반환
+        console.error('경매 조회 에러:', error)
         return {
           success: false,
           data: {
@@ -168,11 +195,17 @@ export function HomeClient({ stats }: HomeClientProps) {
           msg:
             error instanceof Error
               ? error.message
-              : '상품 조회 중 오류가 발생했습니다.',
+              : '경매 조회 중 오류가 발생했습니다.',
         }
       }
     },
-    [selectedCategory, searchQuery, filters],
+    [
+      selectedCategory,
+      selectedSubCategory,
+      searchQuery,
+      statusFilter,
+      nextCursor,
+    ],
   )
 
   // 페이지네이션 훅 사용
@@ -198,12 +231,22 @@ export function HomeClient({ stats }: HomeClientProps) {
 
   // 검색어, 카테고리, 필터 변경 시 페이지 리셋 및 새로고침
   useEffect(() => {
+    setNextCursor(null) // cursor 초기화
     if (currentPage > 1) {
       reset()
     } else {
       refresh()
     }
-  }, [selectedCategory, searchQuery, filters, reset, refresh, currentPage])
+  }, [
+    selectedCategory,
+    selectedSubCategory,
+    searchQuery,
+    statusFilter,
+    sortBy,
+    reset,
+    refresh,
+    currentPage,
+  ])
 
   // 상품 데이터 변환 함수
   const transformProductData = (productsData: any[]): any[] => {
@@ -294,196 +337,82 @@ export function HomeClient({ stats }: HomeClientProps) {
 
       {/* 검색 및 필터 */}
       <div className="mb-8">
-        <div className="mb-6 flex flex-col space-y-4 sm:flex-row sm:space-y-0 sm:space-x-4">
-          <div className="relative flex-1">
+        {/* 검색 바 */}
+        <div className="mb-6">
+          <div className="relative">
             <Search className="absolute top-1/2 left-4 z-10 h-5 w-5 -translate-y-1/2 text-neutral-600" />
             <Input
               placeholder="상품명을 검색하세요"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="h-12 pl-12"
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  setNextCursor(null)
+                  if (currentPage > 1) {
+                    reset()
+                  } else {
+                    refresh()
+                  }
+                }
+              }}
             />
           </div>
-          <Button
-            variant="outline"
-            size="lg"
-            className="flex h-12 items-center space-x-2 px-6"
-            onClick={() => setShowFilters(!showFilters)}
-          >
-            <Filter className="h-4 w-4" />
-            <span>필터</span>
-          </Button>
         </div>
 
-        {/* 필터 패널 */}
-        {showFilters && (
-          <Card variant="elevated" className="animate-scale-in mb-6">
-            <CardContent className="p-6">
-              <div className="mb-6 flex items-center justify-between">
-                <h3 className="text-primary-500 text-xl font-bold">필터</h3>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowFilters(false)}
-                  className="rounded-full p-2 hover:bg-neutral-100"
+        {/* 경매 상태 필터 및 정렬 */}
+        <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          {/* 경매 상태 필터 */}
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium text-neutral-700">
+              경매 상태:
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {statusOptions.map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() =>
+                    setStatusFilter(
+                      option.value as 'ALL' | 'SCHEDULED' | 'LIVE' | 'ENDED',
+                    )
+                  }
+                  className={`rounded-full px-4 py-2 text-sm font-medium transition-all duration-200 ${
+                    statusFilter === option.value
+                      ? 'bg-primary-500 text-white shadow-md'
+                      : 'hover:bg-primary-50 hover:border-primary-300 hover:text-primary-700 border border-neutral-200/50 bg-white/80 text-neutral-700 backdrop-blur-sm'
+                  }`}
                 >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
-              <div className="grid gap-4 md:grid-cols-4">
-                {/* 지역 필터 */}
-                <div>
-                  <label className="mb-2 block text-sm font-medium">지역</label>
-                  <div className="flex flex-wrap gap-2">
-                    {locations.map((location) => (
-                      <button
-                        key={location}
-                        onClick={() => {
-                          setFilters((prev) => ({
-                            ...prev,
-                            location: prev.location.includes(location)
-                              ? prev.location.filter((l) => l !== location)
-                              : [...prev.location, location],
-                          }))
-                        }}
-                        className={`rounded-full border-2 px-4 py-2 text-sm font-medium transition-all duration-200 ${
-                          filters.location.includes(location)
-                            ? 'bg-primary-500 border-primary-500 text-white shadow-lg'
-                            : 'hover:border-primary-300 hover:bg-primary-50 hover:text-primary-700 border-neutral-200 bg-white/80 text-neutral-700 backdrop-blur-sm'
-                        }`}
-                      >
-                        {location}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 배송 필터 */}
-                <div>
-                  <label className="mb-2 block text-sm font-medium">배송</label>
-                  <div className="space-y-2">
-                    <label className="flex items-center">
-                      <input
-                        type="radio"
-                        name="delivery"
-                        checked={filters.isDelivery === undefined}
-                        onChange={() =>
-                          setFilters((prev) => ({
-                            ...prev,
-                            isDelivery: undefined,
-                          }))
-                        }
-                        className="mr-2"
-                      />
-                      전체
-                    </label>
-                    <label className="flex items-center">
-                      <input
-                        type="radio"
-                        name="delivery"
-                        checked={filters.isDelivery === true}
-                        onChange={() =>
-                          setFilters((prev) => ({ ...prev, isDelivery: true }))
-                        }
-                        className="mr-2"
-                      />
-                      배송 가능
-                    </label>
-                    <label className="flex items-center">
-                      <input
-                        type="radio"
-                        name="delivery"
-                        checked={filters.isDelivery === false}
-                        onChange={() =>
-                          setFilters((prev) => ({ ...prev, isDelivery: false }))
-                        }
-                        className="mr-2"
-                      />
-                      직거래만
-                    </label>
-                  </div>
-                </div>
-
-                {/* 경매 상태 */}
-                <div>
-                  <label className="mb-2 block text-sm font-medium">
-                    경매 상태
-                  </label>
-                  <select
-                    value={filters.status}
-                    onChange={(e) =>
-                      setFilters((prev) => ({
-                        ...prev,
-                        status: e.target.value as
-                          | 'BIDDING'
-                          | 'FAILED'
-                          | 'BEFORE_START'
-                          | 'SUCCESSFUL',
-                      }))
-                    }
-                    className="focus:border-primary-300 focus:ring-primary-200 w-full rounded-xl border border-neutral-200/50 bg-white/80 p-3 backdrop-blur-sm"
-                  >
-                    {statusOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* 정렬 */}
-                <div>
-                  <label className="mb-2 block text-sm font-medium">정렬</label>
-                  <select
-                    value={filters.sort}
-                    onChange={(e) =>
-                      setFilters((prev) => ({
-                        ...prev,
-                        sort: e.target.value as
-                          | 'LATEST'
-                          | 'PRICE_LOW'
-                          | 'PRICE_HIGH'
-                          | 'ENDING_SOON'
-                          | 'POPULAR',
-                      }))
-                    }
-                    className="focus:border-primary-300 focus:ring-primary-200 w-full rounded-xl border border-neutral-200/50 bg-white/80 p-3 backdrop-blur-sm"
-                  >
-                    {sortOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="mt-4 flex justify-end">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setFilters({
-                      location: [],
-                      isDelivery: undefined,
-                      sort: 'LATEST',
-                      status: 'BIDDING',
-                    })
-                  }}
-                >
-                  초기화
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+          {/* 정렬 옵션 */}
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium text-neutral-700">정렬:</span>
+            <select
+              value={sortBy}
+              onChange={(e) =>
+                setSortBy(e.target.value as 'newest' | 'closing' | 'popular')
+              }
+              className="focus:border-primary-300 focus:ring-primary-200 rounded-xl border border-neutral-200/50 bg-white/80 p-2 text-sm backdrop-blur-sm"
+            >
+              <option value="newest">최신 등록순</option>
+              <option value="closing">마감 임박순</option>
+              <option value="popular">인기순</option>
+            </select>
+          </div>
+        </div>
 
         {/* 카테고리 탭 */}
         <div className="flex flex-wrap gap-3">
           {CATEGORY_FILTER_OPTIONS.map((category) => (
             <button
               key={category.value}
-              onClick={() => setSelectedCategory(category.value)}
+              onClick={() =>
+                setSelectedCategory(category.value as CategoryValue | 'all')
+              }
               className={`rounded-full px-6 py-3 text-sm font-semibold transition-all duration-200 ${
                 selectedCategory === category.value
                   ? 'bg-primary-500 text-white shadow-lg'
