@@ -11,24 +11,17 @@ import {
   type SubCategoryValue,
 } from '@/lib/constants/categories'
 import { showErrorToast, showSuccessToast } from '@/lib/utils/toast'
-import { ProductForm } from '@/types'
-import { Camera, MapPin, Package } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
 export function ProductRegistrationClient() {
   const router = useRouter()
-  const [formData, setFormData] = useState<ProductForm>({
+  const [formData, setFormData] = useState({
     name: '',
     description: '',
-    categoryId: 1, // 하위 호환성을 위해 유지하되, 실제로는 category와 subCategory 사용
-    images: [],
-    initialPrice: 0, // ProductForm 타입 호환성을 위해 유지하되 사용하지 않음
-    auctionDuration: '24시간', // ProductForm 타입 호환성을 위해 유지하되 사용하지 않음
-    auctionStartTime: '', // ProductForm 타입 호환성을 위해 유지하되 사용하지 않음
-    deliveryMethod: [],
-    location: '',
+    imageUrls: [] as string[], // 이미지 URL 배열
   })
+  const [newImageUrl, setNewImageUrl] = useState('') // 새 이미지 URL 입력
   // 새로운 카테고리 시스템
   const [category, setCategory] = useState<CategoryValue>('STARGOODS')
   const [subCategory, setSubCategory] = useState<SubCategoryValue>('ACC')
@@ -53,16 +46,13 @@ export function ProductRegistrationClient() {
       name: '테스트 상품',
       description:
         '테스트용 상품 설명입니다. 개발 모드에서 자동으로 입력된 기본값입니다.',
-      categoryId: 1,
-      images: [],
-      initialPrice: 0,
-      auctionDuration: '24시간',
-      auctionStartTime: '',
-      deliveryMethod: ['DELIVERY'],
-      location: '서울시 강남구',
+      imageUrls: [
+        'https://images.unsplash.com/photo-1766086892325-74a61d0465f6?q=80&w=2938&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+      ],
     })
     setCategory('STARGOODS')
     setSubCategory('ACC')
+    setNewImageUrl('')
     setErrors({})
     setApiError('')
   }
@@ -72,27 +62,12 @@ export function ProductRegistrationClient() {
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
     >,
   ) => {
-    const { name, value, type } = e.target
+    const { name, value } = e.target
 
-    if (type === 'checkbox') {
-      const checked = (e.target as HTMLInputElement).checked
-      const method = name as 'TRADE' | 'DELIVERY'
-
-      // 개별 옵션 선택 시 해당 옵션 추가/제거 (중복 방지)
-      setFormData((prev) => ({
-        ...prev,
-        deliveryMethod: checked
-          ? prev.deliveryMethod.includes(method)
-            ? prev.deliveryMethod // 이미 포함되어 있으면 그대로 유지
-            : [...prev.deliveryMethod, method] // 없으면 추가
-          : prev.deliveryMethod.filter((m) => m !== method), // 체크 해제 시 제거
-      }))
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-      }))
-    }
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }))
 
     // 에러 메시지 초기화
     if (errors[name]) {
@@ -103,106 +78,120 @@ export function ProductRegistrationClient() {
     }
   }
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || [])
+  // 이미지 URL 추가 함수
+  const handleAddImageUrl = () => {
+    if (newImageUrl.trim() === '') {
+      return
+    }
+
+    // URL 유효성 검사 (간단한 검사)
+    try {
+      new URL(newImageUrl.trim())
+    } catch {
+      setErrors((prev) => ({
+        ...prev,
+        imageUrl: '올바른 URL 형식이 아닙니다',
+      }))
+      return
+    }
+
     setFormData((prev) => ({
       ...prev,
-      images: [...prev.images, ...files],
+      imageUrls: [...prev.imageUrls, newImageUrl.trim()],
+    }))
+    setNewImageUrl('')
+    setErrors((prev) => {
+      const newErrors = { ...prev }
+      delete newErrors.imageUrl
+      return newErrors
+    })
+  }
+
+  // 이미지 URL 삭제 함수
+  const handleImageUrlDelete = (indexToDelete: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      imageUrls: prev.imageUrls.filter((_, index) => index !== indexToDelete),
     }))
   }
 
-  // 이미지 삭제 함수
-  const handleImageDelete = (indexToDelete: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      images: prev.images.filter((_, index) => index !== indexToDelete),
-    }))
-  }
-
-  // 이미지 미리보기 URL 생성 함수
-  const getImagePreviewUrl = (file: File): string => {
-    return URL.createObjectURL(file)
+  // Enter 키로 이미지 URL 추가
+  const handleImageUrlKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      handleAddImageUrl()
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    console.log('🔵 handleSubmit 호출됨')
     setIsLoading(true)
     setApiError('')
 
     // 유효성 검사
     const newErrors: Record<string, string> = {}
 
-    if (!formData.name) {
-      newErrors.title = '제목을 입력해주세요'
-    } else if (formData.name.length < 1 || formData.name.length > 100) {
-      newErrors.title = '제목은 1~100자 사이로 입력해주세요'
+    if (!formData.name || formData.name.trim() === '') {
+      newErrors.name = '상품명을 입력해주세요'
     }
 
-    if (
-      formData.description &&
-      (formData.description.length < 1 || formData.description.length > 1000)
-    ) {
-      newErrors.description = '상품 설명은 1~1000자 사이로 입력해주세요'
+    if (!formData.description || formData.description.trim() === '') {
+      newErrors.description = '상품 설명을 입력해주세요'
     }
 
-    if (formData.deliveryMethod.length === 0) {
-      newErrors.deliveryMethod = '거래 방법을 선택해주세요'
+    if (formData.imageUrls.length === 0) {
+      newErrors.images = '상품 이미지 URL을 1개 이상 입력해주세요'
     }
 
-    if (formData.deliveryMethod.includes('TRADE') && !formData.location) {
-      newErrors.location = '직거래 선택 시 위치를 입력해주세요'
-    }
-
-    if (formData.images.length === 0) {
-      newErrors.images = '상품 이미지를 1개 이상 업로드해주세요'
-    } else if (formData.images.length > 5) {
-      newErrors.images = '이미지는 최대 5개까지 업로드 가능합니다'
-    }
-
+    console.log('🔵 유효성 검사 결과:', newErrors)
     setErrors(newErrors)
 
-    if (Object.keys(newErrors).length === 0) {
-      // 배송 방법 매핑
-      let deliveryMethod: 'DELIVERY' | 'BOTH' | 'TRADE' = 'DELIVERY'
-      if (
-        formData.deliveryMethod.includes('TRADE') &&
-        formData.deliveryMethod.includes('DELIVERY')
-      ) {
-        deliveryMethod = 'BOTH'
-      } else if (formData.deliveryMethod.includes('TRADE')) {
-        deliveryMethod = 'TRADE'
-      } else if (formData.deliveryMethod.includes('DELIVERY')) {
-        deliveryMethod = 'DELIVERY'
+    // 에러가 있으면 사용자에게 알림
+    if (Object.keys(newErrors).length > 0) {
+      console.log('🔴 유효성 검사 실패:', newErrors)
+      // 첫 번째 에러 메시지를 토스트로 표시
+      const firstError = Object.values(newErrors)[0]
+      if (firstError) {
+        showErrorToast(firstError, '입력 오류')
       }
+      setIsLoading(false)
+      return
+    }
 
+    if (Object.keys(newErrors).length === 0) {
       try {
         console.log('🚀 API 전송 데이터:', {
           name: formData.name,
           description: formData.description,
-          categoryId: formData.categoryId,
-          initialPrice: formData.initialPrice,
+          category: category,
+          subCategory: subCategory,
+          imagesFiles: formData.imageUrls,
         })
 
-        // Swagger 스펙에 맞는 요청 데이터
-        // ProductCreateRequest: { name, description, category, subCategory, imagesFiles: string[] }
-        // imagesFiles는 이미 업로드된 파일 URL 배열이어야 함
-        // TODO: 이미지 업로드 API가 별도로 있다면 먼저 업로드하고 URL을 받아야 함
-        // 현재는 빈 배열로 전송 (이미지 업로드 방식 확인 필요)
+        // 요청 형식: { name, description, category, subCategory, imagesFiles: string[] }
         const response = await productApi.createProduct(
           {
             name: formData.name,
             description: formData.description,
             category: category,
             subCategory: subCategory,
-            imagesFiles: [], // TODO: 이미지 업로드 후 URL 배열로 변경 필요
+            imagesFiles: formData.imageUrls, // 이미지 URL 배열
           },
-          formData.images, // 임시로 파일 유지 (실제 업로드 방식 확인 후 수정)
-          'AUCTION',
+          [], // File 객체 배열은 더 이상 사용하지 않음
         )
 
         if (response.success) {
           showSuccessToast('상품이 성공적으로 등록되었습니다.')
-          router.push('/my-products')
+
+          // 응답에서 productId를 가져와서 상품 상세 페이지로 이동
+          const productId = (response.data as any)?.productId
+          if (productId) {
+            router.push(`/products/${productId}`)
+          } else {
+            // productId가 없으면 내 상품 목록으로 이동
+            router.push('/my-products')
+          }
         } else {
           // 백엔드 메시지 우선 사용
           setApiError(
@@ -240,65 +229,71 @@ export function ProductRegistrationClient() {
         </div>
       )}
       <form onSubmit={handleSubmit} className="space-y-8">
-        {/* 상품 사진 */}
+        {/* 상품 이미지 URL */}
         <Card variant="outlined">
           <CardContent className="p-6">
             <h2 className="mb-4 text-lg font-semibold text-neutral-900">
-              상품 사진 *
+              상품 이미지 URL *
             </h2>
 
-            <div className="rounded-lg border-2 border-dashed border-neutral-300 p-8 text-center">
-              <Camera className="mx-auto mb-4 h-12 w-12 text-neutral-400" />
-              <p className="mb-2 text-neutral-600">사진을 선택해주세요</p>
-              <p className="mb-4 text-sm text-neutral-500">
-                1장 이상 필수 (JPG, PNG)
+            <div className="space-y-4">
+              {/* 이미지 URL 입력 */}
+              <div className="flex gap-2">
+                <Input
+                  type="url"
+                  value={newImageUrl}
+                  onChange={(e) => setNewImageUrl(e.target.value)}
+                  onKeyPress={handleImageUrlKeyPress}
+                  placeholder="https://example.com/image.jpg"
+                  error={errors.imageUrl}
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  onClick={handleAddImageUrl}
+                  disabled={!newImageUrl.trim()}
+                >
+                  추가
+                </Button>
+              </div>
+              <p className="text-sm text-neutral-500">
+                이미지 URL을 입력하고 추가 버튼을 클릭하세요 (최소 1개 이상)
               </p>
 
-              <input
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="hidden"
-                id="image-upload"
-              />
-              <label
-                htmlFor="image-upload"
-                className="bg-primary-500 hover:bg-primary-600 inline-flex cursor-pointer items-center rounded-lg px-4 py-2 text-white"
-              >
-                사진 선택
-              </label>
-            </div>
-
-            {formData.images.length > 0 && (
-              <div className="mt-4">
-                <p className="mb-2 text-sm text-neutral-600">
-                  선택된 사진 ({formData.images.length}장)
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {formData.images.map((image, index) => (
-                    <div
-                      key={index}
-                      className="relative h-20 w-20 overflow-hidden rounded-lg border border-neutral-200"
-                    >
-                      <img
-                        src={getImagePreviewUrl(image)}
-                        alt={`상품 이미지 ${index + 1}`}
-                        className="h-full w-full object-cover"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleImageDelete(index)}
-                        className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white shadow-sm hover:bg-red-600"
-                        title="이미지 삭제"
+              {/* 추가된 이미지 URL 목록 */}
+              {formData.imageUrls.length > 0 && (
+                <div className="mt-4">
+                  <p className="mb-2 text-sm text-neutral-600">
+                    추가된 이미지 ({formData.imageUrls.length}개)
+                  </p>
+                  <div className="space-y-2">
+                    {formData.imageUrls.map((url, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center gap-2 rounded-lg border border-neutral-200 p-3"
                       >
-                        <span className="text-xs">×</span>
-                      </button>
-                    </div>
-                  ))}
+                        <div className="flex-1 overflow-hidden">
+                          <p className="truncate text-sm text-neutral-600">
+                            {url}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleImageUrlDelete(index)}
+                          className="flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
+                          title="이미지 삭제"
+                        >
+                          <span className="text-xs">×</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+              {errors.images && (
+                <p className="text-error-500 mt-2 text-sm">{errors.images}</p>
+              )}
+            </div>
           </CardContent>
         </Card>
 
@@ -311,12 +306,12 @@ export function ProductRegistrationClient() {
 
             <div className="space-y-4">
               <Input
-                label="제목 *"
+                label="상품명 *"
                 name="name"
                 value={formData.name}
                 onChange={handleInputChange}
                 placeholder="상품명을 입력하세요"
-                error={errors.title}
+                error={errors.name}
               />
 
               {/* 카테고리 선택 */}
@@ -397,82 +392,6 @@ export function ProductRegistrationClient() {
                   </p>
                 )}
               </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-neutral-700">
-                  거래 지역
-                </label>
-                <Input
-                  name="location"
-                  value={formData.location}
-                  onChange={handleInputChange}
-                  placeholder="예: 서울 강남구, 경기도 고양시"
-                  error={errors.location}
-                />
-                <div className="mt-2 text-sm text-neutral-500">
-                  직거래 선택 시 필수입니다.
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* 거래 방식 */}
-        <Card variant="outlined">
-          <CardContent className="p-6">
-            <h2 className="mb-4 text-lg font-semibold text-neutral-900">
-              거래 방식
-            </h2>
-
-            <div className="space-y-4">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-neutral-700">
-                  거래 방법 * (중복 선택 가능)
-                </label>
-                {errors.deliveryMethod && (
-                  <p className="text-error-500 mb-2 text-sm">
-                    {errors.deliveryMethod}
-                  </p>
-                )}
-
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <label className="flex cursor-pointer items-center rounded-lg border border-neutral-300 p-4 hover:bg-neutral-50">
-                    <input
-                      type="checkbox"
-                      name="DELIVERY"
-                      checked={formData.deliveryMethod.includes('DELIVERY')}
-                      onChange={handleInputChange}
-                      className="text-primary-600 focus:ring-primary-500 rounded border-neutral-300"
-                    />
-                    <div className="ml-3">
-                      <div className="flex items-center space-x-2">
-                        <Package className="h-5 w-5 text-neutral-600" />
-                        <span className="font-medium">배송</span>
-                      </div>
-                      <p className="text-sm text-neutral-500">택배, 우편 등</p>
-                    </div>
-                  </label>
-
-                  <label className="flex cursor-pointer items-center rounded-lg border border-neutral-300 p-4 hover:bg-neutral-50">
-                    <input
-                      type="checkbox"
-                      name="TRADE"
-                      checked={formData.deliveryMethod.includes('TRADE')}
-                      onChange={handleInputChange}
-                      className="text-primary-600 focus:ring-primary-500 rounded border-neutral-300"
-                    />
-                    <div className="ml-3">
-                      <div className="flex items-center space-x-2">
-                        <MapPin className="h-5 w-5 text-neutral-600" />
-                        <span className="font-medium">직거래</span>
-                      </div>
-                      <p className="text-sm text-neutral-500">
-                        직접 만나서 거래
-                      </p>
-                    </div>
-                  </label>
-                </div>
-              </div>
             </div>
           </CardContent>
         </Card>
@@ -482,7 +401,13 @@ export function ProductRegistrationClient() {
           <Button type="button" variant="outline" onClick={() => router.back()}>
             취소
           </Button>
-          <Button type="submit" disabled={isLoading}>
+          <Button
+            type="submit"
+            disabled={isLoading}
+            onClick={(e) => {
+              console.log('🔵 버튼 클릭됨', { isLoading, formData })
+            }}
+          >
             {isLoading ? (
               <div className="flex items-center">
                 <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>

@@ -7,19 +7,18 @@ import { Input } from '@/components/ui/input'
 import { useAuth } from '@/contexts/AuthContext'
 import { useWebSocketAuctionTimer } from '@/hooks/useWebSocketAuctionTimer'
 import { useWebSocketBid } from '@/hooks/useWebSocketBid'
-import { bidApi, productApi } from '@/lib/api'
+import { auctionApi, bidApi, productApi } from '@/lib/api'
 import { handleApiError } from '@/lib/api/common'
 import {
   showErrorToast,
   showInfoToast,
   showSuccessToast,
 } from '@/lib/utils/toast'
-import { Product } from '@/types'
+import { AuctionDetail } from '@/types'
 import {
   Clock,
   Edit,
   Heart,
-  MapPin,
   MessageSquare,
   Send,
   Trash2,
@@ -30,7 +29,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 
 interface ProductDetailClientProps {
-  product: Product
+  product: AuctionDetail
   initialBidStatus?: any
 }
 
@@ -48,9 +47,10 @@ export function ProductDetailClient({
   useEffect(() => {
     if (apiError) {
       showErrorToast(apiError, '오류')
-      setApiError('') // 토스트 표시 후 초기화
+      setApiError('')
     }
   }, [apiError])
+
   const [bidStatus, setBidStatus] = useState<any>(initialBidStatus || null)
   const [isPriceUpdated, setIsPriceUpdated] = useState(false)
   const [isBidCountUpdated, setIsBidCountUpdated] = useState(false)
@@ -61,7 +61,9 @@ export function ProductDetailClient({
   } | null>(null)
   const [productData, setProductData] = useState(product)
   const [isRefreshing, setIsRefreshing] = useState(false)
-  const [isBookmarked, setIsBookmarked] = useState(false)
+  const [isBookmarked, setIsBookmarked] = useState(
+    product.isBookmarked || false,
+  )
   const [isBookmarkLoading, setIsBookmarkLoading] = useState(false)
   const [qnaList, setQnaList] = useState<any[]>([])
   const [isQnaLoading, setIsQnaLoading] = useState(false)
@@ -69,46 +71,15 @@ export function ProductDetailClient({
   const [newAnswers, setNewAnswers] = useState<Record<number, string>>({})
   const [expandedQnaId, setExpandedQnaId] = useState<number | null>(null)
 
-  const getSafeProductId = (productId: any): number => {
-    if (typeof productId === 'number') return productId
-    if (typeof productId === 'string') return parseInt(productId) || 0
-    if (typeof productId === 'object' && productId !== null) {
-      return Number(productId.id || productId.value || productId.productId) || 0
-    }
-    return 0
-  }
-
-  const safeProductId = getSafeProductId(product.productId)
-
-  // 상품 데이터 새로고침 함수
-  const refreshProductData = async () => {
-    try {
-      setIsRefreshing(true)
-      console.log('🔄 상품 데이터 새로고침 중...')
-      const response: any = await productApi.getProduct(safeProductId)
-      if (response.success && response.data) {
-        setProductData(response.data)
-        // bidStatus도 함께 업데이트
-        setBidStatus((prev: any) => ({
-          ...prev,
-          currentPrice: response.data.currentPrice,
-          bidCount: response.data.bidCount,
-        }))
-        console.log('✅ 상품 데이터 새로고침 완료:', response.data)
-      }
-    } catch (error) {
-      console.error('❌ 상품 데이터 새로고침 실패:', error)
-    } finally {
-      setIsRefreshing(false)
-    }
-  }
+  const safeProductId = product.productId
+  const safeAuctionId = product.auctionId
 
   const {
     bidUpdate,
     auctionStatus,
     isSubscribed,
     error: wsErrorFromHook,
-  } = useWebSocketBid(safeProductId)
+  } = useWebSocketBid(safeAuctionId)
 
   // wsError가 변경되면 토스트로 표시
   useEffect(() => {
@@ -118,55 +89,88 @@ export function ProductDetailClient({
   }, [wsErrorFromHook])
 
   const { timerData, isSubscribed: isTimerSubscribed } =
-    useWebSocketAuctionTimer(safeProductId)
+    useWebSocketAuctionTimer(safeAuctionId)
 
-  const mapApiStatusToKorean = (apiStatus: string): string => {
-    switch (apiStatus) {
-      case 'BEFORE_START':
+  const mapStatusToKorean = (status: string): string => {
+    switch (status) {
+      case 'SCHEDULED':
         return '경매 시작 전'
-      case 'BIDDING':
-      case 'SELLING':
+      case 'LIVE':
         return '경매 중'
-      case 'SUCCESSFUL':
-      case 'SOLD':
-        return '낙찰'
-      case 'FAILED':
-        return '유찰'
+      case 'ENDED':
+        return '경매 종료'
       default:
-        return apiStatus
+        return status
     }
   }
 
-  const getImageUrl = (
-    image:
-      | string
-      | { imageUrl: string; id?: number; productId?: number }
-      | undefined,
-  ): string => {
-    if (!image) return ''
-    if (typeof image === 'string') return image
-    return image.imageUrl || ''
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('ko-KR').format(price) + '원'
+  }
+
+  const formatDateTime = (dateString: string) => {
+    if (!dateString) return '시간 미정'
+    try {
+      const date = new Date(dateString)
+      return date.toLocaleString('ko-KR', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    } catch {
+      return '시간 미정'
+    }
+  }
+
+  const formatRemainingTime = (seconds: number) => {
+    if (!seconds || seconds <= 0) return '경매 종료'
+    const days = Math.floor(seconds / 86400)
+    const hours = Math.floor((seconds % 86400) / 3600)
+    const minutes = Math.floor((seconds % 3600) / 60)
+    const secs = seconds % 60
+
+    if (days > 0) {
+      return `${days}일 ${hours}시간`
+    } else if (hours > 0) {
+      return `${hours}시간 ${minutes}분`
+    } else if (minutes > 0) {
+      return `${minutes}분 ${secs}초`
+    } else {
+      return `${secs}초`
+    }
   }
 
   const isOwner = useMemo(() => {
-    return (
-      user &&
-      productData.seller &&
-      String(user.id) === String(productData.seller.id)
-    )
-  }, [user, productData.seller])
+    return user && String(user.id) === String(productData.sellerId)
+  }, [user, productData.sellerId])
 
-  // 입찰 현황 조회
-  const fetchBidStatus = async () => {
+  // 북마크 토글
+  const handleBookmarkToggle = async () => {
+    if (!isLoggedIn) {
+      showInfoToast('로그인이 필요합니다.')
+      router.push('/login')
+      return
+    }
+
+    setIsBookmarkLoading(true)
     try {
-      const response: any = await bidApi.getBidStatus(safeProductId)
-      if (response.success) {
-        setBidStatus(response.data)
+      if (isBookmarked) {
+        await productApi.deleteBookmark(safeProductId)
+        setIsBookmarked(false)
+        showSuccessToast('찜 목록에서 제거되었습니다.')
       } else {
-        console.log('❌ 입찰 현황 조회 실패:', response.message || response.msg)
+        await productApi.addBookmark(safeProductId)
+        setIsBookmarked(true)
+        showSuccessToast('찜 목록에 추가되었습니다.')
       }
-    } catch (error) {
-      console.error('❌ 입찰 현황 조회 실패:', error)
+    } catch (error: any) {
+      console.error('북마크 토글 실패:', error)
+      const apiError = handleApiError(error)
+      showErrorToast(apiError.message)
+    } finally {
+      setIsBookmarkLoading(false)
     }
   }
 
@@ -185,36 +189,6 @@ export function ProductDetailClient({
       console.error('QnA 목록 조회 실패:', error)
     } finally {
       setIsQnaLoading(false)
-    }
-  }
-
-  // 북마크 토글
-  const handleBookmarkToggle = async () => {
-    if (!isLoggedIn) {
-      showInfoToast('로그인이 필요합니다.')
-      router.push('/login')
-      return
-    }
-
-    try {
-      setIsBookmarkLoading(true)
-      if (isBookmarked) {
-        const response = await productApi.deleteBookmark(safeProductId)
-        if (response.success) {
-          setIsBookmarked(false)
-        }
-      } else {
-        const response = await productApi.addBookmark(safeProductId)
-        if (response.success) {
-          setIsBookmarked(true)
-        }
-      }
-    } catch (error: any) {
-      console.error('북마크 토글 실패:', error)
-      const apiError = handleApiError(error)
-      showErrorToast(apiError.message)
-    } finally {
-      setIsBookmarkLoading(false)
     }
   }
 
@@ -292,7 +266,6 @@ export function ProductDetailClient({
         )
       }
     } catch (error: any) {
-      console.error('답변 삭제 실패:', error)
       const apiError = handleApiError(error)
       showErrorToast(apiError.message)
     }
@@ -308,30 +281,26 @@ export function ProductDetailClient({
           bidCount: bidUpdate.bidCount,
         }
 
-        // 가격이 변경되었는지 확인
+        // 가격이 업데이트되었는지 확인
         if (prev?.currentPrice !== bidUpdate.currentPrice) {
           setIsPriceUpdated(true)
-          setTimeout(() => setIsPriceUpdated(false), 3000) // 3초 후 하이라이트 제거
-
-          // 새 입찰 알림 표시
           setLastBidInfo({
             price: bidUpdate.currentPrice,
-            bidder: bidUpdate.lastBidder || '',
+            bidder: bidUpdate.lastBidder || '익명',
           })
           setShowBidNotification(true)
-          setTimeout(() => setShowBidNotification(false), 5000) // 5초 후 알림 제거
-
-          // 상품 데이터 새로고침 (가격 변경 시)
-          refreshProductData()
+          setTimeout(() => {
+            setIsPriceUpdated(false)
+            setShowBidNotification(false)
+          }, 3000)
         }
 
-        // 입찰 수가 변경되었는지 확인
+        // 입찰자 수가 업데이트되었는지 확인
         if (prev?.bidCount !== bidUpdate.bidCount) {
           setIsBidCountUpdated(true)
-          setTimeout(() => setIsBidCountUpdated(false), 3000) // 3초 후 하이라이트 제거
-
-          // 상품 데이터 새로고침 (입찰 수 변경 시)
-          refreshProductData()
+          setTimeout(() => {
+            setIsBidCountUpdated(false)
+          }, 3000)
         }
 
         return newStatus
@@ -339,147 +308,40 @@ export function ProductDetailClient({
     }
   }, [bidUpdate])
 
-  // 경매 상태 업데이트
+  // 타이머 데이터 업데이트
   useEffect(() => {
-    if (auctionStatus) {
-      console.log('🎯 경매 상태 업데이트:', auctionStatus)
-      // 경매 상태에 따른 UI 업데이트 로직
-    }
-  }, [auctionStatus])
+    if (timerData && timerData.timeLeft) {
+      // timeLeft를 파싱하여 초 단위로 변환 (예: "1시간 30분" → 5400초)
+      // 간단하게 endAt과 현재 시간 차이로 계산
+      const endTime = new Date(productData.endAt).getTime()
+      const now = Date.now()
+      const remainingSeconds = Math.max(0, Math.floor((endTime - now) / 1000))
 
+      setProductData((prev) => ({
+        ...prev,
+        remainingTimeSeconds: remainingSeconds || prev.remainingTimeSeconds,
+      }))
+    }
+  }, [timerData, productData.endAt])
+
+  // 초기 데이터 로드
   useEffect(() => {
-    // 토큰 상태 확인
-    const cookies = document.cookie.split(';')
-    const accessTokenCookie = cookies.find((cookie) =>
-      cookie.trim().startsWith('accessToken='),
-    )
-    const accessToken = accessTokenCookie?.split('=')[1]
-
-    // 서버에서 입찰 현황을 가져오지 못한 경우에만 클라이언트에서 조회
-    if (!initialBidStatus && accessToken) {
-      fetchBidStatus()
-    }
-
     // QnA 목록 로드
     fetchQnaList()
   }, [safeProductId])
 
-  const formatPrice = (price: number) => {
-    if (isNaN(price) || price === null || price === undefined) {
-      return '0원'
-    }
-    return new Intl.NumberFormat('ko-KR').format(price) + '원'
-  }
-
-  const formatDateTime = (dateTime: string) => {
-    if (!dateTime || dateTime === '') {
-      return '시간 미정'
-    }
-
-    try {
-      const date = new Date(dateTime)
-      if (isNaN(date.getTime())) {
-        return '시간 미정'
-      }
-
-      return date.toLocaleString('ko-KR', {
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      })
-    } catch (error) {
-      console.error('날짜 포맷 오류:', error, dateTime)
-      return '시간 미정'
-    }
-  }
-
-  const formatDeliveryMethod = (method: string) => {
-    if (!method) return '직접거래'
-
-    const deliveryMethods: { [key: string]: string } = {
-      DELIVERY: '택배',
-      PICKUP: '직접거래',
-      BOTH: '택배/직접거래',
-      TRADE: '직접거래',
-      택배: '택배',
-      직접거래: '직접거래',
-      '택배/직접거래': '택배/직접거래',
-    }
-
-    return deliveryMethods[method] || method
-  }
-
-  const formatTimeLeft = (auctionEndTime: string) => {
-    if (!auctionEndTime || auctionEndTime === '') {
-      return '경매 시간 미정'
-    }
-
-    try {
-      const now = new Date().getTime()
-      let end: number
-
-      // 다양한 날짜 형식 처리
-      if (typeof auctionEndTime === 'string') {
-        // ISO 형식 처리 (2025-11-11T03:27:27)
-        if (auctionEndTime.includes('T')) {
-          end = new Date(auctionEndTime).getTime()
-        }
-        // YYYY-MM-DD 형식인 경우
-        else if (auctionEndTime.match(/^\d{4}-\d{2}-\d{2}$/)) {
-          end = new Date(auctionEndTime + 'T23:59:59').getTime()
-        }
-        // 기타 형식
-        else {
-          end = new Date(auctionEndTime).getTime()
-        }
-      } else {
-        end = new Date(auctionEndTime).getTime()
-      }
-
-      if (isNaN(end)) {
-        return '경매 시간 미정'
-      }
-
-      const diff = end - now
-
-      if (diff <= 0) return '경매 종료'
-
-      const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-      const hours = Math.floor(
-        (diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
-      )
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-
-      if (days > 0) {
-        return `${days}일 ${hours}시간`
-      } else if (hours > 0) {
-        return `${hours}시간 ${minutes}분`
-      } else if (minutes > 0) {
-        return `${minutes}분`
-      } else {
-        return '곧 종료'
-      }
-    } catch (error) {
-      console.error('시간 계산 오류:', error, auctionEndTime)
-      return '경매 시간 미정'
-    }
-  }
-
   const handleBid = async () => {
     if (!isLoggedIn) {
-      console.log('🎯 로그인되지 않음, 로그인 페이지로 이동')
       router.push('/login')
       return
     }
 
     const amount = parseInt(bidAmount.replace(/,/g, ''))
 
-    const currentPrice = productData.currentPrice || productData.initialPrice
-    const minBidAmount = currentPrice + 100
+    const currentPrice = productData.currentHighestBid || productData.startPrice
+    const minBidAmount = currentPrice + productData.minBidStep
 
     if (!amount || amount < minBidAmount) {
-      console.log('🎯 입찰 금액이 최소 입찰가보다 낮음')
       setApiError(
         `최소 입찰가 ${formatPrice(minBidAmount)}원 이상 입력해주세요.`,
       )
@@ -490,44 +352,25 @@ export function ProductDetailClient({
     setApiError('')
 
     try {
-      // auctionId 확인 (상품 데이터에서 가져오기)
-      const auctionId = (productData as any).auctionId
-      if (!auctionId) {
-        setApiError('경매 정보를 찾을 수 없습니다.')
-        setIsLoading(false)
-        return
-      }
-
-      console.log('🎯 입찰 API 호출 시작:', {
-        auctionId: auctionId,
+      const response: any = await bidApi.createBid(safeAuctionId, {
         bidAmount: amount,
       })
-
-      const response: any = await bidApi.createBid(auctionId, {
-        bidAmount: amount,
-      })
-      console.log('🎯 입찰 API 응답:', response)
 
       if (response.success) {
         showSuccessToast('입찰이 성공적으로 등록되었습니다.')
         setBidAmount('')
-        fetchBidStatus()
         // 상품 데이터 새로고침
-        refreshProductData()
-
-        // 내 입찰 목록에 추가 (WebSocket을 통해 다른 페이지에서도 알림 받을 수 있도록)
-        console.log('🎯 입찰 성공 - 내 입찰 목록에 추가됨')
-
-        // 페이지 새로고침 대신 실시간 업데이트 사용
-        // window.location.reload()
+        setProductData((prev) => ({
+          ...prev,
+          currentHighestBid:
+            response.data?.currentHighestBid || prev.currentHighestBid,
+          totalBidCount: (prev.totalBidCount || 0) + 1,
+        }))
       } else {
-        console.log('🎯 입찰 실패:', response.message || response.msg)
         setApiError(response.message || response.msg || '입찰에 실패했습니다.')
       }
     } catch (error: any) {
-      console.error('🎯 입찰 실패:', error)
-      console.error('🎯 에러 상세:', error.response?.data)
-      // 백엔드 에러 메시지 그대로 표시
+      console.error('입찰 실패:', error)
       const apiError = handleApiError(error)
       setApiError(apiError.message)
     }
@@ -541,6 +384,64 @@ export function ProductDetailClient({
     setBidAmount(formatted)
     setApiError('')
   }
+
+  const handleBuyNow = async () => {
+    if (!isLoggedIn) {
+      router.push('/login')
+      return
+    }
+
+    if (
+      !confirm(
+        `즉시 구매가 ${formatPrice(productData.buyNowPrice)}원으로 구매하시겠습니까?`,
+      )
+    ) {
+      return
+    }
+
+    setIsLoading(true)
+    setApiError('')
+
+    try {
+      // TODO: 결제 수단 ID는 실제로는 사용자가 선택한 결제 수단을 사용해야 함
+      const response: any = await auctionApi.buyNow(safeAuctionId, {
+        amount: productData.buyNowPrice,
+        methodId: 1, // 임시로 1 사용
+      })
+
+      if (response.success) {
+        showSuccessToast('즉시 구매가 완료되었습니다.')
+        setProductData((prev) => ({
+          ...prev,
+          status: 'ENDED' as const,
+        }))
+      } else {
+        setApiError(
+          response.message || response.msg || '즉시 구매에 실패했습니다.',
+        )
+      }
+    } catch (error: any) {
+      console.error('즉시 구매 실패:', error)
+      const apiError = handleApiError(error)
+      setApiError(apiError.message)
+    }
+
+    setIsLoading(false)
+  }
+
+  const currentPrice = productData.currentHighestBid || productData.startPrice
+
+  // remainingTimeSeconds 계산
+  const calculateRemainingSeconds = () => {
+    if (timerData && timerData.timeLeft) {
+      const endTime = new Date(productData.endAt).getTime()
+      const now = Date.now()
+      return Math.max(0, Math.floor((endTime - now) / 1000))
+    }
+    return productData.remainingTimeSeconds
+  }
+
+  const remainingTime = calculateRemainingSeconds()
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
@@ -560,7 +461,6 @@ export function ProductDetailClient({
       )}
 
       {/* 실시간 연결 상태 표시 */}
-      {/* WebSocket 연결 상태 표시 */}
       <div className="mb-4 space-y-2">
         {isSubscribed && (
           <div className="flex items-center justify-center space-x-2 rounded-lg bg-green-50 px-4 py-2 text-sm text-green-700">
@@ -574,28 +474,15 @@ export function ProductDetailClient({
             <span>실시간 경매 타이머 연결됨</span>
           </div>
         )}
-        {!isSubscribed && !isTimerSubscribed && (
-          <div className="flex items-center justify-center space-x-2 rounded-lg bg-gray-50 px-4 py-2 text-sm text-gray-600">
-            <span>실시간 기능 연결 중...</span>
-          </div>
-        )}
-
-        {/* 데이터 새로고침 상태 */}
-        {isRefreshing && (
-          <div className="flex items-center justify-center space-x-2 rounded-lg bg-blue-50 px-4 py-2 text-sm text-blue-700">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-500 border-t-transparent"></div>
-            <span>데이터 새로고침 중...</span>
-          </div>
-        )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* 상품 이미지 */}
         <div className="space-y-4">
           <div className="aspect-square rounded-lg bg-neutral-200">
-            {productData.images && productData.images[0] ? (
+            {productData.imageUrls && productData.imageUrls[0] ? (
               <img
-                src={getImageUrl(productData.images[0])}
+                src={productData.imageUrls[0]}
                 alt={productData.name}
                 className="h-full w-full rounded-lg object-cover"
                 onError={(e) => {
@@ -626,16 +513,16 @@ export function ProductDetailClient({
           </div>
 
           {/* 추가 이미지들 */}
-          {productData.images && productData.images.length > 1 && (
+          {productData.imageUrls && productData.imageUrls.length > 1 && (
             <div className="grid grid-cols-4 gap-2">
-              {productData.images.slice(1, 5).map((image, index) => (
+              {productData.imageUrls.slice(1, 5).map((imageUrl, index) => (
                 <div
                   key={index}
                   className="aspect-square rounded-lg bg-neutral-200"
                 >
                   <img
-                    src={getImageUrl(image)}
-                    alt={`${product.name} ${index + 2}`}
+                    src={imageUrl}
+                    alt={`${productData.name} ${index + 2}`}
                     className="h-full w-full rounded-lg object-cover"
                     onError={(e) => {
                       console.error('이미지 로드 실패:', e.currentTarget.src)
@@ -654,17 +541,14 @@ export function ProductDetailClient({
           <div>
             <div className="mb-2 flex items-center space-x-2">
               <Badge variant="primary">{productData.category}</Badge>
-              {productData.status === '경매 중' && (
+              {productData.status === 'LIVE' && (
                 <Badge variant="success">경매중</Badge>
               )}
-              {productData.status === '경매 시작 전' && (
+              {productData.status === 'SCHEDULED' && (
                 <Badge variant="secondary">시작전</Badge>
               )}
-              {productData.status === '낙찰' && (
-                <Badge variant="primary">낙찰</Badge>
-              )}
-              {productData.status === '유찰' && (
-                <Badge variant="error">유찰</Badge>
+              {productData.status === 'ENDED' && (
+                <Badge variant="error">종료</Badge>
               )}
             </div>
 
@@ -691,53 +575,17 @@ export function ProductDetailClient({
                 )}
                 {isOwner && (
                   <>
-                    {/* 경매 시작 전: 경매 등록 버튼 */}
-                    {productData.status === '경매 시작 전' && (
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          router.push(
-                            `/products/${product.productId}/register-auction`,
-                          )
-                        }}
-                        className="bg-primary-600 hover:bg-primary-700 flex items-center space-x-2"
-                      >
-                        <Zap className="h-4 w-4" />
-                        <span>경매 등록</span>
-                      </Button>
-                    )}
-                    {/* 경매 시작 전: 상품 수정 버튼 */}
-                    {productData.status === '경매 시작 전' && (
+                    {productData.status === 'SCHEDULED' && (
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => {
-                          router.push(`/products/${product.productId}/edit`)
+                          router.push(`/products/${productData.productId}/edit`)
                         }}
                         className="flex items-center space-x-2"
                       >
                         <Edit className="h-4 w-4" />
                         <span>상품 수정</span>
-                      </Button>
-                    )}
-                    {/* 경매 등록 후: 수정 불가 */}
-                    {(productData.status === '경매 중' ||
-                      productData.status === '낙찰' ||
-                      productData.status === '유찰') && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={true}
-                        className="flex items-center space-x-2"
-                      >
-                        <Edit className="h-4 w-4" />
-                        <span>
-                          {productData.status === '경매 중'
-                            ? '경매중 (수정 불가)'
-                            : productData.status === '낙찰'
-                              ? '낙찰 완료'
-                              : '유찰 완료'}
-                        </span>
                       </Button>
                     )}
                   </>
@@ -756,12 +604,7 @@ export function ProductDetailClient({
                         : 'text-success-600'
                     }`}
                   >
-                    {formatPrice(
-                      bidUpdate?.currentPrice ||
-                        bidStatus?.currentPrice ||
-                        productData.currentPrice ||
-                        productData.initialPrice,
-                    )}
+                    {formatPrice(currentPrice)}
                   </span>
                   {bidUpdate && (
                     <div className="flex items-center space-x-1">
@@ -779,24 +622,30 @@ export function ProductDetailClient({
               </div>
               <div className="flex items-center justify-between">
                 <span>시작가:</span>
-                <span>{formatPrice(productData.initialPrice)}</span>
+                <span>{formatPrice(productData.startPrice)}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>즉시 구매가:</span>
+                <span className="text-primary-600 font-semibold">
+                  {formatPrice(productData.buyNowPrice)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>최소 입찰 단위:</span>
+                <span>{formatPrice(productData.minBidStep)}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span>경매 시작:</span>
                 <span className="flex items-center space-x-1">
                   <Clock className="h-4 w-4" />
-                  <span>
-                    {formatDateTime((productData as any).auctionStartTime)}
-                  </span>
+                  <span>{formatDateTime(productData.startAt)}</span>
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <span>경매 종료:</span>
                 <span className="flex items-center space-x-1">
                   <Clock className="h-4 w-4" />
-                  <span>
-                    {formatDateTime((productData as any).auctionEndTime)}
-                  </span>
+                  <span>{formatDateTime(productData.endAt)}</span>
                 </span>
               </div>
               <div className="flex items-center justify-between">
@@ -805,16 +654,12 @@ export function ProductDetailClient({
                   <Clock className="h-4 w-4" />
                   <span
                     className={
-                      timerData?.isEndingSoon
+                      remainingTime && remainingTime < 3600
                         ? 'animate-pulse font-semibold text-red-500'
                         : ''
                     }
                   >
-                    {timerData?.timeLeft ||
-                      formatTimeLeft(
-                        (productData as any).auctionEndTime ||
-                          productData.auctionEndTime,
-                      )}
+                    {formatRemainingTime(remainingTime)}
                   </span>
                   {isTimerSubscribed && (
                     <span className="ml-1 animate-pulse text-xs text-green-500">
@@ -824,7 +669,7 @@ export function ProductDetailClient({
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span>참여자 수:</span>
+                <span>총 입찰 횟수:</span>
                 <div className="flex items-center space-x-2">
                   <span
                     className={`font-semibold transition-all duration-500 ${
@@ -833,11 +678,7 @@ export function ProductDetailClient({
                         : ''
                     }`}
                   >
-                    {bidUpdate?.bidCount ||
-                      bidStatus?.bidCount ||
-                      productData.bidderCount ||
-                      0}
-                    명
+                    {bidUpdate?.bidCount || productData.totalBidCount || 0}회
                   </span>
                   {bidUpdate && (
                     <div className="flex items-center space-x-1">
@@ -846,18 +687,12 @@ export function ProductDetailClient({
                       </span>
                       {isBidCountUpdated && (
                         <span className="text-xs font-semibold text-blue-600">
-                          (새 참여자!)
+                          (새 입찰!)
                         </span>
                       )}
                     </div>
                   )}
                 </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>배송 방법:</span>
-                <span>
-                  {formatDeliveryMethod((productData as any).deliveryMethod)}
-                </span>
               </div>
             </div>
           </div>
@@ -872,9 +707,7 @@ export function ProductDetailClient({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() =>
-                    router.push(`/seller/${productData.seller?.id || '1'}`)
-                  }
+                  onClick={() => router.push(`/seller/${productData.sellerId}`)}
                 >
                   상세보기
                 </Button>
@@ -882,38 +715,19 @@ export function ProductDetailClient({
               <div className="space-y-2 text-sm">
                 <div className="flex items-center space-x-2">
                   <User className="h-4 w-4 text-neutral-400" />
-                  <span>{productData.seller?.nickname || '판매자'}</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Heart className="h-4 w-4 text-red-400" />
-                  <span>신뢰도 {productData.seller?.creditScore || 0}점</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <MapPin className="h-4 w-4 text-neutral-400" />
-                  <span>{productData.location || '위치 정보 없음'}</span>
+                  <span>{productData.sellerNickname}</span>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           {/* 입찰 섹션 */}
-          {(() => {
-            const status = (product as any).status
-            const showBidSection = status === 'BIDDING' || status === '경매 중'
-            console.log('🎯 입찰 섹션 표시 조건 확인:', {
-              status,
-              showBidSection,
-              isLoggedIn,
-              productId: safeProductId,
-            })
-            return showBidSection
-          })() && (
+          {productData.status === 'LIVE' && !isOwner && (
             <Card variant="outlined">
-              <CardContent className="p-4">
-                <h3 className="mb-3 text-lg font-semibold text-neutral-900">
+              <CardContent className="p-6">
+                <h3 className="mb-4 text-lg font-semibold text-neutral-900">
                   입찰하기
                 </h3>
-
                 <div className="space-y-4">
                   <div>
                     <label className="mb-2 block text-sm font-medium text-neutral-700">
@@ -923,168 +737,52 @@ export function ProductDetailClient({
                       type="text"
                       value={bidAmount}
                       onChange={handleBidAmountChange}
-                      placeholder="입찰 금액을 입력하세요"
-                      className="text-right"
+                      placeholder={`최소 ${formatPrice(currentPrice + productData.minBidStep)}`}
+                      className="text-lg"
                     />
                     <p className="mt-1 text-xs text-neutral-500">
                       최소 입찰가:{' '}
-                      {formatPrice(
-                        (productData.currentPrice || productData.initialPrice) +
-                          100,
-                      )}
+                      {formatPrice(currentPrice + productData.minBidStep)}
                     </p>
+                    {apiError && (
+                      <p className="mt-1 text-sm text-red-600">{apiError}</p>
+                    )}
                   </div>
-
                   <Button
                     onClick={handleBid}
                     disabled={isLoading || !bidAmount}
                     className="w-full"
                   >
-                    {isLoading ? (
-                      <div className="flex items-center">
-                        <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
-                        입찰 중...
-                      </div>
-                    ) : (
-                      '입찰하기'
-                    )}
+                    {isLoading ? '입찰 중...' : '입찰하기'}
                   </Button>
-
-                  {!isLoggedIn && (
-                    <p className="text-center text-sm text-neutral-500">
-                      입찰하려면{' '}
-                      <button
-                        onClick={() => router.push('/login')}
-                        className="text-primary-600 hover:underline"
-                      >
-                        로그인
-                      </button>
-                      이 필요합니다.
-                    </p>
-                  )}
+                  <Button
+                    onClick={handleBuyNow}
+                    disabled={isLoading}
+                    variant="outline"
+                    className="border-primary-500 text-primary-600 hover:bg-primary-50 w-full"
+                  >
+                    {isLoading
+                      ? '처리 중...'
+                      : `즉시 구매 (${formatPrice(productData.buyNowPrice)})`}
+                  </Button>
                 </div>
               </CardContent>
             </Card>
           )}
 
-          {/* 입찰 현황 */}
+          {/* 상품 설명 */}
           <Card variant="outlined">
-            <CardContent className="p-4">
-              <h3 className="mb-3 text-lg font-semibold text-neutral-900">
-                입찰 현황
+            <CardContent className="p-6">
+              <h3 className="mb-4 text-lg font-semibold text-neutral-900">
+                상품 설명
               </h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center justify-between">
-                  <span>총 입찰 수:</span>
-                  <span>
-                    {bidUpdate?.bidCount ||
-                      bidStatus?.bidCount ||
-                      product.bidderCount ||
-                      0}
-                    회
-                    {bidUpdate && (
-                      <span className="ml-1 animate-pulse text-xs text-green-500">
-                        실시간
-                      </span>
-                    )}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>현재 최고가:</span>
-                  <span className="font-semibold">
-                    {formatPrice(
-                      bidUpdate?.currentPrice ||
-                        bidStatus?.currentPrice ||
-                        productData.currentPrice ||
-                        productData.initialPrice,
-                    )}
-                    {bidUpdate && (
-                      <span className="ml-1 animate-pulse text-xs text-green-500">
-                        실시간
-                      </span>
-                    )}
-                  </span>
-                </div>
-                {bidUpdate?.lastBidder && (
-                  <div className="flex items-center justify-between">
-                    <span>최근 입찰자:</span>
-                    <span className="text-xs text-neutral-500">
-                      {bidUpdate.lastBidder}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* 상품 상태별 메시지 */}
-          <Card variant="outlined">
-            <CardContent className="p-4">
-              <div className="text-center">
-                {((product as any).status === 'BIDDING' ||
-                  (product as any).status === '경매 중') && (
-                  <div className="text-green-600">
-                    <Clock className="mx-auto mb-2 h-8 w-8" />
-                    <p className="font-semibold">경매 진행중</p>
-                    <p className="text-sm">
-                      현재 경매가 진행 중입니다. 입찰에 참여해보세요.
-                    </p>
-                  </div>
-                )}
-                {((product as any).status === 'BEFORE_START' ||
-                  (product as any).status === '경매 시작 전') && (
-                  <div className="text-amber-600">
-                    <Clock className="mx-auto mb-2 h-8 w-8" />
-                    <p className="font-semibold">경매 시작 전</p>
-                    <p className="text-sm">
-                      경매가 시작되면 입찰할 수 있습니다.
-                    </p>
-                  </div>
-                )}
-                {((product as any).status === 'SUCCESSFUL' ||
-                  (product as any).status === '경매 완료') && (
-                  <div className="text-green-600">
-                    <p className="font-semibold">경매 완료</p>
-                    <p className="text-sm">
-                      이 상품의 경매가 성공적으로 완료되었습니다.
-                    </p>
-                  </div>
-                )}
-                {((product as any).status === 'PAID' ||
-                  (product as any).status === '결제 완료') && (
-                  <div className="text-blue-600">
-                    <p className="font-semibold">결제 완료</p>
-                    <p className="text-sm">이 상품의 결제가 완료되었습니다.</p>
-                  </div>
-                )}
-                {((product as any).status === 'FAILED' ||
-                  (product as any).status === '경매 실패') && (
-                  <div className="text-red-600">
-                    <p className="font-semibold">경매 실패</p>
-                    <p className="text-sm">이 상품의 경매가 실패했습니다.</p>
-                  </div>
-                )}
-              </div>
+              <p className="text-sm whitespace-pre-wrap text-neutral-700">
+                {productData.description}
+              </p>
             </CardContent>
           </Card>
         </div>
       </div>
-
-      {/* 상품 설명 */}
-      <Card variant="outlined" className="mt-6">
-        <CardContent className="p-6">
-          <h3 className="mb-4 text-lg font-semibold text-neutral-900">
-            상품 설명
-          </h3>
-          <div className="prose max-w-none text-neutral-700">
-            {productData.description ? (
-              <p className="whitespace-pre-wrap">{productData.description}</p>
-            ) : (
-              <p className="text-neutral-500">상품 설명이 없습니다.</p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
 
       {/* QnA 섹션 */}
       <Card variant="outlined" className="mt-6">
@@ -1145,14 +843,18 @@ export function ProductDetailClient({
                     key={qnaData.qnaId}
                     className="rounded-lg border border-neutral-200 p-4"
                   >
-                    {/* 질문 */}
-                    <div className="mb-3">
+                    <div
+                      className="cursor-pointer"
+                      onClick={() =>
+                        setExpandedQnaId(isExpanded ? null : qnaData.qnaId)
+                      }
+                    >
                       <div className="mb-2 flex items-center justify-between">
                         <div className="flex items-center space-x-2">
-                          <span className="text-sm font-semibold text-neutral-900">
+                          <span className="text-primary-600 text-sm font-semibold">
                             Q.
                           </span>
-                          <span className="text-sm text-neutral-600">
+                          <span className="text-sm font-medium text-neutral-900">
                             {qnaData.question}
                           </span>
                         </div>
@@ -1180,21 +882,19 @@ export function ProductDetailClient({
                                   {answer.answer}
                                 </span>
                               </div>
-                              {isOwner && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() =>
-                                    handleDeleteAnswer(
-                                      safeProductId,
-                                      answer.qnaId,
-                                    )
-                                  }
-                                  className="h-6 px-2 text-xs text-red-500 hover:text-red-700"
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
-                              )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  handleDeleteAnswer(
+                                    safeProductId,
+                                    qnaData.qnaId,
+                                  )
+                                }}
+                                className="h-6 px-2 text-xs text-red-500 hover:text-red-700"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
                             </div>
                             <span className="text-xs text-neutral-400">
                               {answer.answeredAt
@@ -1208,8 +908,8 @@ export function ProductDetailClient({
                       </div>
                     )}
 
-                    {/* 답변 작성 (판매자만) */}
-                    {isOwner && (
+                    {/* 답변 작성 (모든 사용자에게 표시, 권한 없으면 API에서 에러) */}
+                    {isLoggedIn && (
                       <div className="mt-3 ml-4 space-y-2 border-l-2 border-neutral-200 pl-4">
                         <Input
                           placeholder="답변을 입력해주세요"

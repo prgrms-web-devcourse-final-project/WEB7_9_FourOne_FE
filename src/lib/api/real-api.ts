@@ -337,18 +337,26 @@ export const productApi = {
   },
 
   // 상품 등록 (새로운 백엔드: POST /api/v1/products)
-  // Swagger 스펙: application/json, ProductCreateRequest { name, description, category, subCategory, imagesFiles: string[] }
+  // JSON 형식: { name, description, category, subCategory, imagesFiles: string[] }
+  // imagesFiles는 이미 업로드된 이미지 URL 배열이어야 함
+  // TODO: 이미지 업로드 API가 별도로 있다면 먼저 업로드하고 URL을 받아야 함
   createProduct: async (
     productData: ProductCreateRequest,
-    images: File[], // 임시로 유지 (실제 업로드 방식 확인 후 수정)
-    productType?: string, // Swagger에 없음, 제거 고려
+    images: File[], // File 객체 배열 (현재는 사용하지 않음, 추후 이미지 업로드 API 연동 필요)
   ) => {
-    // Swagger 스펙에 따르면 JSON만 전송
-    // imagesFiles는 이미 업로드된 파일 URL 배열이어야 함
-    // TODO: 이미지 업로드 API가 별도로 있다면 먼저 업로드하고 URL을 받아야 함
+    // JSON 형식으로 전송
+    // imagesFiles는 String 배열 (이미지 URL 배열)
+    const requestData = {
+      name: productData.name,
+      description: productData.description,
+      category: productData.category,
+      subCategory: productData.subCategory,
+      imagesFiles: productData.imagesFiles || [], // 이미지 URL 배열
+    }
+
     const response = await apiClient.post<ApiResponse<any>>(
       '/api/v1/products',
-      productData, // Swagger 스펙에 맞게 JSON만 전송
+      requestData, // JSON으로 전송
     )
 
     return normalizeApiResponse(response.data)
@@ -1003,6 +1011,15 @@ export const paymentApi = {
 }
 
 // ❌ 게시판 관련 API - Swagger에 없음 (UI는 유지)
+// 관리자 관련 API
+export const adminApi = {
+  // 관리자 도움말 조회 (GET /api/v1/admin/help)
+  getHelp: async () => {
+    const response = await apiClient.get<ApiResponse<any>>('/api/v1/admin/help')
+    return normalizeApiResponse(response.data)
+  },
+}
+
 export const boardApi = {
   // ❌ Swagger에 없음
   createPost: async (data: BoardWriteRequest) => {

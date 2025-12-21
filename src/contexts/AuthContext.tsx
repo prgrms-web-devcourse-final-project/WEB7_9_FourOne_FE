@@ -62,8 +62,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // 파싱 실패 시 로컬스토리지 정리
           localStorage.removeItem('user')
           localStorage.removeItem('accessToken')
-        }
-      } else {
+                }
+              } else {
         console.log('⚠️ 로컬스토리지에 사용자 정보가 없습니다')
         // 사용자 정보가 없으면 토큰도 정리
         localStorage.removeItem('accessToken')
@@ -71,8 +71,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           'accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
       }
 
-      setLoading(false)
-      console.log('✅ 로그인 상태 확인 완료')
+        setLoading(false)
+        console.log('✅ 로그인 상태 확인 완료')
     }
 
     checkAuthStatus()

@@ -178,7 +178,7 @@ export function HomeClient() {
             )
           }
         }
-      } catch (error) {
+        } catch (error) {
         console.error('경매 조회 에러:', error)
         return {
           success: false,
@@ -363,58 +363,58 @@ export function HomeClient() {
         {/* 카테고리 필터 및 정렬 옵션 */}
         <div className="mb-4 flex items-center justify-between gap-4">
           {/* 카테고리 탭 */}
-          <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2">
             {CATEGORY_FILTER_OPTIONS.map((category) => (
-              <button
+                      <button
                 key={category.value}
-                onClick={() => {
+                        onClick={() => {
                   setSelectedCategory(category.value as CategoryValue | 'all')
                   setSelectedSubCategory('all') // 카테고리 변경 시 서브카테고리 초기화
-                }}
+                        }}
                 className={`rounded-full px-4 py-2 text-sm font-medium transition-all duration-200 ${
                   selectedCategory === category.value
                     ? 'bg-neutral-900 text-white shadow-md'
                     : 'border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-100'
-                }`}
-              >
+                        }`}
+                      >
                 {category.label}
-              </button>
-            ))}
-          </div>
+                      </button>
+                    ))}
+                </div>
 
           {/* 경매 상태 필터 및 정렬 */}
           <div className="flex items-center gap-3">
             {/* 경매 상태 필터 */}
-            <select
+                  <select
               value={statusFilter}
-              onChange={(e) =>
+                    onChange={(e) =>
                 setStatusFilter(
                   e.target.value as 'ALL' | 'SCHEDULED' | 'LIVE' | 'ENDED',
                 )
-              }
+                    }
               className="focus:border-primary-300 focus:ring-primary-200 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm"
-            >
-              {statusOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+                  >
+                    {statusOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
 
             {/* 정렬 옵션 */}
-            <select
+                  <select
               value={sortBy}
-              onChange={(e) =>
+                    onChange={(e) =>
                 setSortBy(e.target.value as 'newest' | 'closing' | 'popular')
-              }
+                    }
               className="focus:border-primary-300 focus:ring-primary-200 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm"
-            >
+                  >
               <option value="newest">최신 등록순</option>
               <option value="closing">마감 임박순</option>
               <option value="popular">인기순</option>
-            </select>
-          </div>
-        </div>
+                  </select>
+                </div>
+              </div>
 
         {/* 서브카테고리 탭 (카테고리 선택 시에만 표시) */}
         {selectedCategory !== 'all' && (
@@ -439,12 +439,12 @@ export function HomeClient() {
                   selectedSubCategory === subCategory.value
                     ? 'bg-neutral-900 text-white shadow-md'
                     : 'border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-100'
-                }`}
-              >
+              }`}
+            >
                 {subCategory.label}
-              </button>
-            ))}
-          </div>
+            </button>
+          ))}
+        </div>
         )}
       </div>
 

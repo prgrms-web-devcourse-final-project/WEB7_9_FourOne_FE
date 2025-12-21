@@ -56,6 +56,29 @@ export type ProductCategory =
 
 export type ProductStatus = '경매 시작 전' | '경매 중' | '낙찰' | '유찰'
 
+// 경매 상세 조회 응답 타입 (새로운 구조)
+export interface AuctionDetail {
+  auctionId: number
+  productId: number
+  sellerId: number
+  sellerNickname: string
+  name: string
+  description: string
+  category: string
+  status: 'SCHEDULED' | 'LIVE' | 'ENDED'
+  startPrice: number
+  buyNowPrice: number
+  minBidStep: number
+  startAt: string
+  endAt: string
+  createdAt: string
+  currentHighestBid: number
+  totalBidCount: number
+  remainingTimeSeconds: number
+  imageUrls: string[]
+  isBookmarked: boolean
+}
+
 // 입찰 관련 타입
 export interface Bid {
   id: number
