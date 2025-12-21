@@ -464,14 +464,14 @@ export function HomeClient() {
                 <Button
                   size="lg"
                   variant="gradient"
-                  onClick={() => (window.location.href = '/login')}
+                  onClick={() => router.push('/login')}
                 >
                   로그인
                 </Button>
                 <Button
                   variant="outline"
                   size="lg"
-                  onClick={() => (window.location.href = '/signup')}
+                  onClick={() => router.push('/login?tab=signup')}
                 >
                   회원가입
                 </Button>

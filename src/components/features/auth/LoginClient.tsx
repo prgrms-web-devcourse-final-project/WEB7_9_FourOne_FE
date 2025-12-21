@@ -8,20 +8,23 @@ import { authApi } from '@/lib/api'
 import { handleApiError } from '@/lib/api/common'
 import { showErrorToast, showSuccessToast } from '@/lib/utils/toast'
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
 export function LoginClient() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { login } = useAuth()
-  const [isLogin, setIsLogin] = useState(true)
+
+  // URL 쿼리 파라미터에서 탭 확인 (tab=signup이면 회원가입 탭)
+  const initialTab = searchParams.get('tab')
+  const [isLogin, setIsLogin] = useState(initialTab !== 'signup')
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     name: '',
-    phone: '',
     confirmPassword: '',
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -49,7 +52,6 @@ export function LoginClient() {
         email: 'notforbug@gmail.com',
         password: 'Password123!',
         name: '',
-        phone: '',
         confirmPassword: '',
       })
     } else {
@@ -57,7 +59,6 @@ export function LoginClient() {
         email: 'notforbug@gmail.com',
         password: 'Password123!',
         name: '테스트유저',
-        phone: '010-1234-5678',
         confirmPassword: 'Password123!',
       })
     }
@@ -194,12 +195,6 @@ export function LoginClient() {
     if (!isLogin) {
       if (!formData.name) {
         newErrors.name = '닉네임을 입력해주세요'
-      }
-
-      if (!formData.phone) {
-        newErrors.phone = '전화번호를 입력해주세요'
-      } else if (!/^010\d{8}$/.test(formData.phone.replace(/-/g, ''))) {
-        newErrors.phone = '올바른 전화번호 형식이 아닙니다 (010-0000-0000)'
       }
 
       if (!formData.confirmPassword) {
@@ -348,7 +343,6 @@ export function LoginClient() {
               email: formData.email,
               password: '',
               name: '',
-              phone: '',
               confirmPassword: '',
             })
           } else {
@@ -475,17 +469,6 @@ export function LoginClient() {
                     </p>
                   )}
                 </div>
-              )}
-
-              {!isLogin && (
-                <Input
-                  label="전화번호"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleInputChange}
-                  placeholder="01000000000"
-                  error={errors.phone}
-                />
               )}
 
               {!isLogin && (
