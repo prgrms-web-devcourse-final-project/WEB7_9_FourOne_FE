@@ -2,13 +2,13 @@
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { ErrorAlert } from '@/components/ui/error-alert'
 import { Input } from '@/components/ui/input'
 import { productApi } from '@/lib/api'
+import { showErrorToast, showSuccessToast } from '@/lib/utils/toast'
 import { Product } from '@/types'
 import { Camera, MapPin, Package, Save, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 interface ProductEditClientProps {
   product: Product
@@ -16,6 +16,10 @@ interface ProductEditClientProps {
 
 export function ProductEditClient({ product }: ProductEditClientProps) {
   const router = useRouter()
+
+  // 경매 등록 여부 확인 (경매 시작 전이 아니면 수정/삭제 불가)
+  const isAuctionRegistered =
+    product.status !== '경매 시작 전' && (product as any).auctionStartTime
 
   const [formData, setFormData] = useState({
     name: product.name,
@@ -45,6 +49,14 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [apiError, setApiError] = useState('')
+
+  // apiError가 변경되면 토스트로 표시
+  useEffect(() => {
+    if (apiError) {
+      showErrorToast(apiError, '요청 실패')
+      setApiError('') // 토스트 표시 후 초기화
+    }
+  }, [apiError])
 
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -126,6 +138,11 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
 
   // 상품 삭제 함수
   const handleDeleteProduct = async () => {
+    if (isAuctionRegistered) {
+      showErrorToast('경매가 등록된 상품은 삭제할 수 없습니다.', '삭제 불가')
+      return
+    }
+
     if (
       !confirm(
         '정말로 이 상품을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.',
@@ -148,7 +165,7 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
       const response = await productApi.deleteProduct(productId)
 
       if (response.success || response.resultCode?.startsWith('200')) {
-        alert('상품이 성공적으로 삭제되었습니다.')
+        showSuccessToast('상품이 성공적으로 삭제되었습니다.')
         router.push('/my-products')
       } else {
         setApiError(response.msg || '상품 삭제에 실패했습니다.')
@@ -207,6 +224,11 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (isAuctionRegistered) {
+      showErrorToast('경매가 등록된 상품은 수정할 수 없습니다.', '수정 불가')
+      return
+    }
 
     if (!validateForm()) {
       return
@@ -306,7 +328,7 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
 
       if (response.success || response.resultCode?.startsWith('200')) {
         console.log('✅ 상품 수정 성공:', response.data)
-        alert('상품이 성공적으로 수정되었습니다.')
+        showSuccessToast('상품이 성공적으로 수정되었습니다.')
         const redirectProductId = product.productId || (product as any).id
         router.push(`/products/${redirectProductId}`)
       } else {
@@ -336,16 +358,37 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6 sm:px-6 lg:px-8">
-      <form onSubmit={handleSubmit} className="space-y-8">
-        {/* API 에러 메시지 */}
-        {apiError && (
-          <ErrorAlert
-            title="요청 실패"
-            message={apiError}
-            onClose={() => setApiError('')}
-          />
-        )}
+      {/* 경매 등록 후 수정 불가 안내 */}
+      {isAuctionRegistered && (
+        <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4">
+          <div className="flex items-start space-x-3">
+            <div className="flex-shrink-0">
+              <svg
+                className="h-5 w-5 text-amber-600"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-medium text-amber-800">
+                경매가 등록된 상품입니다
+              </h3>
+              <p className="mt-1 text-sm text-amber-700">
+                경매가 등록된 상품은 수정하거나 삭제할 수 없습니다. 경매가
+                종료된 후에만 수정이 가능합니다.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
+      <form onSubmit={handleSubmit} className="space-y-8">
         {/* 상품 사진 */}
         <Card variant="outlined">
           <CardContent className="p-6">
@@ -367,13 +410,15 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
                         alt={`기존 이미지 ${index + 1}`}
                         className="h-24 w-full rounded-lg border border-neutral-200 object-cover"
                       />
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteExistingImage(imageUrl)}
-                        className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-600"
-                      >
-                        ×
-                      </button>
+                      {!isAuctionRegistered && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteExistingImage(imageUrl)}
+                          className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-600"
+                        >
+                          ×
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -422,12 +467,17 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
                 multiple
                 accept="image/*"
                 onChange={handleImageChange}
+                disabled={isAuctionRegistered}
                 className="hidden"
                 id="image-upload"
               />
               <label
                 htmlFor="image-upload"
-                className="bg-primary-600 hover:bg-primary-700 inline-flex cursor-pointer items-center rounded-md px-4 py-2 text-sm font-medium text-white"
+                className={`${
+                  isAuctionRegistered
+                    ? 'cursor-not-allowed opacity-50'
+                    : 'hover:bg-primary-700 cursor-pointer'
+                } bg-primary-600 inline-flex items-center rounded-md px-4 py-2 text-sm font-medium text-white`}
               >
                 이미지 추가
               </label>
@@ -459,6 +509,7 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
                   onChange={handleInputChange}
                   placeholder="상품명을 입력하세요"
                   error={errors.name}
+                  disabled={isAuctionRegistered}
                 />
               </div>
 
@@ -472,8 +523,9 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
                   value={formData.description}
                   onChange={handleInputChange}
                   placeholder="상품에 대한 자세한 설명을 입력하세요"
-                  className="focus:border-primary-500 focus:ring-primary-500 w-full rounded-md border border-neutral-300 p-3 focus:ring-1 focus:outline-none"
+                  className="focus:border-primary-500 focus:ring-primary-500 w-full rounded-md border border-neutral-300 p-3 focus:ring-1 focus:outline-none disabled:cursor-not-allowed disabled:bg-neutral-100"
                   rows={4}
+                  disabled={isAuctionRegistered}
                 />
                 {errors.description && (
                   <p className="mt-1 text-sm text-red-600">
@@ -491,7 +543,8 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
                   name="category"
                   value={formData.category}
                   onChange={handleInputChange}
-                  className="focus:border-primary-500 focus:ring-primary-500 w-full rounded-md border border-neutral-300 p-2 focus:ring-1 focus:outline-none"
+                  disabled={isAuctionRegistered}
+                  className="focus:border-primary-500 focus:ring-primary-500 w-full rounded-md border border-neutral-300 p-2 focus:ring-1 focus:outline-none disabled:cursor-not-allowed disabled:bg-neutral-100"
                 >
                   <option value="디지털/가전">디지털/가전</option>
                   <option value="패션/의류">패션/의류</option>
@@ -534,24 +587,34 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
                   경매 기간 *
                 </label>
                 <div className="space-y-3">
-                  <label className="flex cursor-pointer items-center">
+                  <label
+                    className={`flex cursor-pointer items-center ${
+                      isAuctionRegistered ? 'cursor-not-allowed opacity-50' : ''
+                    }`}
+                  >
                     <input
                       type="radio"
                       name="auctionDuration"
                       value="24시간"
                       checked={formData.auctionDuration === '24시간'}
                       onChange={handleInputChange}
+                      disabled={isAuctionRegistered}
                       className="text-primary-600 focus:ring-primary-500 mr-3"
                     />
                     <span>24시간</span>
                   </label>
-                  <label className="flex cursor-pointer items-center">
+                  <label
+                    className={`flex cursor-pointer items-center ${
+                      isAuctionRegistered ? 'cursor-not-allowed opacity-50' : ''
+                    }`}
+                  >
                     <input
                       type="radio"
                       name="auctionDuration"
                       value="48시간"
                       checked={formData.auctionDuration === '48시간'}
                       onChange={handleInputChange}
+                      disabled={isAuctionRegistered}
                       className="text-primary-600 focus:ring-primary-500 mr-3"
                     />
                     <span>48시간</span>
@@ -589,6 +652,7 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
                   onChange={handleInputChange}
                   placeholder="거래 위치를 입력하세요"
                   error={errors.location}
+                  disabled={isAuctionRegistered}
                 />
               </div>
 
@@ -604,12 +668,19 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
                 )}
 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <label className="flex cursor-pointer items-center rounded-lg border border-neutral-300 p-4 hover:bg-neutral-50">
+                  <label
+                    className={`flex cursor-pointer items-center rounded-lg border border-neutral-300 p-4 ${
+                      isAuctionRegistered
+                        ? 'cursor-not-allowed opacity-50'
+                        : 'hover:bg-neutral-50'
+                    }`}
+                  >
                     <input
                       type="checkbox"
                       name="DELIVERY"
                       checked={formData.deliveryMethod.includes('DELIVERY')}
                       onChange={handleInputChange}
+                      disabled={isAuctionRegistered}
                       className="text-primary-600 focus:ring-primary-500 rounded border-neutral-300"
                     />
                     <div className="ml-3">
@@ -621,12 +692,19 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
                     </div>
                   </label>
 
-                  <label className="flex cursor-pointer items-center rounded-lg border border-neutral-300 p-4 hover:bg-neutral-50">
+                  <label
+                    className={`flex cursor-pointer items-center rounded-lg border border-neutral-300 p-4 ${
+                      isAuctionRegistered
+                        ? 'cursor-not-allowed opacity-50'
+                        : 'hover:bg-neutral-50'
+                    }`}
+                  >
                     <input
                       type="checkbox"
                       name="TRADE"
                       checked={formData.deliveryMethod.includes('TRADE')}
                       onChange={handleInputChange}
+                      disabled={isAuctionRegistered}
                       className="text-primary-600 focus:ring-primary-500 rounded border-neutral-300"
                     />
                     <div className="ml-3">
@@ -668,7 +746,7 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
           </Button>
           <Button
             type="submit"
-            disabled={isLoading || isDeleting}
+            disabled={isLoading || isDeleting || isAuctionRegistered}
             className="bg-primary-600 hover:bg-primary-700 flex-1"
           >
             <Save className="mr-2 h-4 w-4" />

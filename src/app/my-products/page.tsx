@@ -34,7 +34,7 @@ export default async function MyProductsPage() {
 
     if (!response.success || !response.data) {
       return (
-        <HomeLayout isLoggedIn={true}>
+        <HomeLayout isLoggedIn={!!accessToken}>
           <PageHeader
             title="내 상품 관리"
             description="등록한 상품을 관리하고 판매 현황을 확인하세요"
@@ -73,7 +73,7 @@ export default async function MyProductsPage() {
     console.log('📦 처리된 상품 목록:', products)
 
     return (
-      <HomeLayout isLoggedIn={true}>
+      <HomeLayout isLoggedIn={!!accessToken}>
         <PageHeader
           title="내 상품 관리"
           description="등록한 상품을 관리하고 판매 현황을 확인하세요"
@@ -93,8 +93,11 @@ export default async function MyProductsPage() {
   } catch (error: any) {
     console.error('MyProducts 페이지 에러:', error)
 
+    const cookieStore = await cookies()
+    const accessToken = cookieStore.get('accessToken')?.value
+
     return (
-      <HomeLayout isLoggedIn={true}>
+      <HomeLayout isLoggedIn={!!accessToken}>
         <PageHeader
           title="내 상품 관리"
           description="등록한 상품을 관리하고 판매 현황을 확인하세요"

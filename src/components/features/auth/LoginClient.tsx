@@ -2,14 +2,14 @@
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { ErrorAlert } from '@/components/ui/error-alert'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/contexts/AuthContext'
 import { authApi } from '@/lib/api'
 import { handleApiError } from '@/lib/api/common'
+import { showErrorToast, showSuccessToast } from '@/lib/utils/toast'
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 export function LoginClient() {
   const router = useRouter()
@@ -22,12 +22,19 @@ export function LoginClient() {
     password: '',
     name: '',
     phone: '',
-    address: '',
     confirmPassword: '',
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [apiError, setApiError] = useState('')
   const [isEmailVerified, setIsEmailVerified] = useState(false)
+
+  // apiError가 변경되면 토스트로 표시
+  useEffect(() => {
+    if (apiError) {
+      showErrorToast(apiError, '요청 실패')
+      setApiError('') // 토스트 표시 후 초기화
+    }
+  }, [apiError])
   const [isSendingCode, setIsSendingCode] = useState(false)
   const [isVerifyingCode, setIsVerifyingCode] = useState(false)
   const [verificationCode, setVerificationCode] = useState('')
@@ -43,7 +50,6 @@ export function LoginClient() {
         password: 'Password123!',
         name: '',
         phone: '',
-        address: '',
         confirmPassword: '',
       })
     } else {
@@ -52,7 +58,6 @@ export function LoginClient() {
         password: 'Password123!',
         name: '테스트유저',
         phone: '010-1234-5678',
-        address: '서울시 강남구',
         confirmPassword: 'Password123!',
       })
     }
@@ -81,7 +86,7 @@ export function LoginClient() {
       console.log('🔍 인증 코드 전송 응답:', response)
 
       if (response.success) {
-        alert('인증 코드가 전송되었습니다. 이메일을 확인해주세요.')
+        showSuccessToast('인증 코드가 전송되었습니다. 이메일을 확인해주세요.')
       } else {
         // 응답에서 message를 그대로 사용
         const errorMessage =
@@ -123,7 +128,7 @@ export function LoginClient() {
 
       if (response.success) {
         setIsEmailVerified(true)
-        alert('이메일 인증이 완료되었습니다.')
+        showSuccessToast('이메일 인증이 완료되었습니다.')
       } else {
         // 응답에서 message를 그대로 사용
         const errorMessage =
@@ -188,7 +193,7 @@ export function LoginClient() {
 
     if (!isLogin) {
       if (!formData.name) {
-        newErrors.name = '이름을 입력해주세요'
+        newErrors.name = '닉네임을 입력해주세요'
       }
 
       if (!formData.phone) {
@@ -231,39 +236,75 @@ export function LoginClient() {
 
           if (isSuccess) {
             const responseData = response.data as any // 타입 단언으로 임시 해결
+
+            // 토큰 추출 (real-api.ts에서 이미 저장했지만, 여기서도 확인)
+            const accessToken = responseData?.accessToken || responseData?.token
+
+            if (!accessToken || accessToken === 'temp-token') {
+              console.error('❌ 로그인 응답에 유효한 토큰이 없습니다:', {
+                responseData,
+                hasAccessToken: !!responseData?.accessToken,
+                hasToken: !!responseData?.token,
+              })
+              setApiError('로그인 응답에 토큰이 없습니다.')
+              setIsLoading(false)
+              return
+            }
+
+            // JWT 토큰 디코딩하여 만료 시간 확인
+            let tokenExpired = false
+            try {
+              const payload = JSON.parse(atob(accessToken.split('.')[1]))
+              const now = Math.floor(Date.now() / 1000)
+              const exp = payload.exp
+              tokenExpired = exp && exp <= now
+
+              if (tokenExpired) {
+                setApiError('토큰이 만료되었습니다. 다시 로그인해주세요.')
+                setIsLoading(false)
+                return
+              }
+            } catch (e) {
+              // 토큰 디코딩 실패 시 만료된 것으로 간주
+              tokenExpired = true
+              setApiError('토큰이 유효하지 않습니다. 다시 로그인해주세요.')
+              setIsLoading(false)
+              return
+            }
+
             const userData = {
-              id: responseData?.id || responseData?.memberId || 1,
-              email: formData.email,
+              id:
+                responseData?.id ||
+                responseData?.memberId ||
+                responseData?.userId ||
+                1,
+              email: responseData?.email || formData.email,
               nickname: responseData?.nickname || responseData?.name || '',
-              phoneNumber:
-                responseData?.phone || responseData?.phoneNumber || '',
-              address: responseData?.address || '',
             }
 
-            const tokens = {
-              accessToken:
-                responseData?.accessToken ||
-                responseData?.token ||
-                'temp-token',
-              refreshToken: responseData?.refreshToken || 'temp-refresh-token',
+            // real-api.ts에서 이미 토큰을 저장했으므로, 여기서는 확인만
+            const cookies = document.cookie.split(';')
+            const hasAccessTokenCookie = cookies.some((cookie) =>
+              cookie.trim().startsWith('accessToken='),
+            )
+
+            if (!hasAccessTokenCookie) {
+              // real-api.ts에서 저장 실패한 경우 대비
+              document.cookie = `accessToken=${accessToken}; path=/; max-age=86400; SameSite=Lax`
+              localStorage.setItem('accessToken', accessToken)
             }
 
-            login(userData, tokens)
+            // refreshToken은 HttpOnly 쿠키로 자동 설정되므로 프론트엔드에서 읽을 필요 없음
+            // 백엔드가 자동으로 쿠키에서 읽어서 사용함
+            const refreshToken = '' // 쿠키에 자동으로 있으므로 빈 문자열로 처리
 
-            localStorage.setItem('user', JSON.stringify(userData))
-
-            // 쿠키에 토큰 저장 (서버에서 접근 가능)
-            document.cookie = `accessToken=${tokens.accessToken}; path=/; max-age=86400; SameSite=Lax`
-            document.cookie = `refreshToken=${tokens.refreshToken}; path=/; max-age=604800; SameSite=Lax`
-
-            // localStorage에도 토큰 저장 (AuthContext 호환성)
-            localStorage.setItem('accessToken', tokens.accessToken)
-            localStorage.setItem('refreshToken', tokens.refreshToken)
-
-            console.log('🍪 토큰 저장 완료:', {
-              cookie: document.cookie,
-              localStorage: localStorage.getItem('accessToken'),
+            // 로그인 응답에서 받은 사용자 정보로 로그인 처리
+            // auth/me API를 사용하지 않고 로그인 응답 데이터 사용
+            await login(userData, {
+              accessToken,
+              refreshToken,
             })
+            localStorage.setItem('user', JSON.stringify(userData))
 
             // 홈페이지로 리다이렉트
             router.push('/')
@@ -300,16 +341,14 @@ export function LoginClient() {
 
           if (isSuccess) {
             // 회원가입 성공
-            console.log('✅ 회원가입 성공:', response.data)
             setApiError('')
-            alert('회원가입이 완료되었습니다. 로그인해주세요.')
+            showSuccessToast('회원가입이 완료되었습니다. 로그인해주세요.')
             setIsLogin(true)
             setFormData({
               email: formData.email,
               password: '',
               name: '',
               phone: '',
-              address: '',
               confirmPassword: '',
             })
           } else {
@@ -402,21 +441,13 @@ export function LoginClient() {
               </div>
             )}
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* API 에러 메시지 */}
-              {apiError && (
-                <ErrorAlert
-                  title="요청 실패"
-                  message={apiError}
-                  onClose={() => setApiError('')}
-                />
-              )}
               {!isLogin && (
                 <Input
-                  label="이름"
+                  label="닉네임"
                   name="name"
                   value={formData.name}
                   onChange={handleInputChange}
-                  placeholder="이름을 입력하세요"
+                  placeholder="닉네임을 입력하세요"
                   error={errors.name}
                 />
               )}
@@ -458,23 +489,11 @@ export function LoginClient() {
               )}
 
               {!isLogin && (
-                <Input
-                  label="주소"
-                  name="address"
-                  value={formData.address}
-                  onChange={handleInputChange}
-                  placeholder="주소를 입력하세요"
-                  error={errors.address}
-                />
-              )}
-
-              {/* 이메일 인증 - 필수 (회원가입 시에만) */}
-              {!isLogin && (
-                <div className="border-primary-200 bg-primary-50/50 rounded-lg border-2 p-4">
+                <div className="rounded-lg border border-neutral-200 bg-neutral-50/50 p-4">
                   <div className="mb-3 flex items-center justify-between">
                     <div className="flex items-center space-x-2">
                       <label className="text-sm font-semibold text-neutral-900">
-                        이메일 인증 <span className="text-red-500">*</span>
+                        이메일 인증
                       </label>
                       {isEmailVerified && (
                         <span className="flex items-center space-x-1 text-sm text-green-600">
@@ -483,9 +502,6 @@ export function LoginClient() {
                         </span>
                       )}
                     </div>
-                    {!isEmailVerified && (
-                      <span className="text-xs text-red-600">필수 항목</span>
-                    )}
                   </div>
 
                   <div className="mb-3 space-y-3">
@@ -570,8 +586,8 @@ export function LoginClient() {
                   </div>
 
                   {!isEmailVerified && (
-                    <p className="text-xs text-neutral-600">
-                      ⚠️ 이메일 인증을 완료해야 회원가입이 가능합니다.
+                    <p className="text-xs text-neutral-500">
+                      이메일 인증을 완료해주세요.
                     </p>
                   )}
                 </div>

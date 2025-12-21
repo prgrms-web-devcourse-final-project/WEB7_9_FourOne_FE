@@ -40,7 +40,7 @@ export default async function BookmarksPage() {
     // }
 
     return (
-      <HomeLayout isLoggedIn={true}>
+      <HomeLayout isLoggedIn={!!accessToken}>
         <PageHeader
           title="찜 목록"
           description="관심 있는 상품을 찜해보세요"
@@ -52,8 +52,11 @@ export default async function BookmarksPage() {
   } catch (error: any) {
     console.error('Bookmarks 페이지 에러:', error)
 
+    const cookieStore = await cookies()
+    const accessToken = cookieStore.get('accessToken')?.value
+
     return (
-      <HomeLayout isLoggedIn={true}>
+      <HomeLayout isLoggedIn={!!accessToken}>
         <PageHeader
           title="찜 목록"
           description="관심 있는 상품을 찜해보세요"

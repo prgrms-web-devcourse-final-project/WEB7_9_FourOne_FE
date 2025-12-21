@@ -2,14 +2,13 @@
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { productApi, reviewApi } from '@/lib/api'
+import { productApi } from '@/lib/api'
 import { Product } from '@/types'
 import {
   Calendar,
   CheckCircle,
   Eye,
   MapPin,
-  MessageSquare,
   Package,
   Shield,
   Star,
@@ -29,18 +28,7 @@ interface SellerDetailClientProps {
   products?: Product[]
 }
 
-type TabType = 'selling' | 'sold' | 'reviews'
-
-interface Review {
-  reviewId: number
-  productId: number
-  productName: string
-  buyerNickname: string
-  rating: number
-  comment: string
-  createDate: string
-  isSatisfied: boolean
-}
+type TabType = 'selling' | 'sold'
 
 export function SellerDetailClient({
   seller,
@@ -50,7 +38,6 @@ export function SellerDetailClient({
   const [activeTab, setActiveTab] = useState<TabType>('selling')
   const [products, setProducts] = useState<Product[]>(initialProducts || [])
   const [soldProducts, setSoldProducts] = useState<Product[]>([])
-  const [reviews, setReviews] = useState<Review[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [apiError, setApiError] = useState('')
 
@@ -186,63 +173,6 @@ export function SellerDetailClient({
     setIsLoading(false)
   }
 
-  // 판매자 리뷰 조회
-  const fetchSellerReviews = async () => {
-    setIsLoading(true)
-    setApiError('')
-    try {
-      // 1. 판매완료 상품들 조회
-      const productsResponse = await productApi.getProductsByMember(
-        +seller.id,
-        {
-          status: 'SOLD' as any,
-        },
-      )
-      let soldProductsData = []
-      if (Array.isArray(productsResponse.data)) {
-        soldProductsData = productsResponse.data
-      } else if (
-        productsResponse.data.content &&
-        Array.isArray(productsResponse.data.content)
-      ) {
-        soldProductsData = productsResponse.data.content
-      }
-
-      // 2. 각 상품의 리뷰 조회
-      const allReviews: Review[] = []
-      for (const product of soldProductsData) {
-        try {
-          const reviewsResponse = await reviewApi.getReviewsByProduct(
-            product.productId,
-          )
-          if (reviewsResponse.success && reviewsResponse.data) {
-            const productReviews = reviewsResponse.data.map((review: any) => ({
-              reviewId: review.reviewId,
-              productId: product.productId,
-              productName: product.name,
-              buyerNickname: review.buyerNickname || '구매자',
-              rating: review.rating || 0,
-              comment: review.comment || '',
-              createDate: review.createDate,
-              isSatisfied: review.isSatisfied || false,
-            }))
-            allReviews.push(...productReviews)
-          }
-        } catch (error) {
-          console.warn(`상품 ${product.productId} 리뷰 조회 실패:`, error)
-        }
-      }
-
-      setReviews(allReviews)
-    } catch (error: any) {
-      console.error('🏪 판매자 리뷰 조회 실패:', error)
-      setApiError(
-        error.response?.data?.msg || '리뷰를 불러오는데 실패했습니다.',
-      )
-    }
-    setIsLoading(false)
-  }
-
   // 탭 변경 핸들러
   const handleTabChange = async (tab: TabType) => {
     setActiveTab(tab)
@@ -258,11 +188,6 @@ export function SellerDetailClient({
       case 'sold':
         if (soldProducts.length === 0) {
           await fetchSoldProducts()
-        }
-        break
-      case 'reviews':
-        if (reviews.length === 0) {
-          await fetchSellerReviews()
         }
         break
     }
@@ -281,7 +206,7 @@ export function SellerDetailClient({
     // 백그라운드에서 나머지 데이터 로드 (통계용)
     const loadBackgroundData = async () => {
       try {
-        await Promise.all([fetchSoldProducts(), fetchSellerReviews()])
+        await fetchSoldProducts()
       } catch (error) {
         console.warn('백그라운드 데이터 로드 실패:', error)
       }
@@ -429,17 +354,6 @@ export function SellerDetailClient({
                       </div>
                     </div>
                   </div>
-                  <div className="rounded-2xl bg-white/15 p-6 shadow-lg backdrop-blur-sm transition-all duration-300 hover:bg-white/20">
-                    <div className="text-center">
-                      <div className="mb-2 text-3xl font-bold text-white">
-                        {reviews.length}
-                      </div>
-                      <div className="flex items-center justify-center text-sm text-white/90">
-                        <MessageSquare className="mr-1 h-4 w-4" />
-                        리뷰 수
-                      </div>
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
@@ -475,20 +389,6 @@ export function SellerDetailClient({
               <span>판매완료</span>
               <span className="rounded-full bg-white/20 px-2 py-1 text-xs">
                 {soldProducts.length}
-              </span>
-            </button>
-            <button
-              onClick={() => handleTabChange('reviews')}
-              className={`flex flex-1 items-center justify-center space-x-2 rounded-xl px-6 py-4 font-semibold transition-all duration-300 ${
-                activeTab === 'reviews'
-                  ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-lg'
-                  : 'text-gray-600 hover:bg-white/50 hover:text-gray-900'
-              }`}
-            >
-              <MessageSquare className="h-5 w-5" />
-              <span>리뷰</span>
-              <span className="rounded-full bg-white/20 px-2 py-1 text-xs">
-                {reviews.length}
               </span>
             </button>
           </div>
@@ -803,90 +703,6 @@ export function SellerDetailClient({
                         </Card>
                       )
                     })}
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* 리뷰 탭 */}
-            {activeTab === 'reviews' && (
-              <>
-                {reviews.length === 0 ? (
-                  <Card className="overflow-hidden border-0 bg-white/80 shadow-xl backdrop-blur-sm">
-                    <CardContent className="py-20 text-center">
-                      <div className="mb-8">
-                        <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-r from-amber-100 to-orange-200">
-                          <MessageSquare className="h-12 w-12 text-amber-400" />
-                        </div>
-                        <h3 className="mb-4 text-2xl font-bold text-gray-900">
-                          등록된 리뷰가 없습니다
-                        </h3>
-                        <p className="text-lg text-gray-600">
-                          아직 이 판매자에 대한 리뷰가 없습니다.
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <div className="space-y-6">
-                    {reviews.map((review) => (
-                      <Card
-                        key={review.reviewId}
-                        className="overflow-hidden border-0 bg-white/80 shadow-lg backdrop-blur-sm transition-all duration-300 hover:shadow-xl"
-                      >
-                        <CardContent className="p-6">
-                          <div className="flex items-start space-x-4">
-                            {/* 리뷰어 아바타 */}
-                            <div className="flex-shrink-0">
-                              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-r from-amber-500 to-orange-600">
-                                <span className="text-lg font-bold text-white">
-                                  {review.buyerNickname.charAt(0).toUpperCase()}
-                                </span>
-                              </div>
-                            </div>
-
-                            {/* 리뷰 내용 */}
-                            <div className="flex-1">
-                              <div className="mb-3 flex items-center justify-between">
-                                <div className="flex items-center space-x-3">
-                                  <h4 className="text-lg font-semibold text-gray-900">
-                                    {review.buyerNickname}
-                                  </h4>
-                                  <div className="flex items-center space-x-1">
-                                    {[...Array(5)].map((_, i) => (
-                                      <Star
-                                        key={i}
-                                        className={`h-4 w-4 ${
-                                          i < (review.isSatisfied ? 5 : 2)
-                                            ? 'fill-current text-amber-400'
-                                            : 'text-gray-300'
-                                        }`}
-                                      />
-                                    ))}
-                                  </div>
-                                </div>
-                                <span className="text-sm text-gray-500">
-                                  {formatDate(review.createDate)}
-                                </span>
-                              </div>
-
-                              <p className="mb-3 leading-relaxed text-gray-700">
-                                {review.comment}
-                              </p>
-
-                              <div className="flex items-center space-x-2">
-                                <span className="text-sm text-gray-500">
-                                  상품:
-                                </span>
-                                <span className="text-sm font-medium text-indigo-600">
-                                  {review.productName}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
                   </div>
                 )}
               </>

@@ -3,10 +3,10 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { ErrorAlert } from '@/components/ui/error-alert'
 import { useAuth } from '@/contexts/AuthContext'
 import { productApi } from '@/lib/api'
 import { handleApiError } from '@/lib/api/common'
+import { showErrorToast } from '@/lib/utils/toast'
 import { Product } from '@/types'
 import { Heart, Trash2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -18,14 +18,22 @@ interface BookmarksClientProps {
 
 export function BookmarksClient({ initialBookmarks }: BookmarksClientProps) {
   const router = useRouter()
-  const { user, isAuthenticated } = useAuth()
+  const { user, isLoggedIn } = useAuth()
   const [bookmarks, setBookmarks] = useState(initialBookmarks || [])
   const [isLoading, setIsLoading] = useState(false)
   const [apiError, setApiError] = useState('')
 
+  // apiError가 변경되면 토스트로 표시
+  useEffect(() => {
+    if (apiError) {
+      showErrorToast(apiError)
+      setApiError('') // 토스트 표시 후 초기화
+    }
+  }, [apiError])
+
   // 찜 목록 조회
   const fetchBookmarks = async () => {
-    if (!isAuthenticated) {
+    if (!isLoggedIn) {
       setApiError('로그인이 필요합니다.')
       return
     }
@@ -33,32 +41,29 @@ export function BookmarksClient({ initialBookmarks }: BookmarksClientProps) {
     setIsLoading(true)
     setApiError('')
     try {
-      const response = await productApi.getBookmarks({
+      const response = (await productApi.getBookmarks({
         page: 0,
         size: 100,
-      })
+      })) as any
 
-      if (response.success && response.data) {
+      if (response && response.success && response.data) {
         // API 응답 데이터 구조에 맞게 변환
-        let bookmarksData = []
-        if (Array.isArray(response.data)) {
-          bookmarksData = response.data
-        } else if (
-          response.data.content &&
-          Array.isArray(response.data.content)
-        ) {
-          bookmarksData = response.data.content
-        } else if (
-          response.data.bookmarks &&
-          Array.isArray(response.data.bookmarks)
-        ) {
-          bookmarksData = response.data.bookmarks
+        let bookmarksData: Product[] = []
+        const data = response.data
+        if (Array.isArray(data)) {
+          bookmarksData = data
+        } else if (data.content && Array.isArray(data.content)) {
+          bookmarksData = data.content
+        } else if (data.bookmarks && Array.isArray(data.bookmarks)) {
+          bookmarksData = data.bookmarks
         }
 
         setBookmarks(bookmarksData)
-      } else {
+      } else if (response && response.message) {
         setApiError(
-          response.message || response.msg || '찜 목록을 불러오는데 실패했습니다.',
+          response.message ||
+            response.msg ||
+            '찜 목록을 불러오는데 실패했습니다.',
         )
       }
     } catch (error: any) {
@@ -132,22 +137,13 @@ export function BookmarksClient({ initialBookmarks }: BookmarksClientProps) {
 
   // 초기 데이터가 있으면 사용, 없으면 API 호출
   useEffect(() => {
-    if (isAuthenticated && (!initialBookmarks || initialBookmarks.length === 0)) {
+    if (isLoggedIn && (!initialBookmarks || initialBookmarks.length === 0)) {
       fetchBookmarks()
     }
-  }, [isAuthenticated])
+  }, [isLoggedIn])
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-      {/* API 에러 메시지 */}
-      {apiError && (
-        <ErrorAlert
-          message={apiError}
-          onClose={() => setApiError('')}
-          className="mb-6"
-        />
-      )}
-
       {/* 찜 목록 */}
       <div className="space-y-4">
         {isLoading && bookmarks.length === 0 ? (
@@ -170,9 +166,7 @@ export function BookmarksClient({ initialBookmarks }: BookmarksClientProps) {
                 <p className="mb-4 text-neutral-600">
                   관심 있는 상품을 찜해보세요
                 </p>
-                <Button onClick={() => router.push('/')}>
-                  상품 둘러보기
-                </Button>
+                <Button onClick={() => router.push('/')}>상품 둘러보기</Button>
               </div>
             </CardContent>
           </Card>
@@ -184,13 +178,13 @@ export function BookmarksClient({ initialBookmarks }: BookmarksClientProps) {
               <Card
                 key={bookmark.productId}
                 variant="outlined"
-                className="transition-shadow hover:shadow-md cursor-pointer"
+                className="cursor-pointer transition-shadow hover:shadow-md"
                 onClick={() => router.push(`/products/${bookmark.productId}`)}
               >
                 <CardContent className="p-6">
                   <div className="flex items-start space-x-4">
                     {/* 상품 이미지 */}
-                    <div className="flex-shrink-0">
+                    <div className="shrink-0">
                       <div className="h-24 w-24 overflow-hidden rounded-xl bg-neutral-100 shadow-sm">
                         {bookmark.thumbnailUrl ? (
                           <img
@@ -235,19 +229,27 @@ export function BookmarksClient({ initialBookmarks }: BookmarksClientProps) {
                           </span>{' '}
                           {formatPrice(bookmark.initialPrice || 0)}원
                         </div>
-                        {bookmark.bidCount !== undefined && (
+                        {(bookmark as any).bidCount !== undefined && (
                           <div>
                             <span className="font-semibold text-neutral-900">
                               입찰 수:
                             </span>{' '}
-                            {bookmark.bidCount}건
+                            {(bookmark as any).bidCount}건
+                          </div>
+                        )}
+                        {bookmark.bidderCount !== undefined && (
+                          <div>
+                            <span className="font-semibold text-neutral-900">
+                              입찰자 수:
+                            </span>{' '}
+                            {bookmark.bidderCount}명
                           </div>
                         )}
                       </div>
 
-                      {bookmark.endDate && (
+                      {bookmark.auctionEndTime && (
                         <div className="mb-3 text-xs text-neutral-500">
-                          경매 종료: {formatDate(bookmark.endDate)}
+                          경매 종료: {formatDate(bookmark.auctionEndTime)}
                         </div>
                       )}
 
@@ -261,7 +263,7 @@ export function BookmarksClient({ initialBookmarks }: BookmarksClientProps) {
                             handleRemoveBookmark(bookmark.productId)
                           }}
                           disabled={isLoading}
-                          className="flex items-center space-x-1 text-red-500 hover:text-red-700 hover:border-red-300"
+                          className="flex items-center space-x-1 text-red-500 hover:border-red-300 hover:text-red-700"
                         >
                           <Trash2 className="h-4 w-4" />
                           <span>찜 해제</span>

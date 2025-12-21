@@ -65,7 +65,9 @@ class ServerApiClient {
 
   // ❌ Swagger에 없음 - API 호출 비활성화 (UI는 유지)
   async getProduct(productId: number) {
-    throw new Error('GET /api/v1/products/{productId}는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    throw new Error(
+      'GET /api/v1/products/{productId}는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.',
+    )
   }
 
   // ❌ Swagger에 없음 - API 호출 비활성화 (UI는 유지)
@@ -79,7 +81,9 @@ class ServerApiClient {
     sort?: string
     search?: string
   }) {
-    throw new Error('GET /api/v1/products는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    throw new Error(
+      'GET /api/v1/products는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.',
+    )
   }
 
   // ❌ Swagger에 없음 - API 호출 비활성화 (UI는 유지)
@@ -87,8 +91,28 @@ class ServerApiClient {
     page?: number
     size?: number
     status?: string
+    sort?: string
   }) {
-    throw new Error('GET /api/v1/products/me는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    const searchParams = new URLSearchParams()
+    if (params?.page !== undefined) {
+      searchParams.append('page', params.page.toString())
+    }
+    if (params?.size !== undefined) {
+      searchParams.append('size', params.size.toString())
+    }
+    if (params?.status) {
+      searchParams.append('status', params.status)
+    }
+    if (params?.sort) {
+      searchParams.append('sort', params.sort)
+    }
+
+    const queryString = searchParams.toString()
+    const endpoint = queryString
+      ? `/users/me/products?${queryString}`
+      : `/users/me/products`
+
+    return this.makeRequest(endpoint)
   }
 
   // 사용자 정보 API (새로운 엔드포인트: /api/v1/auth/me)
@@ -98,32 +122,58 @@ class ServerApiClient {
 
   // ❌ Swagger에 없음 - API 호출 비활성화 (UI는 유지)
   async getMyBids(params?: { page?: number; size?: number; status?: string }) {
-    throw new Error('입찰 관련 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    const searchParams = new URLSearchParams()
+    if (params?.page !== undefined) {
+      searchParams.append('page', params.page.toString())
+    }
+    if (params?.size !== undefined) {
+      searchParams.append('size', params.size.toString())
+    }
+    if (params?.status) {
+      searchParams.append('status', params.status)
+    }
+
+    const queryString = searchParams.toString()
+    const endpoint = queryString
+      ? `/users/me/bids?${queryString}`
+      : `/users/me/bids`
+
+    return this.makeRequest(endpoint)
   }
 
   // ❌ Swagger에 없음 - API 호출 비활성화 (UI는 유지)
   async getBidStatus(productId: number) {
-    throw new Error('입찰 현황 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    throw new Error(
+      '입찰 현황 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.',
+    )
   }
 
   // ❌ Swagger에 없음 - API 호출 비활성화 (UI는 유지)
   async getNotifications(params?: { page?: number; size?: number }) {
-    throw new Error('알림 목록 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    throw new Error(
+      '알림 목록 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.',
+    )
   }
 
   // ❌ Swagger에 없음 - API 호출 비활성화 (UI는 유지)
   async getUnreadCount() {
-    throw new Error('읽지 않은 알림 개수 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    throw new Error(
+      '읽지 않은 알림 개수 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.',
+    )
   }
 
   // ❌ Swagger에 없음 - API 호출 비활성화 (UI는 유지)
   async getPaymentMethods() {
-    throw new Error('결제 수단 목록 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    throw new Error(
+      '결제 수단 목록 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.',
+    )
   }
 
   // ❌ Swagger에 없음 - API 호출 비활성화 (UI는 유지)
   async getPaymentHistory() {
-    throw new Error('결제 내역 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    throw new Error(
+      '결제 내역 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.',
+    )
   }
 
   // ❌ Swagger에 없음 - API 호출 비활성화 (UI는 유지)
@@ -132,7 +182,9 @@ class ServerApiClient {
     size?: number
     productId?: number
   }) {
-    throw new Error('리뷰 관련 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    throw new Error(
+      '리뷰 관련 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.',
+    )
   }
 }
 

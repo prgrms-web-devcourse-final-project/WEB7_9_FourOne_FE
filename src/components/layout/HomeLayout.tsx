@@ -7,7 +7,7 @@ import { Header } from './Header'
 interface HomeLayoutProps {
   children: ReactNode
   isLoggedIn?: boolean
-  user?: User
+  user?: User | null
   notificationCount?: number
 }
 

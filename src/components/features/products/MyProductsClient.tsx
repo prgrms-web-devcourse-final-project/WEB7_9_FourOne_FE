@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useWebSocketMyAuctions } from '@/hooks/useWebSocketMyAuctions'
 import { productApi } from '@/lib/api'
 import { handleApiError } from '@/lib/api/common'
+import { showErrorToast, showSuccessToast } from '@/lib/utils/toast'
 import { Product } from '@/types'
 import { MyProductsParams } from '@/types/api-types'
 import { Edit, Trash2, Zap } from 'lucide-react'
@@ -27,6 +28,14 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
   const [products, setProducts] = useState(initialProducts || [])
   const [isLoading, setIsLoading] = useState(false)
   const [apiError, setApiError] = useState('')
+
+  // apiError가 변경되면 토스트로 표시
+  useEffect(() => {
+    if (apiError) {
+      showErrorToast(apiError)
+      setApiError('') // 토스트 표시 후 초기화
+    }
+  }, [apiError])
 
   // WebSocket 내 경매 실시간 모니터링
   const { myAuctionUpdates, isSubscribed: isMyAuctionsSubscribed } =
@@ -59,9 +68,7 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
     setIsLoading(true)
     setApiError('')
     try {
-      console.log('🔍 API 요청 파라미터:', params)
-      const response = await productApi.getMyProducts(params)
-      console.log('📦 API 응답:', response)
+      const response: any = await productApi.getMyProducts(params)
 
       if (response.success && response.data) {
         // API 응답 데이터 구조에 맞게 변환
@@ -84,7 +91,11 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
         setProducts(processedProducts)
       } else {
         console.error('❌ API 응답 실패:', response)
-        setApiError(response.message || response.msg || '상품 목록을 불러오는데 실패했습니다.')
+        setApiError(
+          response.message ||
+            response.msg ||
+            '상품 목록을 불러오는데 실패했습니다.',
+        )
       }
     } catch (error: any) {
       console.error('❌ 내 상품 목록 조회 실패:', error)
@@ -105,14 +116,16 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
     try {
       const response = await productApi.deleteProduct(productId)
       if (response.success) {
-        alert('상품이 성공적으로 삭제되었습니다.')
+        showSuccessToast('상품이 성공적으로 삭제되었습니다.')
         // 현재 탭과 정렬 상태를 유지하면서 목록 새로고침
         fetchMyProducts({
           status: mapTabToApiStatus(selectedTab),
           sort: sortBy,
         })
       } else {
-        setApiError(response.message || response.msg || '상품 삭제에 실패했습니다.')
+        setApiError(
+          response.message || response.msg || '상품 삭제에 실패했습니다.',
+        )
       }
     } catch (error: any) {
       console.error('상품 삭제 실패:', error)
@@ -456,6 +469,18 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
                       <div className="flex flex-wrap gap-2 border-t border-neutral-100 pt-2">
                         {product.status === '경매 시작 전' && (
                           <>
+                            <Button
+                              size="sm"
+                              onClick={() =>
+                                router.push(
+                                  `/products/${product.productId}/register-auction`,
+                                )
+                              }
+                              className="bg-primary-600 hover:bg-primary-700 flex-1"
+                            >
+                              <Zap className="mr-2 h-4 w-4" />
+                              경매 등록
+                            </Button>
                             <Button
                               size="sm"
                               variant="outline"

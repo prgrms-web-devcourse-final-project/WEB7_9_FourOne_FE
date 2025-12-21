@@ -1,5 +1,6 @@
 import { AuthProvider } from '@/contexts/AuthContext'
 import { WebSocketProvider } from '@/contexts/WebSocketContext'
+import { Toaster } from '@/components/ui/sonner'
 import type { Metadata, Viewport } from 'next'
 import { Noto_Sans_KR } from 'next/font/google'
 import './globals.css'
@@ -55,6 +56,7 @@ export default function RootLayout({
         <AuthProvider>
           <WebSocketProvider>{children}</WebSocketProvider>
         </AuthProvider>
+        <Toaster position="top-center" />
       </body>
     </html>
   )

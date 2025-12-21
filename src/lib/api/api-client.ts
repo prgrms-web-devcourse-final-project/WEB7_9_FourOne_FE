@@ -67,6 +67,24 @@ class ApiClient {
 
           if (accessToken) {
             config.headers.Authorization = `Bearer ${accessToken}`
+            // 디버깅용 로그 (auth/me 호출 시에만)
+            if (config.url?.includes('auth/me')) {
+              console.log('🔑 Authorization 헤더 설정:', {
+                url: config.url,
+                hasToken: !!accessToken,
+                tokenLength: accessToken.length,
+                tokenPrefix: accessToken.substring(0, 20) + '...',
+              })
+            }
+          } else {
+            // 토큰이 없을 때 경고 (auth/me 호출 시에만)
+            if (config.url?.includes('auth/me')) {
+              console.warn('⚠️ auth/me 호출 시 토큰이 없습니다:', {
+                url: config.url,
+                cookieToken: cookieToken ? '존재' : '없음',
+                localStorageToken: localStorageToken ? '존재' : '없음',
+              })
+            }
           }
         }
 
@@ -121,21 +139,11 @@ class ApiClient {
           this.isRefreshing = true
 
           try {
-            // refresh token 가져오기
-            const refreshToken =
-              typeof window !== 'undefined'
-                ? localStorage.getItem('refreshToken') ||
-                  document.cookie
-                    .split(';')
-                    .find((cookie) => cookie.trim().startsWith('refreshToken='))
-                    ?.split('=')[1]
-                : null
+            // refreshToken은 HttpOnly 쿠키로 자동 설정되므로 JavaScript에서 읽을 수 없음
+            // 백엔드가 쿠키에서 자동으로 읽어서 사용함
+            // credentials: 'include'로 쿠키가 자동 전송됨
 
-            if (!refreshToken) {
-              throw new Error('Refresh token이 없습니다.')
-            }
-
-            // 토큰 재발급 API 호출
+            // 토큰 재발급 API 호출 (쿠키에서 refreshToken 자동 전송)
             const refreshResponse = await axios.post<{
               code?: string
               httpStatus?: number
@@ -146,10 +154,8 @@ class ApiClient {
                 refreshToken?: string
               }
             }>(`${baseURL}/api/v1/auth/refresh`, undefined, {
-              headers: {
-                Authorization: `Bearer ${refreshToken as string}`,
-              },
-              withCredentials: true,
+              // refreshToken은 쿠키에서 자동으로 전송되므로 Authorization 헤더 불필요
+              withCredentials: true, // 쿠키 자동 전송
             })
 
             const normalizedResponse = refreshResponse.data
@@ -162,19 +168,13 @@ class ApiClient {
 
             if (isSuccess && normalizedResponse.data?.accessToken) {
               const newAccessToken = normalizedResponse.data.accessToken
-              const newRefreshToken =
-                normalizedResponse.data.refreshToken || refreshToken
 
               // 새 토큰 저장
-              if (
-                typeof window !== 'undefined' &&
-                newAccessToken &&
-                newRefreshToken
-              ) {
+              // refreshToken은 HttpOnly 쿠키로 백엔드가 자동 관리하므로 프론트엔드에서 저장 불필요
+              if (typeof window !== 'undefined' && newAccessToken) {
                 localStorage.setItem('accessToken', newAccessToken)
-                localStorage.setItem('refreshToken', newRefreshToken)
                 document.cookie = `accessToken=${newAccessToken}; path=/; max-age=86400; SameSite=Lax`
-                document.cookie = `refreshToken=${newRefreshToken}; path=/; max-age=604800; SameSite=Lax`
+                // refreshToken은 쿠키에 이미 있으므로 별도 저장 불필요
               }
 
               // 대기 중인 요청들 재시도
@@ -195,7 +195,6 @@ class ApiClient {
             }
           } catch (refreshError) {
             // 토큰 재발급 실패 시 로그아웃 처리
-            console.error('토큰 재발급 실패:', refreshError)
 
             // 대기 중인 요청들 모두 실패 처리
             this.failedQueue.forEach(({ reject }) => {

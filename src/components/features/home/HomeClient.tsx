@@ -14,6 +14,7 @@ import { usePagination } from '@/hooks/usePagination'
 import { useWebSocketHome } from '@/hooks/useWebSocketHome'
 import { auctionApi } from '@/lib/api'
 import {
+  CATEGORIES,
   CATEGORY_FILTER_OPTIONS,
   type CategoryValue,
   type SubCategoryValue,
@@ -66,7 +67,7 @@ const mapApiStatusToKorean = (apiStatus: string): string => {
   }
 }
 
-export function HomeClient({ stats }: HomeClientProps) {
+export function HomeClient() {
   const router = useRouter()
   const { isLoggedIn } = useAuth()
   const [selectedCategory, setSelectedCategory] = useState<
@@ -99,7 +100,6 @@ export function HomeClient({ stats }: HomeClientProps) {
             search: searchQuery.trim(),
             cursor: page > 1 ? nextCursor || undefined : undefined,
             limit: limit,
-            sort: sortBy,
           })
 
           if (response.success && response.data) {
@@ -360,43 +360,54 @@ export function HomeClient({ stats }: HomeClientProps) {
           </div>
         </div>
 
-        {/* 경매 상태 필터 및 정렬 */}
-        <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          {/* 경매 상태 필터 */}
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-medium text-neutral-700">
-              경매 상태:
-            </span>
-            <div className="flex flex-wrap gap-2">
-              {statusOptions.map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() =>
-                    setStatusFilter(
-                      option.value as 'ALL' | 'SCHEDULED' | 'LIVE' | 'ENDED',
-                    )
-                  }
-                  className={`rounded-full px-4 py-2 text-sm font-medium transition-all duration-200 ${
-                    statusFilter === option.value
-                      ? 'bg-primary-500 text-white shadow-md'
-                      : 'hover:bg-primary-50 hover:border-primary-300 hover:text-primary-700 border border-neutral-200/50 bg-white/80 text-neutral-700 backdrop-blur-sm'
-                  }`}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
+        {/* 카테고리 필터 및 정렬 옵션 */}
+        <div className="mb-4 flex items-center justify-between gap-4">
+          {/* 카테고리 탭 */}
+          <div className="flex flex-wrap gap-2">
+            {CATEGORY_FILTER_OPTIONS.map((category) => (
+              <button
+                key={category.value}
+                onClick={() => {
+                  setSelectedCategory(category.value as CategoryValue | 'all')
+                  setSelectedSubCategory('all') // 카테고리 변경 시 서브카테고리 초기화
+                }}
+                className={`rounded-full px-4 py-2 text-sm font-medium transition-all duration-200 ${
+                  selectedCategory === category.value
+                    ? 'bg-neutral-900 text-white shadow-md'
+                    : 'border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-100'
+                }`}
+              >
+                {category.label}
+              </button>
+            ))}
           </div>
 
-          {/* 정렬 옵션 */}
+          {/* 경매 상태 필터 및 정렬 */}
           <div className="flex items-center gap-3">
-            <span className="text-sm font-medium text-neutral-700">정렬:</span>
+            {/* 경매 상태 필터 */}
+            <select
+              value={statusFilter}
+              onChange={(e) =>
+                setStatusFilter(
+                  e.target.value as 'ALL' | 'SCHEDULED' | 'LIVE' | 'ENDED',
+                )
+              }
+              className="focus:border-primary-300 focus:ring-primary-200 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm"
+            >
+              {statusOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+
+            {/* 정렬 옵션 */}
             <select
               value={sortBy}
               onChange={(e) =>
                 setSortBy(e.target.value as 'newest' | 'closing' | 'popular')
               }
-              className="focus:border-primary-300 focus:ring-primary-200 rounded-xl border border-neutral-200/50 bg-white/80 p-2 text-sm backdrop-blur-sm"
+              className="focus:border-primary-300 focus:ring-primary-200 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm"
             >
               <option value="newest">최신 등록순</option>
               <option value="closing">마감 임박순</option>
@@ -405,24 +416,36 @@ export function HomeClient({ stats }: HomeClientProps) {
           </div>
         </div>
 
-        {/* 카테고리 탭 */}
-        <div className="flex flex-wrap gap-3">
-          {CATEGORY_FILTER_OPTIONS.map((category) => (
+        {/* 서브카테고리 탭 (카테고리 선택 시에만 표시) */}
+        {selectedCategory !== 'all' && (
+          <div className="mb-4 flex flex-wrap gap-2">
             <button
-              key={category.value}
-              onClick={() =>
-                setSelectedCategory(category.value as CategoryValue | 'all')
-              }
-              className={`rounded-full px-6 py-3 text-sm font-semibold transition-all duration-200 ${
-                selectedCategory === category.value
-                  ? 'bg-primary-500 text-white shadow-lg'
-                  : 'hover:bg-primary-50 hover:border-primary-300 hover:text-primary-700 border border-neutral-200/50 bg-white/80 text-neutral-700 backdrop-blur-sm'
+              onClick={() => setSelectedSubCategory('all')}
+              className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all duration-200 ${
+                selectedSubCategory === 'all'
+                  ? 'bg-neutral-900 text-white shadow-md'
+                  : 'border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-100'
               }`}
             >
-              {category.label}
+              전체
             </button>
-          ))}
-        </div>
+            {CATEGORIES.find(
+              (cat) => cat.value === selectedCategory,
+            )?.subCategories.map((subCategory) => (
+              <button
+                key={subCategory.value}
+                onClick={() => setSelectedSubCategory(subCategory.value)}
+                className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all duration-200 ${
+                  selectedSubCategory === subCategory.value
+                    ? 'bg-neutral-900 text-white shadow-md'
+                    : 'border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-100'
+                }`}
+              >
+                {subCategory.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* 로그인 상태에 따른 메인 CTA */}

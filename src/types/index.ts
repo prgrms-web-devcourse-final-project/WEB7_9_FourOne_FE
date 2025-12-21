@@ -4,8 +4,6 @@ export interface User {
   id: number
   email: string
   nickname: string
-  phoneNumber: string
-  address: string
 }
 
 export interface UserInfo {
@@ -79,6 +77,116 @@ export interface BidHistory {
 }
 
 export type BidStatus = 'active' | 'won' | 'lost' | 'cancelled'
+
+// 찜(북마크) 관련 타입
+export interface BookmarkItem {
+  id: number
+  productId: number
+  title: string
+  productImagelUrl: string
+  bookmarkedAt: string
+}
+
+export interface BookmarksResponse {
+  page: number
+  total: number
+  bookmarks: BookmarkItem[]
+}
+
+// 내가 등록한 상품 타입
+export interface MyProductItem {
+  auctionId: number
+  productId: number
+  name: string
+  imageUrl: string
+  status: 'SCHEDULED' | 'LIVE' | 'ENDED'
+  currentHighestBid: number
+  startPrice: number
+  endAt: string
+  bookmarkCount: number
+  bidCount: number
+  remainingTimeSeconds: number
+}
+
+// 참여한 경매 목록 타입
+export interface MyBidItem {
+  auctionId: number
+  productId: number
+  productName: string
+  productImageUrl: string
+  myBid: number
+  finalBid: number | null // 낙찰 시 금액, 실패 또는 진행중이면 null
+  status: 'WIN' | 'LOSE'
+  endAt: string
+}
+
+// 경매 목록 아이템 타입
+export interface AuctionListItem {
+  auctionId: number
+  productId: number
+  name: string
+  imageUrl: string
+  status: 'SCHEDULED' | 'LIVE' | 'ENDED'
+  currentHighestBid: number
+  startPrice: number
+  endAt: string
+  bookmarkCount: number
+  bidCount: number
+  remainingTimeSeconds: number
+}
+
+// 경매 목록 응답 타입 (커서 기반 페이징)
+export interface AuctionListResponse {
+  cursor?: string // 다음 페이지 커서 (있으면)
+  items: AuctionListItem[]
+}
+
+// 경매 입찰 내역 타입 (새로운 API 구조)
+export interface AuctionBidItem {
+  bidId: number
+  bidderNickname: string
+  bidAmount: number
+  bidTime: string
+  isAuto: boolean
+}
+
+export interface AuctionBidsResponse {
+  page: number
+  size: number
+  totalCount: number
+  hasNext: boolean
+  items: AuctionBidItem[]
+}
+
+// 경매 입찰 요청 타입
+export interface BidCreateRequest {
+  bidAmount: number // 입찰 금액 (현재 최고가 + 최소입찰단위 이상)
+}
+
+// 경매 입찰 응답 타입
+export interface BidCreateResponse {
+  auctionId: number
+  isHighestBidder: boolean
+  currentHighestBid: number
+  bidTime: string
+}
+
+// 즉시 구매 요청 타입
+export interface BuyNowRequest {
+  amount: number // 총 결제 금액 (buyNowPrice와 일치)
+  methodId: number // 결제 수단 ID (자동 결제를 위한 등록된 카드 ID)
+}
+
+// 즉시 구매 응답 타입
+export interface BuyNowResponse {
+  auctionId: number
+  auctionStatus: 'ENDED'
+  winnerId: number
+  finalPrice: number
+  winTime: string
+  paymentRequestId: number
+  paymentStatus: 'REQUESTED'
+}
 
 // 알림 관련 타입
 export interface Notification {

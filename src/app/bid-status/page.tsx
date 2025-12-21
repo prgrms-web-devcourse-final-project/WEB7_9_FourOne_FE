@@ -2,10 +2,15 @@ import { BidStatusClient } from '@/components/features/bids/BidStatusClient'
 import { HomeLayout } from '@/components/layout/HomeLayout'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { serverApi } from '@/lib/api/server-api-client'
+import { cookies } from 'next/headers'
 
 export const dynamic = 'force-dynamic'
 
 export default async function BidStatusPage() {
+  const cookieStore = await cookies()
+  const accessToken = cookieStore.get('accessToken')?.value
+  const isLoggedIn = !!accessToken
+
   try {
     const response = await serverApi.getMyBids()
 
@@ -32,7 +37,7 @@ export default async function BidStatusPage() {
     }
 
     return (
-      <HomeLayout isLoggedIn={true}>
+      <HomeLayout isLoggedIn={isLoggedIn}>
         <PageHeader
           title="입찰 현황"
           description="내가 참여한 경매의 현황을 확인하세요"
@@ -43,7 +48,7 @@ export default async function BidStatusPage() {
     )
   } catch (error: any) {
     return (
-      <HomeLayout isLoggedIn={true}>
+      <HomeLayout isLoggedIn={isLoggedIn}>
         <PageHeader
           title="입찰 현황"
           description="내가 참여한 경매의 현황을 확인하세요"

@@ -3,9 +3,9 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { ErrorAlert } from '@/components/ui/error-alert'
 import { Input } from '@/components/ui/input'
 import { paymentMethodApi } from '@/lib/api'
+import { showErrorToast } from '@/lib/utils/toast'
 import { CreditCard, Edit3, Plus, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
@@ -104,13 +104,13 @@ export function PaymentMethodClient() {
       const response = await paymentMethodApi.deletePaymentMethod(id)
       if (response.success) {
         setPaymentMethods((prev) => prev.filter((method) => method.id !== id))
-        alert('결제 수단이 삭제되었습니다.')
+        showSuccessToast('결제 수단이 삭제되었습니다.')
       } else {
-        alert(response.msg || '결제 수단 삭제에 실패했습니다.')
+        showErrorToast(response.msg || '결제 수단 삭제에 실패했습니다.')
       }
     } catch (err: any) {
       console.error('결제 수단 삭제 에러:', err)
-      alert(err.response?.data?.msg || '결제 수단 삭제에 실패했습니다.')
+      showErrorToast(err.response?.data?.msg || '결제 수단 삭제에 실패했습니다.')
     }
   }
 
@@ -167,7 +167,7 @@ export function PaymentMethodClient() {
       })
 
       if (response.success) {
-        alert('결제수단이 성공적으로 추가되었습니다.')
+        showSuccessToast('결제수단이 성공적으로 추가되었습니다.')
         setShowAddForm(false)
         setAddFormData({
           type: 'card',
@@ -197,11 +197,11 @@ export function PaymentMethodClient() {
           setPaymentMethods(paymentMethodsData)
         }
       } else {
-        alert(response.msg || '결제수단 추가에 실패했습니다.')
+        showErrorToast(response.msg || '결제수단 추가에 실패했습니다.')
       }
     } catch (err: any) {
       console.error('결제수단 추가 에러:', err)
-      alert(err.response?.data?.msg || '결제수단 추가에 실패했습니다.')
+      showErrorToast(err.response?.data?.msg || '결제수단 추가에 실패했습니다.')
     }
     setIsAdding(false)
   }
@@ -232,7 +232,7 @@ export function PaymentMethodClient() {
       )
 
       if (response.success) {
-        alert('결제수단이 성공적으로 수정되었습니다.')
+        showSuccessToast('결제수단이 성공적으로 수정되었습니다.')
         setEditingId(null)
         setEditFormData({ alias: '', isDefault: false })
         // 목록 새로고침
@@ -250,11 +250,11 @@ export function PaymentMethodClient() {
           setPaymentMethods(paymentMethodsData)
         }
       } else {
-        alert(response.msg || '결제수단 수정에 실패했습니다.')
+        showErrorToast(response.msg || '결제수단 수정에 실패했습니다.')
       }
     } catch (err: any) {
       console.error('결제수단 수정 에러:', err)
-      alert(err.response?.data?.msg || '결제수단 수정에 실패했습니다.')
+      showErrorToast(err.response?.data?.msg || '결제수단 수정에 실패했습니다.')
     }
     setIsEditing(false)
   }
@@ -271,16 +271,6 @@ export function PaymentMethodClient() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
       {/* 에러 메시지 */}
-      {error && (
-        <div className="mb-6">
-          <ErrorAlert
-            title="결제 수단 로드 실패"
-            message={error}
-            onClose={() => setError('')}
-          />
-        </div>
-      )}
-
       {/* 헤더 */}
       <div className="mb-6 flex items-center justify-between">
         <div>

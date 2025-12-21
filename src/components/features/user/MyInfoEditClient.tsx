@@ -2,13 +2,13 @@
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { ErrorAlert } from '@/components/ui/error-alert'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/contexts/AuthContext'
 import { authApi } from '@/lib/api'
+import { showErrorToast, showSuccessToast } from '@/lib/utils/toast'
 import { Edit } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 interface MyInfoEditClientProps {
   initialProfile?: {
@@ -24,9 +24,19 @@ export function MyInfoEditClient({ initialProfile }: MyInfoEditClientProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [apiError, setApiError] = useState('')
+
+  // apiError가 변경되면 토스트로 표시
+  useEffect(() => {
+    if (apiError) {
+      showErrorToast(apiError, '수정 실패')
+      setApiError('') // 토스트 표시 후 초기화
+    }
+  }, [apiError])
+
   const [formData, setFormData] = useState({
     nickname: user?.nickname || initialProfile?.nickname || '',
-    phoneNumber: user?.phoneNumber || initialProfile?.phoneNumber || '',
+    phoneNumber:
+      (user as any)?.phoneNumber || initialProfile?.phoneNumber || '',
     address: (user as any)?.address || initialProfile?.address || '',
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -68,8 +78,6 @@ export function MyInfoEditClient({ initialProfile }: MyInfoEditClientProps) {
         // API 호출
         const response = await authApi.updateProfile({
           nickname: formData.nickname,
-          phoneNumber: formData.phoneNumber.replace(/-/g, ''), // 하이푼 제거
-          address: formData.address,
         })
 
         console.log('🔍 프로필 수정 API 응답:', response)
@@ -85,7 +93,7 @@ export function MyInfoEditClient({ initialProfile }: MyInfoEditClientProps) {
           } as any
           updateUser(updatedUser)
 
-          alert('프로필이 성공적으로 수정되었습니다.')
+          showSuccessToast('프로필이 성공적으로 수정되었습니다.')
           setIsEditing(false)
         } else {
           setApiError(response.msg || '프로필 수정에 실패했습니다.')
@@ -104,7 +112,8 @@ export function MyInfoEditClient({ initialProfile }: MyInfoEditClientProps) {
   const handleCancel = () => {
     setFormData({
       nickname: user?.nickname || initialProfile?.nickname || '',
-      phoneNumber: user?.phoneNumber || initialProfile?.phoneNumber || '',
+      phoneNumber:
+        (user as any)?.phoneNumber || initialProfile?.phoneNumber || '',
       address: (user as any)?.address || initialProfile?.address || '',
     })
     setErrors({})
@@ -137,15 +146,6 @@ export function MyInfoEditClient({ initialProfile }: MyInfoEditClientProps) {
                 </Button>
               )}
             </div>
-
-            {/* API 에러 메시지 */}
-            {apiError && (
-              <ErrorAlert
-                title="수정 실패"
-                message={apiError}
-                onClose={() => setApiError('')}
-              />
-            )}
 
             <div className="space-y-4">
               <div>

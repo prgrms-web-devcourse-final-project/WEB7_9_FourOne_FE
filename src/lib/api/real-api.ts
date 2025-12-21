@@ -1,14 +1,7 @@
 // 실제 백엔드 API 연결
 import type {
   ApiResponse,
-  BidPayResponseDto,
-  BidRequest,
   BoardWriteRequest,
-  BoardWriteResponse,
-  IdempotencyKey,
-  LoginResponse,
-  MyPaymentDetail,
-  MyPaymentListResponse,
   MyProductsParams,
   PaymentMethodCreateRequest,
   PaymentMethodEditRequest,
@@ -18,23 +11,27 @@ import type {
   ReviewUpdateRequest,
   ReviewWriteRequest,
   SignupRequest,
-  TossBillingAuthParams,
   UserInfo,
   UserInfoUpdate,
   WalletChargeRequest,
-  WalletChargeResponse,
 } from '@/types/api-types'
 import { apiClient } from './api-client'
 
 // API 응답을 표준화하는 헬퍼 함수 (새로운 백엔드 구조: { code, status, message, data })
 function normalizeApiResponse<T>(response: any) {
   // 새로운 응답 구조 지원: { code, status/httpStatus, message, data }
-  if (response.code !== undefined || response.status !== undefined || response.httpStatus !== undefined) {
+  if (
+    response.code !== undefined ||
+    response.status !== undefined ||
+    response.httpStatus !== undefined
+  ) {
     const code = String(response.code || '')
     const status = response.status || response.httpStatus || 0
     // HTTP 상태 코드가 2xx 범위이고, code가 SUCCESS이거나 에러 코드가 아닌 경우 성공으로 처리
     const isHttpSuccess = status >= 200 && status < 300
-    const isCodeSuccess = code === 'SUCCESS' || (!code.includes('FAILED') && !code.includes('ERROR'))
+    const isCodeSuccess =
+      code === 'SUCCESS' ||
+      (!code.includes('FAILED') && !code.includes('ERROR'))
     const success = isHttpSuccess && isCodeSuccess
 
     return {
@@ -98,14 +95,54 @@ export const authApi = {
     const normalized = normalizeApiResponse(data)
 
     // 로그인 성공 시 토큰을 쿠키에 저장
-    if (normalized.success && normalized.data?.accessToken) {
-      // accessToken을 쿠키에 저장
-      document.cookie = `accessToken=${normalized.data.accessToken}; path=/; max-age=86400; SameSite=Lax`
+    // Swagger 스펙: LocalLoginResponse에는 accessToken만 있고 refreshToken은 없음
+    const loginData = normalized.data as any
+    const accessToken = loginData?.accessToken
 
-      // refreshToken이 있으면 쿠키에 저장
-      if (normalized.data.refreshToken) {
-        document.cookie = `refreshToken=${normalized.data.refreshToken}; path=/; max-age=604800; SameSite=Lax`
+    // JWT 토큰 디코딩하여 만료 시간 확인
+    let tokenExpired = false
+    if (accessToken) {
+      try {
+        const payload = JSON.parse(atob(accessToken.split('.')[1]))
+        const now = Math.floor(Date.now() / 1000)
+        const exp = payload.exp
+        tokenExpired = exp && exp <= now
+      } catch (e) {
+        // 토큰 디코딩 실패 시 만료된 것으로 간주
+        tokenExpired = true
       }
+    }
+
+    if (
+      normalized.success &&
+      accessToken &&
+      accessToken !== 'temp-token' &&
+      !tokenExpired
+    ) {
+      // 기존 쿠키 제거 후 새로 설정
+      document.cookie =
+        'accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+      document.cookie =
+        'refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+
+      // accessToken을 쿠키에 저장
+      document.cookie = `accessToken=${accessToken}; path=/; max-age=86400; SameSite=Lax`
+
+      // Swagger 스펙: LocalLoginResponse에는 refreshToken이 없음
+      // 백엔드가 쿠키에 refreshToken을 자동으로 설정했는지 확인
+      // 단, accessToken과 같은 값이면 무시 (잘못된 값)
+      const allCookies = document.cookie.split(';')
+      const refreshTokenFromCookie = allCookies
+        .find((cookie) => cookie.trim().startsWith('refreshToken='))
+        ?.split('=')[1]
+        ?.trim()
+
+      if (refreshTokenFromCookie && refreshTokenFromCookie !== accessToken) {
+        localStorage.setItem('refreshToken', refreshTokenFromCookie)
+      }
+
+      // localStorage에도 저장
+      localStorage.setItem('accessToken', accessToken)
     }
 
     return normalized
@@ -151,14 +188,7 @@ export const authApi = {
     return normalizeApiResponse(response.data)
   },
 
-  // 내 정보 조회 (새로운 엔드포인트: /api/v1/auth/me)
-  getProfile: async () => {
-    const response =
-      await apiClient.get<ApiResponse<UserInfo>>('/api/v1/auth/me')
-    return normalizeApiResponse(response.data)
-  },
-
-  // 내 정보 조회 (별칭)
+  // 내 정보 조회 (별칭 - check와 동일)
   getMyInfo: async () => {
     const response =
       await apiClient.get<ApiResponse<UserInfo>>('/api/v1/auth/me')
@@ -224,17 +254,29 @@ export const authApi = {
   },
 
   // 토큰 재발급 (Swagger 스펙: /api/v1/auth/refresh, requestBody 없음)
-  reissue: async (refreshToken: string) => {
-    const response = await apiClient.post<ApiResponse<LoginResponse>>(
+  // TokenRefreshResponse: { accessToken, expiresIn } - refreshToken은 응답에 없음
+  // refreshToken은 HttpOnly 쿠키로 자동 전송되므로 파라미터 불필요
+  reissue: async () => {
+    const response = await apiClient.post<ApiResponse<any>>(
       '/api/v1/auth/refresh',
-      undefined, // Swagger 스펙에 requestBody가 없으므로 undefined
-      {
-        headers: {
-          Authorization: `Bearer ${refreshToken}`,
-        },
-      },
+      undefined,
+      // refreshToken은 쿠키에서 자동으로 전송되므로 헤더 불필요
     )
-    return normalizeApiResponse(response.data)
+    const normalized = normalizeApiResponse(response.data)
+
+    // TokenRefreshResponse에는 accessToken만 있음
+    if (normalized.success && normalized.data?.accessToken) {
+      const newAccessToken = normalized.data.accessToken
+
+      // 새 토큰 저장
+      if (typeof document !== 'undefined') {
+        document.cookie = `accessToken=${newAccessToken}; path=/; max-age=86400; SameSite=Lax`
+        localStorage.setItem('accessToken', newAccessToken)
+        // refreshToken은 재발급 응답에 없으므로 기존 refreshToken 유지
+      }
+    }
+
+    return normalized
   },
 
   // 이메일 인증 코드 전송 (새로운 API)
@@ -260,7 +302,9 @@ export const authApi = {
 export const productApi = {
   // ❌ Swagger에 없음 - API 호출 비활성화 (UI는 유지)
   getProducts: async (params?: ProductListParams) => {
-    throw new Error('GET /api/v1/products는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    throw new Error(
+      'GET /api/v1/products는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.',
+    )
     // const response = await apiClient.get<ApiResponse<any>>('/api/v1/products', {
     //   params,
     // })
@@ -269,7 +313,9 @@ export const productApi = {
 
   // ❌ Swagger에 없음 - API 호출 비활성화 (UI는 유지)
   searchProducts: async (params?: ProductListParams) => {
-    throw new Error('GET /api/v1/products/es는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    throw new Error(
+      'GET /api/v1/products/es는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.',
+    )
     // const response = await apiClient.get<ApiResponse<any>>(
     //   '/api/v1/products/es',
     //   {
@@ -281,7 +327,9 @@ export const productApi = {
 
   // ❌ Swagger에 없음 - API 호출 비활성화 (UI는 유지)
   getProduct: async (productId: number) => {
-    throw new Error('GET /api/v1/products/{productId}는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    throw new Error(
+      'GET /api/v1/products/{productId}는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.',
+    )
     // const response = await apiClient.get<ApiResponse<any>>(
     //   `/api/v1/products/${productId}`,
     // )
@@ -326,21 +374,37 @@ export const productApi = {
     return normalizeApiResponse(response.data)
   },
 
-  // ❌ Swagger에 없음 - API 호출 비활성화 (UI는 유지)
+  // 내가 등록한 상품 조회 (GET /api/v1/users/me/products)
+  // TODO: 아직 백엔드 개발 안됨 - API가 준비되면 활성화
   getMyProducts: async (params?: MyProductsParams) => {
-    throw new Error('GET /api/v1/products/me는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
-    // const response = await apiClient.get<ApiResponse<any>>(
-    //   '/api/v1/products/me',
-    //   {
-    //     params,
-    //   },
-    // )
-    // return normalizeApiResponse(response.data)
+    const searchParams = new URLSearchParams()
+    if (params?.page !== undefined) {
+      searchParams.append('page', params.page.toString())
+    }
+    if (params?.size !== undefined) {
+      searchParams.append('size', params.size.toString())
+    }
+    if (params?.status) {
+      searchParams.append('status', params.status)
+    }
+    if (params?.sort) {
+      searchParams.append('sort', params.sort)
+    }
+
+    const queryString = searchParams.toString()
+    const endpoint = queryString
+      ? `/api/v1/users/me/products?${queryString}`
+      : `/api/v1/users/me/products`
+
+    const response = await apiClient.get<ApiResponse<any>>(endpoint)
+    return normalizeApiResponse(response.data)
   },
 
   // ❌ Swagger에 없음 - API 호출 비활성화 (UI는 유지)
   getProductsByMember: async (memberId: number, params?: ProductListParams) => {
-    throw new Error('GET /api/v1/products/members/{memberId}는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    throw new Error(
+      'GET /api/v1/products/members/{memberId}는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.',
+    )
     // const response = await apiClient.get<ApiResponse<any>>(
     //   `/api/v1/products/members/${memberId}`,
     //   {
@@ -419,62 +483,60 @@ export const productApi = {
     return normalizeApiResponse(response.data)
   },
 
-  // ❌ 찜 목록 조회 - Swagger에 없음 (UI는 유지)
-  getBookmarks: async (params?: {
-    page?: number
-    size?: number
-  }) => {
-    throw new Error('GET /api/v1/bookmarks는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
-    // const searchParams = new URLSearchParams()
-    // if (params?.page) searchParams.append('page', params.page.toString())
-    // if (params?.size) searchParams.append('size', params.size.toString())
-    //
-    // const queryString = searchParams.toString()
-    // const endpoint = queryString
-    //   ? `/api/v1/bookmarks?${queryString}`
-    //   : `/api/v1/bookmarks`
-    //
-    // const response = await apiClient.get<ApiResponse<any>>(endpoint)
-    // return normalizeApiResponse(response.data)
+  // 찜 목록 조회 (GET /api/v1/users/me/bookmarks)
+  // TODO: 아직 백엔드 개발 안됨 - API가 준비되면 활성화
+  getBookmarks: async (params?: { page?: number; size?: number }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.page !== undefined) {
+      searchParams.append('page', params.page.toString())
+    }
+    if (params?.size !== undefined) {
+      searchParams.append('size', params.size.toString())
+    }
+
+    const queryString = searchParams.toString()
+    const endpoint = queryString
+      ? `/api/v1/users/me/bookmarks?${queryString}`
+      : `/api/v1/users/me/bookmarks`
+
+    const response = await apiClient.get<ApiResponse<any>>(endpoint)
+    return normalizeApiResponse(response.data)
   },
 }
 
 // 경매 관련 API
 export const auctionApi = {
-  // 경매 목록 조회 (키워드 검색)
-  // GET /api/v1/auctions?search={keyword}&cursor={cursor}&limit={limit}&sort={sort}
-  searchAuctions: async (params?: {
-    search?: string
-    cursor?: string
-    limit?: number
-    sort?: 'newest' | 'closing' | 'popular'
-  }) => {
-    const searchParams = new URLSearchParams()
-    if (params?.search) searchParams.append('search', params.search)
-    if (params?.cursor) searchParams.append('cursor', params.cursor)
-    if (params?.limit) searchParams.append('limit', params.limit.toString())
-    if (params?.sort) searchParams.append('sort', params.sort)
-
-    const queryString = searchParams.toString()
-    const endpoint = queryString
-      ? `/api/v1/auctions?${queryString}`
-      : `/api/v1/auctions`
-
-    const response = await apiClient.get<ApiResponse<any>>(endpoint)
-    return normalizeApiResponse(response.data)
-  },
-
-  // 경매 목록 조회 (카테고리/상태 필터)
-  // GET /api/v1/auctions?category={category}&subCategory={subCategory}&status={status}&cursor={cursor}&limit={limit}&sort={sort}
+  // 경매 목록 조회 (홈 화면 - 커서 기반 무한 스크롤)
+  // GET /api/v1/auctions?sort={newest|closing|popular}&cursor={cursor}
+  // 또는
+  // GET /api/v1/auctions?category={category}&subCategory={subCategory}&status={status}&cursor={cursor}
+  // TODO: 곧 배포 예정 - API가 준비되면 활성화
   getAuctions: async (params?: {
+    // 정렬 관련
+    sort?: 'newest' | 'closing' | 'popular' // 기본값: newest
+    // 카테고리 필터
     category?: 'ALL' | 'STARGOODS' | 'FIGURE' | 'CDLP' | 'GAME'
-    subCategory?: 'ALL' | 'ACC' | 'STATIONARY' | 'DAILY' | 'ELECTRONICS' | 'GAME' | 'ETC'
+    subCategory?:
+      | 'ALL'
+      | 'ACC'
+      | 'STATIONARY'
+      | 'DAILY'
+      | 'ELECTRONICS'
+      | 'GAME'
+      | 'ETC'
     status?: 'ALL' | 'SCHEDULED' | 'LIVE' | 'ENDED'
+    // 페이징
     cursor?: string
-    limit?: number
-    sort?: 'newest' | 'closing' | 'popular'
+    limit?: number // 선택적, 기본값은 백엔드에서 결정
   }) => {
     const searchParams = new URLSearchParams()
+
+    // 정렬 파라미터
+    if (params?.sort) {
+      searchParams.append('sort', params.sort)
+    }
+
+    // 카테고리 필터 파라미터
     if (params?.category && params.category !== 'ALL') {
       searchParams.append('category', params.category)
     }
@@ -484,9 +546,14 @@ export const auctionApi = {
     if (params?.status && params.status !== 'ALL') {
       searchParams.append('status', params.status)
     }
-    if (params?.cursor) searchParams.append('cursor', params.cursor)
-    if (params?.limit) searchParams.append('limit', params.limit.toString())
-    if (params?.sort) searchParams.append('sort', params.sort)
+
+    // 페이징 파라미터
+    if (params?.cursor) {
+      searchParams.append('cursor', params.cursor)
+    }
+    if (params?.limit !== undefined) {
+      searchParams.append('limit', params.limit.toString())
+    }
 
     const queryString = searchParams.toString()
     const endpoint = queryString
@@ -496,37 +563,187 @@ export const auctionApi = {
     const response = await apiClient.get<ApiResponse<any>>(endpoint)
     return normalizeApiResponse(response.data)
   },
-}
 
-// ❌ 입찰 관련 API - Swagger에 없음 (UI는 유지)
-export const bidApi = {
-  // ❌ Swagger에 없음
-  createBid: async (productId: number, bidData: BidRequest) => {
-    throw new Error('입찰 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+  // 경매 목록 조회 (키워드 검색)
+  // GET /api/v1/auctions?search={keyword}&cursor={cursor}
+  // TODO: 곧 배포 예정 - API가 준비되면 활성화
+  // 검색어 최소 2자 ~ 20자, 공백 기준 검색: and
+  searchAuctions: async (params?: {
+    search: string // 검색어 (2~20자)
+    cursor?: string
+    limit?: number // 선택적, 기본값은 백엔드에서 결정
+  }) => {
+    const searchParams = new URLSearchParams()
+
+    // 검색어는 필수 (클라이언트에서 2~20자 검증 권장)
+    if (params?.search) {
+      searchParams.append('search', params.search)
+    }
+
+    // 페이징 파라미터
+    if (params?.cursor) {
+      searchParams.append('cursor', params.cursor)
+    }
+    if (params?.limit !== undefined) {
+      searchParams.append('limit', params.limit.toString())
+    }
+
+    const queryString = searchParams.toString()
+    const endpoint = queryString
+      ? `/api/v1/auctions?${queryString}`
+      : `/api/v1/auctions`
+
+    const response = await apiClient.get<ApiResponse<any>>(endpoint)
+    return normalizeApiResponse(response.data)
   },
 
-  // ❌ Swagger에 없음
+  // 경매 등록 (Swagger 스펙: POST /api/v1/auctions)
+  // AuctionCreateRequest: { product_id, startPrice, buyNowPrice, midBidStep, startAt, endAt }
+  createAuction: async (auctionData: {
+    product_id: number
+    startPrice: number
+    buyNowPrice: number
+    midBidStep: number // Swagger에서는 midBidStep이지만 사용자가 minBidStep으로 언급
+    startAt: string // ISO 8601 형식
+    endAt: string // ISO 8601 형식
+  }) => {
+    const response = await apiClient.post<ApiResponse<any>>(
+      '/api/v1/auctions',
+      {
+        product_id: auctionData.product_id,
+        startPrice: auctionData.startPrice,
+        buyNowPrice: auctionData.buyNowPrice,
+        midBidStep: auctionData.midBidStep,
+        startAt: auctionData.startAt,
+        endAt: auctionData.endAt,
+      },
+    )
+    return normalizeApiResponse(response.data)
+  },
+
+  // 경매 입찰 내역 조회 (GET /api/v1/auctions/{auctionId}/bids)
+  // TODO: 아직 백엔드 개발 안됨 - API가 준비되면 활성화
+  getAuctionBids: async (
+    auctionId: number,
+    params?: { page?: number; size?: number },
+  ) => {
+    const searchParams = new URLSearchParams()
+    if (params?.page !== undefined) {
+      searchParams.append('page', params.page.toString())
+    }
+    if (params?.size !== undefined) {
+      searchParams.append('size', params.size.toString())
+    }
+
+    const queryString = searchParams.toString()
+    const endpoint = queryString
+      ? `/api/v1/auctions/${auctionId}/bids?${queryString}`
+      : `/api/v1/auctions/${auctionId}/bids`
+
+    const response = await apiClient.get<ApiResponse<any>>(endpoint)
+    return normalizeApiResponse(response.data)
+  },
+
+  // 실시간 최고가 조회 (GET /api/v1/auctions/{auctionId}/highest-bid)
+  // TODO: 아직 백엔드 개발 안됨 - API가 준비되면 활성화
+  getHighestBid: async (
+    auctionId: number,
+    params?: { page?: number; size?: number },
+  ) => {
+    const searchParams = new URLSearchParams()
+    if (params?.page !== undefined) {
+      searchParams.append('page', params.page.toString())
+    }
+    if (params?.size !== undefined) {
+      searchParams.append('size', params.size.toString())
+    }
+
+    const queryString = searchParams.toString()
+    const endpoint = queryString
+      ? `/api/v1/auctions/${auctionId}/highest-bid?${queryString}`
+      : `/api/v1/auctions/${auctionId}/highest-bid`
+
+    const response = await apiClient.get<ApiResponse<any>>(endpoint)
+    return normalizeApiResponse(response.data)
+  },
+
+  // 즉시 구매 (POST /api/v1/auctions/{auctionId}/buy-now)
+  // TODO: 곧 배포 예정 - API가 준비되면 활성화
+  buyNow: async (
+    auctionId: number,
+    buyNowData: { amount: number; methodId: number },
+  ) => {
+    const response = await apiClient.post<ApiResponse<any>>(
+      `/api/v1/auctions/${auctionId}/buy-now`,
+      {
+        amount: buyNowData.amount,
+        methodId: buyNowData.methodId,
+      },
+    )
+    return normalizeApiResponse(response.data)
+  },
+}
+
+// 입찰 관련 API
+export const bidApi = {
+  // 경매 입찰 (POST /api/v1/auctions/{auctionId}/bids)
+  // TODO: 곧 배포 예정 - API가 준비되면 활성화
+  createBid: async (auctionId: number, bidData: { bidAmount: number }) => {
+    const response = await apiClient.post<ApiResponse<any>>(
+      `/api/v1/auctions/${auctionId}/bids`,
+      {
+        bidAmount: bidData.bidAmount,
+      },
+    )
+    return normalizeApiResponse(response.data)
+  },
+
+  // 참여한 경매 목록 조회 (GET /api/v1/users/me/bids)
+  // TODO: 아직 백엔드 개발 안됨 - API가 준비되면 활성화
   getMyBids: async (params?: {
     page?: number
     size?: number
     status?: string
   }) => {
-    throw new Error('내 입찰 현황 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    const searchParams = new URLSearchParams()
+    if (params?.page !== undefined) {
+      searchParams.append('page', params.page.toString())
+    }
+    if (params?.size !== undefined) {
+      searchParams.append('size', params.size.toString())
+    }
+    if (params?.status) {
+      searchParams.append('status', params.status)
+    }
+
+    const queryString = searchParams.toString()
+    const endpoint = queryString
+      ? `/api/v1/users/me/bids?${queryString}`
+      : `/api/v1/users/me/bids`
+
+    const response = await apiClient.get<ApiResponse<any>>(endpoint)
+    return normalizeApiResponse(response.data)
   },
 
   // ❌ Swagger에 없음
   getBidStatus: async (productId: number) => {
-    throw new Error('입찰 현황 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    throw new Error(
+      '입찰 현황 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.',
+    )
   },
 
   // ❌ Swagger에 없음
   cancelBid: async (bidId: number) => {
-    throw new Error('입찰 취소 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    throw new Error(
+      '입찰 취소 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.',
+    )
   },
 
   // ❌ Swagger에 없음
   payBid: async (bidId: number) => {
-    throw new Error('낙찰 결제 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    throw new Error(
+      '낙찰 결제 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.',
+    )
   },
 }
 
@@ -534,27 +751,37 @@ export const bidApi = {
 export const reviewApi = {
   // ❌ Swagger에 없음
   createReview: async (data: ReviewWriteRequest) => {
-    throw new Error('리뷰 작성 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    throw new Error(
+      '리뷰 작성 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.',
+    )
   },
 
   // ❌ Swagger에 없음
   getReview: async (reviewId: number) => {
-    throw new Error('리뷰 조회 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    throw new Error(
+      '리뷰 조회 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.',
+    )
   },
 
   // ❌ Swagger에 없음
   updateReview: async (reviewId: number, data: ReviewUpdateRequest) => {
-    throw new Error('리뷰 수정 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    throw new Error(
+      '리뷰 수정 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.',
+    )
   },
 
   // ❌ Swagger에 없음
   deleteReview: async (reviewId: number) => {
-    throw new Error('리뷰 삭제 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    throw new Error(
+      '리뷰 삭제 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.',
+    )
   },
 
   // ❌ Swagger에 없음
   getReviewsByProduct: async (productId: number) => {
-    throw new Error('상품별 리뷰 목록 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    throw new Error(
+      '상품별 리뷰 목록 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.',
+    )
   },
 }
 
@@ -562,22 +789,30 @@ export const reviewApi = {
 export const notificationApi = {
   // ❌ Swagger에 없음
   getNotifications: async (params?: { page?: number; size?: number }) => {
-    throw new Error('알림 목록 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    throw new Error(
+      '알림 목록 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.',
+    )
   },
 
   // ❌ Swagger에 없음
   getUnreadCount: async () => {
-    throw new Error('읽지 않은 알림 개수 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    throw new Error(
+      '읽지 않은 알림 개수 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.',
+    )
   },
 
   // ❌ Swagger에 없음
   markAllAsRead: async () => {
-    throw new Error('모든 알림 읽음 처리 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    throw new Error(
+      '모든 알림 읽음 처리 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.',
+    )
   },
 
   // ❌ Swagger에 없음
   markAsRead: async (notificationId: number) => {
-    throw new Error('알림 읽음 처리 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    throw new Error(
+      '알림 읽음 처리 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.',
+    )
   },
 }
 
@@ -585,12 +820,32 @@ export const notificationApi = {
 export const paymentMethodApi = {
   // ❌ Swagger에 없음
   createPaymentMethod: async (data: PaymentMethodCreateRequest) => {
-    throw new Error('결제 수단 등록 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    // TODO: 결제 수단 등록 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.
+    return {
+      success: false,
+      data: null,
+      resultCode: 'NOT_IMPLEMENTED',
+      msg: '결제 수단 등록 API는 아직 구현되지 않았습니다.',
+      code: 'NOT_IMPLEMENTED',
+      status: 501,
+      httpStatus: 501,
+      message: '결제 수단 등록 API는 아직 구현되지 않았습니다.',
+    }
   },
 
   // ❌ Swagger에 없음
   getPaymentMethods: async () => {
-    throw new Error('결제 수단 목록 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    // TODO: 결제 수단 목록 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.
+    return {
+      success: true,
+      data: [],
+      resultCode: 'SUCCESS',
+      msg: '',
+      code: 'SUCCESS',
+      status: 200,
+      httpStatus: 200,
+      message: '',
+    }
   },
 
   // ❌ Swagger에 없음
@@ -598,12 +853,32 @@ export const paymentMethodApi = {
     paymentMethodId: number,
     data: PaymentMethodEditRequest,
   ) => {
-    throw new Error('결제 수단 수정 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    // TODO: 결제 수단 수정 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.
+    return {
+      success: false,
+      data: null,
+      resultCode: 'NOT_IMPLEMENTED',
+      msg: '결제 수단 수정 API는 아직 구현되지 않았습니다.',
+      code: 'NOT_IMPLEMENTED',
+      status: 501,
+      httpStatus: 501,
+      message: '결제 수단 수정 API는 아직 구현되지 않았습니다.',
+    }
   },
 
   // ❌ Swagger에 없음
   deletePaymentMethod: async (paymentMethodId: number) => {
-    throw new Error('결제 수단 삭제 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    // TODO: 결제 수단 삭제 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.
+    return {
+      success: false,
+      data: null,
+      resultCode: 'NOT_IMPLEMENTED',
+      msg: '결제 수단 삭제 API는 아직 구현되지 않았습니다.',
+      code: 'NOT_IMPLEMENTED',
+      status: 501,
+      httpStatus: 501,
+      message: '결제 수단 삭제 API는 아직 구현되지 않았습니다.',
+    }
   },
 }
 
@@ -611,17 +886,47 @@ export const paymentMethodApi = {
 export const cashApi = {
   // ❌ Swagger에 없음
   getMyCash: async () => {
-    throw new Error('지갑 잔액 조회 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    // TODO: 지갑 잔액 조회 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.
+    return {
+      success: false,
+      data: null,
+      resultCode: 'NOT_IMPLEMENTED',
+      msg: '지갑 잔액 조회 API는 아직 구현되지 않았습니다.',
+      code: 'NOT_IMPLEMENTED',
+      status: 501,
+      httpStatus: 501,
+      message: '지갑 잔액 조회 API는 아직 구현되지 않았습니다.',
+    }
   },
 
   // ❌ Swagger에 없음
   getCashTransactions: async (params?: { page?: number; size?: number }) => {
-    throw new Error('거래 내역 조회 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    // TODO: 거래 내역 조회 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.
+    return {
+      success: true,
+      data: { items: [] },
+      resultCode: 'SUCCESS',
+      msg: '',
+      code: 'SUCCESS',
+      status: 200,
+      httpStatus: 200,
+      message: '',
+    }
   },
 
   // ❌ Swagger에 없음
   getTransactionDetail: async (transactionId: number) => {
-    throw new Error('거래 상세 조회 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    // TODO: 거래 상세 조회 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.
+    return {
+      success: false,
+      data: null,
+      resultCode: 'NOT_IMPLEMENTED',
+      msg: '거래 상세 조회 API는 아직 구현되지 않았습니다.',
+      code: 'NOT_IMPLEMENTED',
+      status: 501,
+      httpStatus: 501,
+      message: '거래 상세 조회 API는 아직 구현되지 않았습니다.',
+    }
   },
 }
 
@@ -629,22 +934,38 @@ export const cashApi = {
 export const tossApi = {
   // ❌ Swagger에 없음
   getBillingAuthParams: async () => {
-    throw new Error('토스 빌링 인증 파라미터 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    // TODO: 토스 빌링 인증 파라미터 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.
+    return {
+      success: false,
+      data: null,
+      resultCode: 'NOT_IMPLEMENTED',
+      msg: '토스 빌링 인증 파라미터 API는 아직 구현되지 않았습니다.',
+      code: 'NOT_IMPLEMENTED',
+      status: 501,
+      httpStatus: 501,
+      message: '토스 빌링 인증 파라미터 API는 아직 구현되지 않았습니다.',
+    }
   },
 
   // ❌ Swagger에 없음
   issueBillingKey: async (authKey: string) => {
-    throw new Error('토스 빌링키 발급 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    throw new Error(
+      '토스 빌링키 발급 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.',
+    )
   },
 
   // ❌ Swagger에 없음
   getIdempotencyKey: async () => {
-    throw new Error('멱등키 발급 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    throw new Error(
+      '멱등키 발급 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.',
+    )
   },
 
   // ❌ Swagger에 없음
   chargeWallet: async (data: WalletChargeRequest) => {
-    throw new Error('지갑 충전 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    throw new Error(
+      '지갑 충전 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.',
+    )
   },
 }
 
@@ -652,12 +973,32 @@ export const tossApi = {
 export const paymentApi = {
   // ❌ Swagger에 없음
   getMyPayments: async (params?: { page?: number; size?: number }) => {
-    throw new Error('결제 내역 목록 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    // TODO: 결제 내역 목록 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.
+    return {
+      success: true,
+      data: { items: [] },
+      resultCode: 'SUCCESS',
+      msg: '',
+      code: 'SUCCESS',
+      status: 200,
+      httpStatus: 200,
+      message: '',
+    }
   },
 
   // ❌ Swagger에 없음
   getPaymentDetail: async (paymentId: number) => {
-    throw new Error('결제 상세 정보 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    // TODO: 결제 상세 정보 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.
+    return {
+      success: false,
+      data: null,
+      resultCode: 'NOT_IMPLEMENTED',
+      msg: '결제 상세 정보 API는 아직 구현되지 않았습니다.',
+      code: 'NOT_IMPLEMENTED',
+      status: 501,
+      httpStatus: 501,
+      message: '결제 상세 정보 API는 아직 구현되지 않았습니다.',
+    }
   },
 }
 

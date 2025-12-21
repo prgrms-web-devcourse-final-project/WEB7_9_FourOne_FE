@@ -1,11 +1,18 @@
 import { WalletClient } from '@/components/features/wallet/WalletClient'
 import { HomeLayout } from '@/components/layout/HomeLayout'
 import { PageHeader } from '@/components/layout/PageHeader'
+import { cookies } from 'next/headers'
+
+export const dynamic = 'force-dynamic'
 
 export default async function WalletPage() {
+  const cookieStore = await cookies()
+  const accessToken = cookieStore.get('accessToken')?.value
+  const isLoggedIn = !!accessToken
+
   try {
     return (
-      <HomeLayout isLoggedIn={true}>
+      <HomeLayout isLoggedIn={isLoggedIn}>
         <PageHeader
           title="결제 관리"
           description="내 결제 수단과 거래 내역을 확인하세요"
@@ -18,7 +25,7 @@ export default async function WalletPage() {
     console.error('Wallet 페이지 에러:', error)
 
     return (
-      <HomeLayout isLoggedIn={true}>
+      <HomeLayout isLoggedIn={isLoggedIn}>
         <PageHeader
           title="지갑"
           description="내 결제 수단과 거래 내역을 확인하세요"

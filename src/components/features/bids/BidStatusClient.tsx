@@ -2,13 +2,13 @@
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { ErrorAlert } from '@/components/ui/error-alert'
 import {
   PageSizeSelector,
   Pagination,
   PaginationInfo,
 } from '@/components/ui/pagination'
 import { bidApi, cashApi, paymentApi } from '@/lib/api'
+import { showErrorToast, showInfoToast } from '@/lib/utils/toast'
 import { Bid } from '@/types'
 import { ExternalLink, StarIcon } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -341,7 +341,7 @@ export function BidStatusClient({
         return false
       }
 
-      alert('잔액 확인 중 오류가 발생했습니다.')
+      showErrorToast('잔액 확인 중 오류가 발생했습니다.')
       return false
     }
   }
@@ -353,8 +353,8 @@ export function BidStatusClient({
       const result = await bidApi.payBid(bidId)
 
       if (result.success) {
-        alert(
-          `결제가 완료되었습니다!\n금액: ${result.data?.amount?.toLocaleString()}원\n잔액: ${result.data?.balanceAfter?.toLocaleString()}원\n\n거래내역을 확인하시겠습니까?`,
+        showSuccessToast(
+          `결제가 완료되었습니다! 금액: ${result.data?.amount?.toLocaleString()}원, 잔액: ${result.data?.balanceAfter?.toLocaleString()}원`,
         )
 
         // UI 업데이트 - 페이지 새로고침으로 최신 데이터 가져오기
@@ -372,7 +372,7 @@ export function BidStatusClient({
             router.push('/wallet')
           }
         } else {
-          alert(`결제 실패: ${result.msg}`)
+          showErrorToast(`결제 실패: ${result.msg}`)
         }
       }
     } catch (error: any) {
@@ -400,7 +400,7 @@ export function BidStatusClient({
           router.push('/wallet')
         }
       } else {
-        alert('결제 중 오류가 발생했습니다.')
+        showErrorToast('결제 중 오류가 발생했습니다.')
       }
     } finally {
       setPayingBidId(null)
@@ -425,15 +425,6 @@ export function BidStatusClient({
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
-      {/* API 에러 메시지 */}
-      {apiError && (
-        <ErrorAlert
-          title="오류"
-          message={apiError}
-          onClose={() => setApiError('')}
-        />
-      )}
-
       {/* 페이지 헤더 */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-neutral-900">입찰 내역</h1>

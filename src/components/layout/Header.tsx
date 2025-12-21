@@ -1,16 +1,14 @@
 'use client'
 
 import { useAuth } from '@/contexts/AuthContext'
-import { useWebSocketNotifications } from '@/hooks/useWebSocketNotifications'
-import { notificationApi } from '@/lib/api'
 import { User } from '@/types'
-import { Bell, Menu, X } from 'lucide-react'
+import { Heart, Menu, X } from 'lucide-react'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 interface HeaderProps {
   isLoggedIn?: boolean
-  user?: User
+  user?: User | null
   notificationCount?: number
 }
 
@@ -26,60 +24,62 @@ export function Header({
     useState(notificationCount)
 
   // Context 우선, props는 fallback
-  const isLoggedIn = contextIsLoggedIn || propIsLoggedIn
+  // user가 실제로 존재할 때만 로그인 상태로 간주
+  const isLoggedIn =
+    (contextIsLoggedIn && !!contextUser) || (propIsLoggedIn && !!propUser)
   const user = contextUser || propUser
 
-  // WebSocket 실시간 알림 구독 (로그인된 경우에만)
-  const { unreadCount: wsUnreadCount } = useWebSocketNotifications(isLoggedIn)
+  // // WebSocket 실시간 알림 구독 (로그인된 경우에만)
+  // const { unreadCount: wsUnreadCount } = useWebSocketNotifications(isLoggedIn)
 
-  // WebSocket 실시간 알림 개수와 API 알림 개수 합산
-  useEffect(() => {
-    if (isLoggedIn) {
-      const totalCount = (unreadNotificationCount || 0) + (wsUnreadCount || 0)
-      setUnreadNotificationCount(totalCount)
-    }
-  }, [wsUnreadCount, isLoggedIn])
+  // // WebSocket 실시간 알림 개수와 API 알림 개수 합산
+  // useEffect(() => {
+  //   if (isLoggedIn) {
+  //     const totalCount = (unreadNotificationCount || 0) + (wsUnreadCount || 0)
+  //     setUnreadNotificationCount(totalCount)
+  //   }
+  // }, [wsUnreadCount, isLoggedIn])
 
-  // 읽지 않은 알림 개수 가져오기
-  useEffect(() => {
-    const fetchUnreadCount = async () => {
-      if (isLoggedIn) {
-        try {
-          const response = await notificationApi.getUnreadCount()
-          if (response.success && response.data) {
-            setUnreadNotificationCount(
-              response.data.count || response.data || 0,
-            )
-          }
-        } catch (error) {
-          console.error('읽지 않은 알림 개수 조회 실패:', error)
-        }
-      }
-    }
+  // // 읽지 않은 알림 개수 가져오기
+  // useEffect(() => {
+  //   const fetchUnreadCount = async () => {
+  //     if (isLoggedIn) {
+  //       try {
+  //         const response = await notificationApi.getUnreadCount()
+  //         if (response.success && response.data) {
+  //           setUnreadNotificationCount(
+  //             response.data.count || response.data || 0,
+  //           )
+  //         }
+  //       } catch (error) {
+  //         console.error('읽지 않은 알림 개수 조회 실패:', error)
+  //       }
+  //     }
+  //   }
 
-    fetchUnreadCount()
+  //   fetchUnreadCount()
 
-    // 5분마다 알림 개수 새로고침 (성능 최적화)
-    const interval = setInterval(fetchUnreadCount, 300000)
+  //   // 5분마다 알림 개수 새로고침 (성능 최적화)
+  //   const interval = setInterval(fetchUnreadCount, 300000)
 
-    // 알림 개수 업데이트 이벤트 리스너
-    const handleNotificationCountUpdate = (event: CustomEvent) => {
-      setUnreadNotificationCount(event.detail.count)
-    }
+  //   // 알림 개수 업데이트 이벤트 리스너
+  //   const handleNotificationCountUpdate = (event: CustomEvent) => {
+  //     setUnreadNotificationCount(event.detail.count)
+  //   }
 
-    window.addEventListener(
-      'notificationCountUpdate',
-      handleNotificationCountUpdate as EventListener,
-    )
+  //   window.addEventListener(
+  //     'notificationCountUpdate',
+  //     handleNotificationCountUpdate as EventListener,
+  //   )
 
-    return () => {
-      clearInterval(interval)
-      window.removeEventListener(
-        'notificationCountUpdate',
-        handleNotificationCountUpdate as EventListener,
-      )
-    }
-  }, [isLoggedIn])
+  //   return () => {
+  //     clearInterval(interval)
+  //     window.removeEventListener(
+  //       'notificationCountUpdate',
+  //       handleNotificationCountUpdate as EventListener,
+  //     )
+  //   }
+  // }, [isLoggedIn])
 
   return (
     <header className="sticky top-0 z-50 border-b border-neutral-200/50 bg-white/95 shadow-sm backdrop-blur-md">
@@ -139,79 +139,72 @@ export function Header({
                   상품 등록
                 </Link>
 
-                {/* 알림 */}
+                {/* 찜 */}
                 <Link
-                  href="/notifications"
+                  href="/bookmarks"
                   className="hover:text-primary-600 hover:bg-primary-50 relative rounded-lg p-2.5 text-neutral-600 transition-all duration-200"
                 >
-                  <Bell className="h-5 w-5" />
-                  {unreadNotificationCount > 0 && (
-                    <span className="bg-error-500 absolute -top-1 -right-1 flex h-5 w-5 animate-pulse items-center justify-center rounded-full text-xs font-bold text-white shadow-lg ring-2 ring-white">
-                      {unreadNotificationCount > 99
-                        ? '99+'
-                        : unreadNotificationCount > 9
-                          ? '9+'
-                          : unreadNotificationCount}
-                    </span>
-                  )}
+                  <Heart className="h-5 w-5" />
                 </Link>
 
                 {/* 사용자 프로필 */}
-                <div className="relative">
-                  <button
-                    onClick={() => setIsProfileOpen(!isProfileOpen)}
-                    className="hover:bg-primary-50 flex items-center space-x-3 rounded-xl p-2 transition-all duration-200"
-                  >
-                    <div className="bg-primary-500 flex h-9 w-9 items-center justify-center rounded-full shadow-lg">
-                      <span className="text-sm font-bold text-white">
-                        {(user?.nickname || user?.email || 'U')
-                          .charAt(0)
-                          .toUpperCase()}
-                      </span>
-                    </div>
-                    <span className="hidden text-sm font-semibold text-neutral-900 sm:block">
-                      {user?.nickname || user?.email?.split('@')[0] || '사용자'}
-                    </span>
-                  </button>
-
-                  {/* 프로필 드롭다운 */}
-                  {isProfileOpen && (
-                    <>
-                      {/* 배경 오버레이 */}
-                      <div
-                        className="fixed inset-0 z-40"
-                        onClick={() => setIsProfileOpen(false)}
-                      />
-                      {/* 드롭다운 메뉴 */}
-                      <div className="animate-scale-in fixed top-16 right-4 z-50 w-56 rounded-2xl border border-neutral-200/50 bg-white/95 py-3 shadow-xl shadow-neutral-200/50 backdrop-blur-md md:absolute md:top-full md:right-0 md:mt-2">
-                        <Link
-                          href="/my-info"
-                          className="hover:bg-primary-50 hover:text-primary-700 block px-4 py-3 text-sm font-medium text-neutral-700 transition-colors"
-                          onClick={() => setIsProfileOpen(false)}
-                        >
-                          내 정보
-                        </Link>
-                        <Link
-                          href="/notifications"
-                          className="hover:bg-primary-50 hover:text-primary-700 block px-4 py-3 text-sm font-medium text-neutral-700 transition-colors"
-                          onClick={() => setIsProfileOpen(false)}
-                        >
-                          알림
-                        </Link>
-                        <hr className="my-2 border-neutral-200/50" />
-                        <button
-                          onClick={() => {
-                            setIsProfileOpen(false)
-                            logout()
-                          }}
-                          className="hover:bg-error-50 hover:text-error-700 block w-full px-4 py-3 text-left text-sm font-medium text-neutral-700 transition-colors"
-                        >
-                          로그아웃
-                        </button>
+                {user && (
+                  <div className="relative">
+                    <button
+                      onClick={() => setIsProfileOpen(!isProfileOpen)}
+                      className="hover:bg-primary-50 flex items-center space-x-3 rounded-xl p-2 transition-all duration-200"
+                    >
+                      <div className="bg-primary-500 flex h-9 w-9 items-center justify-center rounded-full shadow-lg">
+                        <span className="text-sm font-bold text-white">
+                          {(user.nickname || user.email || 'U')
+                            .charAt(0)
+                            .toUpperCase()}
+                        </span>
                       </div>
-                    </>
-                  )}
-                </div>
+                      <span className="hidden text-sm font-semibold text-neutral-900 sm:block">
+                        {user.nickname || user.email?.split('@')[0] || '사용자'}
+                      </span>
+                    </button>
+
+                    {/* 프로필 드롭다운 */}
+                    {isProfileOpen && (
+                      <>
+                        {/* 배경 오버레이 */}
+                        <div
+                          className="fixed inset-0 z-40"
+                          onClick={() => setIsProfileOpen(false)}
+                        />
+                        {/* 드롭다운 메뉴 */}
+                        <div className="animate-scale-in fixed top-16 right-4 z-50 w-56 rounded-2xl border border-neutral-200/50 bg-white/95 py-3 shadow-xl shadow-neutral-200/50 backdrop-blur-md md:absolute md:top-full md:right-0 md:mt-2">
+                          <Link
+                            href="/my-info"
+                            className="hover:bg-primary-50 hover:text-primary-700 block px-4 py-3 text-sm font-medium text-neutral-700 transition-colors"
+                            onClick={() => setIsProfileOpen(false)}
+                          >
+                            내 정보
+                          </Link>
+                          <Link
+                            href="/bookmarks"
+                            className="hover:bg-primary-50 hover:text-primary-700 block px-4 py-3 text-sm font-medium text-neutral-700 transition-colors"
+                            onClick={() => setIsProfileOpen(false)}
+                          >
+                            찜
+                          </Link>
+                          <hr className="my-2 border-neutral-200/50" />
+                          <button
+                            onClick={async () => {
+                              setIsProfileOpen(false)
+                              await logout()
+                            }}
+                            className="hover:bg-error-50 hover:text-error-700 block w-full px-4 py-3 text-left text-sm font-medium text-neutral-700 transition-colors"
+                          >
+                            로그아웃
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
               </>
             ) : (
               <Link

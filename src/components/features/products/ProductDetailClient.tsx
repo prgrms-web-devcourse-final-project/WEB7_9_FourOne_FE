@@ -1,16 +1,19 @@
 'use client'
 
-import { ReviewSection } from '@/components/features/reviews/ReviewSection'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { ErrorAlert } from '@/components/ui/error-alert'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/contexts/AuthContext'
 import { useWebSocketAuctionTimer } from '@/hooks/useWebSocketAuctionTimer'
 import { useWebSocketBid } from '@/hooks/useWebSocketBid'
 import { bidApi, productApi } from '@/lib/api'
 import { handleApiError } from '@/lib/api/common'
+import {
+  showErrorToast,
+  showInfoToast,
+  showSuccessToast,
+} from '@/lib/utils/toast'
 import { Product } from '@/types'
 import {
   Clock,
@@ -40,6 +43,14 @@ export function ProductDetailClient({
   const [bidAmount, setBidAmount] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [apiError, setApiError] = useState('')
+
+  // apiError가 변경되면 토스트로 표시
+  useEffect(() => {
+    if (apiError) {
+      showErrorToast(apiError, '오류')
+      setApiError('') // 토스트 표시 후 초기화
+    }
+  }, [apiError])
   const [bidStatus, setBidStatus] = useState<any>(initialBidStatus || null)
   const [isPriceUpdated, setIsPriceUpdated] = useState(false)
   const [isBidCountUpdated, setIsBidCountUpdated] = useState(false)
@@ -74,7 +85,7 @@ export function ProductDetailClient({
     try {
       setIsRefreshing(true)
       console.log('🔄 상품 데이터 새로고침 중...')
-      const response = await productApi.getProduct(safeProductId)
+      const response: any = await productApi.getProduct(safeProductId)
       if (response.success && response.data) {
         setProductData(response.data)
         // bidStatus도 함께 업데이트
@@ -96,8 +107,15 @@ export function ProductDetailClient({
     bidUpdate,
     auctionStatus,
     isSubscribed,
-    error: wsError,
+    error: wsErrorFromHook,
   } = useWebSocketBid(safeProductId)
+
+  // wsError가 변경되면 토스트로 표시
+  useEffect(() => {
+    if (wsErrorFromHook) {
+      showErrorToast(wsErrorFromHook, '실시간 연결 오류')
+    }
+  }, [wsErrorFromHook])
 
   const { timerData, isSubscribed: isTimerSubscribed } =
     useWebSocketAuctionTimer(safeProductId)
@@ -141,7 +159,7 @@ export function ProductDetailClient({
   // 입찰 현황 조회
   const fetchBidStatus = async () => {
     try {
-      const response = await bidApi.getBidStatus(safeProductId)
+      const response: any = await bidApi.getBidStatus(safeProductId)
       if (response.success) {
         setBidStatus(response.data)
       } else {
@@ -173,7 +191,7 @@ export function ProductDetailClient({
   // 북마크 토글
   const handleBookmarkToggle = async () => {
     if (!isLoggedIn) {
-      alert('로그인이 필요합니다.')
+      showInfoToast('로그인이 필요합니다.')
       router.push('/login')
       return
     }
@@ -194,7 +212,7 @@ export function ProductDetailClient({
     } catch (error: any) {
       console.error('북마크 토글 실패:', error)
       const apiError = handleApiError(error)
-      alert(apiError.message)
+      showErrorToast(apiError.message)
     } finally {
       setIsBookmarkLoading(false)
     }
@@ -203,13 +221,13 @@ export function ProductDetailClient({
   // QnA 질문 등록
   const handleAddQna = async () => {
     if (!isLoggedIn) {
-      alert('로그인이 필요합니다.')
+      showInfoToast('로그인이 필요합니다.')
       router.push('/login')
       return
     }
 
     if (!newQuestion.trim()) {
-      alert('질문을 입력해주세요.')
+      showInfoToast('질문을 입력해주세요.')
       return
     }
 
@@ -218,13 +236,16 @@ export function ProductDetailClient({
       if (response.success) {
         setNewQuestion('')
         fetchQnaList()
+        showSuccessToast('질문이 등록되었습니다.')
       } else {
-        alert(response.message || response.msg || '질문 등록에 실패했습니다.')
+        showErrorToast(
+          response.message || response.msg || '질문 등록에 실패했습니다.',
+        )
       }
     } catch (error: any) {
       console.error('QnA 등록 실패:', error)
       const apiError = handleApiError(error)
-      alert(apiError.message)
+      showErrorToast(apiError.message)
     }
   }
 
@@ -232,7 +253,7 @@ export function ProductDetailClient({
   const handleAddAnswer = async (qnaId: number) => {
     const answer = newAnswers[qnaId]
     if (!answer?.trim()) {
-      alert('답변을 입력해주세요.')
+      showInfoToast('답변을 입력해주세요.')
       return
     }
 
@@ -241,13 +262,16 @@ export function ProductDetailClient({
       if (response.success) {
         setNewAnswers((prev) => ({ ...prev, [qnaId]: '' }))
         fetchQnaList()
+        showSuccessToast('답변이 등록되었습니다.')
       } else {
-        alert(response.message || response.msg || '답변 등록에 실패했습니다.')
+        showErrorToast(
+          response.message || response.msg || '답변 등록에 실패했습니다.',
+        )
       }
     } catch (error: any) {
       console.error('답변 등록 실패:', error)
       const apiError = handleApiError(error)
-      alert(apiError.message)
+      showErrorToast(apiError.message)
     }
   }
 
@@ -261,13 +285,16 @@ export function ProductDetailClient({
       const response = await productApi.deleteAnswer(productId, qnaId)
       if (response.success) {
         fetchQnaList()
+        showSuccessToast('답변이 삭제되었습니다.')
       } else {
-        alert(response.message || response.msg || '답변 삭제에 실패했습니다.')
+        showErrorToast(
+          response.message || response.msg || '답변 삭제에 실패했습니다.',
+        )
       }
     } catch (error: any) {
       console.error('답변 삭제 실패:', error)
       const apiError = handleApiError(error)
-      alert(apiError.message)
+      showErrorToast(apiError.message)
     }
   }
 
@@ -463,20 +490,26 @@ export function ProductDetailClient({
     setApiError('')
 
     try {
+      // auctionId 확인 (상품 데이터에서 가져오기)
+      const auctionId = (productData as any).auctionId
+      if (!auctionId) {
+        setApiError('경매 정보를 찾을 수 없습니다.')
+        setIsLoading(false)
+        return
+      }
+
       console.log('🎯 입찰 API 호출 시작:', {
-        productId: safeProductId,
-        price: amount,
-        bidData: { price: amount },
+        auctionId: auctionId,
+        bidAmount: amount,
       })
 
-      // API 호출 방식 확인
-      console.log('🎯 bidApi.createBid 함수:', bidApi.createBid)
-
-      const response = await bidApi.createBid(safeProductId, { price: amount })
+      const response: any = await bidApi.createBid(auctionId, {
+        bidAmount: amount,
+      })
       console.log('🎯 입찰 API 응답:', response)
 
       if (response.success) {
-        alert('입찰이 성공적으로 등록되었습니다.')
+        showSuccessToast('입찰이 성공적으로 등록되었습니다.')
         setBidAmount('')
         fetchBidStatus()
         // 상품 데이터 새로고침
@@ -511,24 +544,6 @@ export function ProductDetailClient({
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
-      {/* API 에러 메시지 */}
-      {apiError && (
-        <ErrorAlert
-          title="오류"
-          message={apiError}
-          onClose={() => setApiError('')}
-        />
-      )}
-
-      {/* WebSocket 에러 메시지 */}
-      {wsError && (
-        <ErrorAlert
-          title="실시간 연결 오류"
-          message={wsError}
-          onClose={() => {}}
-        />
-      )}
-
       {/* 새 입찰 알림 토스트 */}
       {showBidNotification && lastBidInfo && (
         <div className="animate-slide-in fixed top-4 right-4 z-50">
@@ -557,11 +572,6 @@ export function ProductDetailClient({
           <div className="flex items-center justify-center space-x-2 rounded-lg bg-blue-50 px-4 py-2 text-sm text-blue-700">
             <Clock className="h-4 w-4 animate-pulse" />
             <span>실시간 경매 타이머 연결됨</span>
-          </div>
-        )}
-        {wsError && (
-          <div className="flex items-center justify-center space-x-2 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700">
-            <span>⚠️ 실시간 연결 오류: {wsError}</span>
           </div>
         )}
         {!isSubscribed && !isTimerSubscribed && (
@@ -680,30 +690,57 @@ export function ProductDetailClient({
                   </Button>
                 )}
                 {isOwner && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      router.push(`/products/${product.productId}/edit`)
-                    }}
-                    className="flex items-center space-x-2"
-                    disabled={
-                      productData.status === '경매 중' ||
+                  <>
+                    {/* 경매 시작 전: 경매 등록 버튼 */}
+                    {productData.status === '경매 시작 전' && (
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          router.push(
+                            `/products/${product.productId}/register-auction`,
+                          )
+                        }}
+                        className="bg-primary-600 hover:bg-primary-700 flex items-center space-x-2"
+                      >
+                        <Zap className="h-4 w-4" />
+                        <span>경매 등록</span>
+                      </Button>
+                    )}
+                    {/* 경매 시작 전: 상품 수정 버튼 */}
+                    {productData.status === '경매 시작 전' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          router.push(`/products/${product.productId}/edit`)
+                        }}
+                        className="flex items-center space-x-2"
+                      >
+                        <Edit className="h-4 w-4" />
+                        <span>상품 수정</span>
+                      </Button>
+                    )}
+                    {/* 경매 등록 후: 수정 불가 */}
+                    {(productData.status === '경매 중' ||
                       productData.status === '낙찰' ||
-                      productData.status === '유찰'
-                    }
-                  >
-                    <Edit className="h-4 w-4" />
-                    <span>
-                      {productData.status === '경매 중'
-                        ? '경매중'
-                        : productData.status === '낙찰'
-                          ? '완료'
-                          : productData.status === '유찰'
-                            ? '결제완료'
-                            : '수정'}
-                    </span>
-                  </Button>
+                      productData.status === '유찰') && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={true}
+                        className="flex items-center space-x-2"
+                      >
+                        <Edit className="h-4 w-4" />
+                        <span>
+                          {productData.status === '경매 중'
+                            ? '경매중 (수정 불가)'
+                            : productData.status === '낙찰'
+                              ? '낙찰 완료'
+                              : '유찰 완료'}
+                        </span>
+                      </Button>
+                    )}
+                  </>
                 )}
               </div>
             </div>
@@ -1209,9 +1246,6 @@ export function ProductDetailClient({
           )}
         </CardContent>
       </Card>
-
-      {/* 리뷰 섹션 */}
-      <ReviewSection productId={getSafeProductId(productData.productId)} />
     </div>
   )
 }

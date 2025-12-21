@@ -3,7 +3,6 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { ErrorAlert } from '@/components/ui/error-alert'
 import {
   PageSizeSelector,
   Pagination,
@@ -11,6 +10,7 @@ import {
 } from '@/components/ui/pagination'
 import { usePagination } from '@/hooks/usePagination'
 import { notificationApi } from '@/lib/api'
+import { showErrorToast } from '@/lib/utils/toast'
 import { Bell, Check } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
@@ -66,6 +66,20 @@ export function NotificationsClient({
     autoLoad: !initialNotifications || initialNotifications.length === 0,
     onError: setError,
   })
+
+  // error나 paginationError가 변경되면 토스트로 표시
+  useEffect(() => {
+    if (error) {
+      showErrorToast(error, '알림 로드 실패')
+      setError('') // 토스트 표시 후 초기화
+    }
+  }, [error])
+
+  useEffect(() => {
+    if (paginationError) {
+      showErrorToast(paginationError, '알림 로드 실패')
+    }
+  }, [paginationError])
 
   // 초기 데이터가 있으면 설정
   useEffect(() => {
@@ -189,17 +203,6 @@ export function NotificationsClient({
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-      {/* 에러 메시지 */}
-      {(error || paginationError) && (
-        <div className="mb-6">
-          <ErrorAlert
-            title="알림 로드 실패"
-            message={error || paginationError || ''}
-            onClose={() => setError('')}
-          />
-        </div>
-      )}
-
       {/* 알림 현황 요약 */}
       <div className="mb-6 grid grid-cols-2 gap-4">
         <Card variant="outlined">

@@ -20,6 +20,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/webhooks/toss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["handle"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/settlements/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["confirm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/payments/{paymentId}/fail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["fail"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/payments/create": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/products": {
         parameters: {
             query?: never;
@@ -212,6 +276,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/notifications/subscribe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["subscribe"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/me": {
         parameters: {
             query?: never;
@@ -291,6 +371,31 @@ export interface components {
             message?: string;
             data?: components["schemas"]["ProductCreateResponse"];
         };
+        Data: {
+            paymentKey?: string;
+            orderId?: string;
+            status?: string;
+            /** Format: int64 */
+            totalAmount?: number;
+        };
+        TossWebhookRequest: {
+            eventType?: string;
+            data?: components["schemas"]["Data"];
+        };
+        RsDataVoid: {
+            code?: string;
+            /** Format: int32 */
+            status?: number;
+            message?: string;
+            data?: Record<string, never>;
+        };
+        RsDataObject: {
+            code?: string;
+            /** Format: int32 */
+            status?: number;
+            message?: string;
+            data?: Record<string, never>;
+        };
         ProductQnACreateRequest: {
             question: string;
         };
@@ -357,13 +462,6 @@ export interface components {
             accessToken?: string;
             /** Format: int64 */
             expiresIn?: number;
-        };
-        RsDataVoid: {
-            code?: string;
-            /** Format: int32 */
-            status?: number;
-            message?: string;
-            data?: Record<string, never>;
         };
         LocalLoginRequest: {
             email: string;
@@ -505,6 +603,10 @@ export interface components {
             message?: string;
             data?: components["schemas"]["ProductQnAListResponse"];
         };
+        SseEmitter: {
+            /** Format: int64 */
+            timeout?: number;
+        };
         GetCurrentUserInfoResponse: {
             /** Format: int64 */
             userId?: number;
@@ -590,6 +692,103 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["RsDataVoid"];
+                };
+            };
+        };
+    };
+    handle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TossWebhookRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataVoid"];
+                };
+            };
+        };
+    };
+    confirm: {
+        parameters: {
+            query: {
+                paymentId: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    fail: {
+        parameters: {
+            query: {
+                user: components["schemas"]["User"];
+            };
+            header?: never;
+            path: {
+                paymentId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataObject"];
+                };
+            };
+        };
+    };
+    create: {
+        parameters: {
+            query: {
+                user: components["schemas"]["User"];
+                amount: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataObject"];
                 };
             };
         };
@@ -778,7 +977,9 @@ export interface operations {
             query?: never;
             header?: never;
             path?: never;
-            cookie?: never;
+            cookie?: {
+                refreshToken?: string;
+            };
         };
         requestBody?: never;
         responses: {
@@ -957,6 +1158,28 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["RsDataAuctionCreateResponse"];
+                };
+            };
+        };
+    };
+    subscribe: {
+        parameters: {
+            query: {
+                userId: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": components["schemas"]["SseEmitter"];
                 };
             };
         };
