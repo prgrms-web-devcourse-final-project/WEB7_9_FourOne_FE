@@ -8,7 +8,7 @@ import {
   PaginationInfo,
 } from '@/components/ui/pagination'
 import { bidApi, cashApi, paymentApi } from '@/lib/api'
-import { showErrorToast, showInfoToast } from '@/lib/utils/toast'
+import { showErrorToast, showSuccessToast } from '@/lib/utils/toast'
 import { Bid } from '@/types'
 import { ExternalLink, StarIcon } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -125,7 +125,7 @@ export function BidStatusClient({
             currentPage,
             pageSize,
             hasNext,
-          } = response.data
+          } = response.data as any
 
           setPayments(content || [])
           setCurrentPaymentPage(currentPage + 1) // 0-based를 1-based로 변환
@@ -314,7 +314,7 @@ export function BidStatusClient({
     try {
       const cashInfo = await cashApi.getMyCash()
       if (cashInfo.success && cashInfo.data) {
-        const balance = cashInfo.data.balance || 0
+        const balance = (cashInfo.data as any).balance || 0
         if (balance < bidAmount) {
           const shouldGoToWallet = confirm(
             `잔액이 부족합니다.\n현재 잔액: ${balance.toLocaleString()}원\n필요 금액: ${bidAmount.toLocaleString()}원\n\n지갑을 충전하시겠습니까?`,
@@ -350,11 +350,12 @@ export function BidStatusClient({
   const handlePayBid = async (bidId: number, bidAmount: number) => {
     setPayingBidId(bidId)
     try {
-      const result = await bidApi.payBid(bidId)
+      const result = (await bidApi.payBid(bidId)) as any
 
       if (result.success) {
+        const resultData = result.data as any
         showSuccessToast(
-          `결제가 완료되었습니다! 금액: ${result.data?.amount?.toLocaleString()}원, 잔액: ${result.data?.balanceAfter?.toLocaleString()}원`,
+          `결제가 완료되었습니다! 금액: ${resultData?.amount?.toLocaleString()}원, 잔액: ${resultData?.balanceAfter?.toLocaleString()}원`,
         )
 
         // UI 업데이트 - 페이지 새로고침으로 최신 데이터 가져오기
@@ -364,15 +365,16 @@ export function BidStatusClient({
         router.push('/wallet?tab=transactions')
       } else {
         // 결제 실패 처리
-        if (result.msg?.includes('잔액') || result.msg?.includes('지갑')) {
+        const resultMsg = result.msg || result.message || ''
+        if (resultMsg.includes('잔액') || resultMsg.includes('지갑')) {
           const shouldGoToWallet = confirm(
-            `결제 실패: ${result.msg}\n\n지갑을 충전하시겠습니까?`,
+            `결제 실패: ${resultMsg}\n\n지갑을 충전하시겠습니까?`,
           )
           if (shouldGoToWallet) {
             router.push('/wallet')
           }
         } else {
-          showErrorToast(`결제 실패: ${result.msg}`)
+          showErrorToast(`결제 실패: ${resultMsg}`)
         }
       }
     } catch (error: any) {
@@ -524,7 +526,7 @@ export function BidStatusClient({
                     <CardContent className="p-6">
                       <div className="flex items-start space-x-6">
                         {/* 상품 이미지 */}
-                        <div className="flex-shrink-0">
+                        <div className="shrink-0">
                           <div
                             className="h-24 w-24 cursor-pointer rounded-lg bg-neutral-200 transition-transform hover:scale-105"
                             onClick={() =>

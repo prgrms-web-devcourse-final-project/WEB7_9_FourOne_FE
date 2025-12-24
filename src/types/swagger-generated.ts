@@ -11,10 +11,26 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["getProduct"];
         put: operations["updateProduct"];
         post?: never;
         delete: operations["deleteProduct"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications/{notificationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getNotificationById"];
+        put: operations["readNotification"];
+        post?: never;
+        delete: operations["deleteNotification"];
         options?: never;
         head?: never;
         patch?: never;
@@ -84,6 +100,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/user/me/profile/img": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["getProfileImageUrl"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/products": {
         parameters: {
             query?: never;
@@ -126,7 +158,7 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["addAnswer"];
-        delete: operations["deleteAnswer"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -143,6 +175,22 @@ export interface paths {
         put?: never;
         post: operations["addBookmark"];
         delete: operations["deleteBookmark"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/products/img": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["getImageUrl"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -276,6 +324,102 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auctions/{auctionId}/buy-now": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["buyNow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auctions/{auctionId}/bids": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["placeBid"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/user/me/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["updateProfile"];
+        trace?: never;
+    };
+    "/api/v1/user/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["me"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/user/me/bookmarks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getMyBookmarks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getNotification"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/notifications/subscribe": {
         parameters: {
             query?: never;
@@ -292,6 +436,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getMyProducts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/bids": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getMyBids"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/me": {
         parameters: {
             query?: never;
@@ -299,7 +475,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["me"];
+        get: operations["me_1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -319,6 +495,22 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/products/{productId}/qna/{qnaId}/{answerId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["deleteAnswer"];
         options?: never;
         head?: never;
         patch?: never;
@@ -352,6 +544,24 @@ export interface components {
             message?: string;
             data?: components["schemas"]["ProductCreateResponse"];
         };
+        NotificationResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            userId?: number;
+            message?: string;
+            /** Format: date-time */
+            sendAt?: string;
+            /** Format: date-time */
+            readAt?: string;
+        };
+        RsDataNotificationResponse: {
+            code?: string;
+            /** Format: int32 */
+            status?: number;
+            message?: string;
+            data?: components["schemas"]["NotificationResponse"];
+        };
         Data: {
             paymentKey?: string;
             orderId?: string;
@@ -376,6 +586,18 @@ export interface components {
             status?: number;
             message?: string;
             data?: Record<string, never>;
+        };
+        PreSignedUrlRequest: {
+            contentType: string;
+            /** Format: int64 */
+            contentLength: number;
+        };
+        RsDataListString: {
+            code?: string;
+            /** Format: int32 */
+            status?: number;
+            message?: string;
+            data?: string[];
         };
         ProductQnACreateRequest: {
             question: string;
@@ -561,6 +783,133 @@ export interface components {
             message?: string;
             data?: components["schemas"]["AuctionCreateResponse"];
         };
+        BuyNowRequestDto: {
+            /** Format: int64 */
+            bidAmount?: number;
+        };
+        BuyNowResponseDto: {
+            /** Format: int64 */
+            auctionId?: number;
+            auctionStatus?: string;
+            /** Format: int64 */
+            winnerId?: number;
+            /** Format: int64 */
+            finalPrice?: number;
+            /** Format: date-time */
+            winTime?: string;
+        };
+        RsDataBuyNowResponseDto: {
+            code?: string;
+            /** Format: int32 */
+            status?: number;
+            message?: string;
+            data?: components["schemas"]["BuyNowResponseDto"];
+        };
+        BidRequestDto: {
+            /** Format: int64 */
+            bidAmount: number;
+        };
+        BidResponseDto: {
+            /** Format: int64 */
+            auctionId?: number;
+            isHighestBidder?: boolean;
+            /** Format: int64 */
+            currentHighestBid?: number;
+            /** Format: date-time */
+            bidTime?: string;
+        };
+        RsDataBidResponseDto: {
+            code?: string;
+            /** Format: int32 */
+            status?: number;
+            message?: string;
+            data?: components["schemas"]["BidResponseDto"];
+        };
+        UpdateProfileRequest: {
+            nickname: string;
+            profileImageUrl?: string;
+        };
+        RsDataUpdateProfileResponse: {
+            code?: string;
+            /** Format: int32 */
+            status?: number;
+            message?: string;
+            data?: components["schemas"]["UpdateProfileResponse"];
+        };
+        UpdateProfileResponse: {
+            /** Format: int64 */
+            userId?: number;
+            nickname?: string;
+            profileImageUrl?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
+        MyPageResponse: {
+            /** Format: int64 */
+            userId?: number;
+            email?: string;
+            nickname?: string;
+            profileImageUrl?: string;
+            /** Format: date-time */
+            createdAt?: string;
+        };
+        RsDataMyPageResponse: {
+            code?: string;
+            /** Format: int32 */
+            status?: number;
+            message?: string;
+            data?: components["schemas"]["MyPageResponse"];
+        };
+        MyBookmarkPageResponse: {
+            /** Format: int32 */
+            page?: number;
+            /** Format: int64 */
+            total?: number;
+            bookmarks?: components["schemas"]["MyBookmarkResponse"][];
+        };
+        MyBookmarkResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            productId?: number;
+            title?: string;
+            productImageUrl?: string;
+            /** Format: date-time */
+            bookmarkedAt?: string;
+        };
+        RsDataMyBookmarkPageResponse: {
+            code?: string;
+            /** Format: int32 */
+            status?: number;
+            message?: string;
+            data?: components["schemas"]["MyBookmarkPageResponse"];
+        };
+        ProductSearchResponse: {
+            /** Format: int64 */
+            productId?: number;
+            /** Format: int64 */
+            sellerId?: number;
+            name?: string;
+            description?: string;
+            images?: string[];
+            /** @enum {string} */
+            category?: "STARGOODS" | "FIGURE" | "CDLP" | "GAME";
+            /** @enum {string} */
+            subCategory?: "ACC" | "STATIONARY" | "DAILY" | "ETC" | "ELECTRONICS" | "GAME";
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+            /** Format: int32 */
+            bookmarkCount?: number;
+        };
+        RsDataProductSearchResponse: {
+            code?: string;
+            /** Format: int32 */
+            status?: number;
+            message?: string;
+            data?: components["schemas"]["ProductSearchResponse"];
+        };
         Pageable: {
             /** Format: int32 */
             page?: number;
@@ -584,9 +933,84 @@ export interface components {
             message?: string;
             data?: components["schemas"]["ProductQnAListResponse"];
         };
+        RsDataListNotificationResponse: {
+            code?: string;
+            /** Format: int32 */
+            status?: number;
+            message?: string;
+            data?: components["schemas"]["NotificationResponse"][];
+        };
         SseEmitter: {
             /** Format: int64 */
             timeout?: number;
+        };
+        MyProductPageResponse: {
+            /** Format: int32 */
+            currentPage?: number;
+            /** Format: int32 */
+            totalPages?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            products?: components["schemas"]["MyProductResponse"][];
+        };
+        MyProductResponse: {
+            /** Format: int64 */
+            auctionId?: number;
+            /** Format: int64 */
+            productId?: number;
+            name?: string;
+            imageUrl?: string;
+            status?: string;
+            /** Format: int32 */
+            currentHighestBid?: number;
+            /** Format: int32 */
+            startPrice?: number;
+            /** Format: date-time */
+            endAt?: string;
+            /** Format: int64 */
+            bookmarkCount?: number;
+            /** Format: int64 */
+            bidCount?: number;
+            /** Format: int64 */
+            remainingTimeSeconds?: number;
+        };
+        RsDataMyProductPageResponse: {
+            code?: string;
+            /** Format: int32 */
+            status?: number;
+            message?: string;
+            data?: components["schemas"]["MyProductPageResponse"];
+        };
+        MyBidPageResponse: {
+            /** Format: int32 */
+            currentPage?: number;
+            /** Format: int32 */
+            totalPages?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            auctions?: components["schemas"]["MyBidResponse"][];
+        };
+        MyBidResponse: {
+            /** Format: int64 */
+            auctionId?: number;
+            /** Format: int64 */
+            productId?: number;
+            productName?: string;
+            productImageUrl?: string;
+            /** Format: int32 */
+            myBid?: number;
+            /** Format: int32 */
+            finalBid?: number;
+            status?: string;
+            /** Format: date-time */
+            endAt?: string;
+        };
+        RsDataMyBidPageResponse: {
+            code?: string;
+            /** Format: int32 */
+            status?: number;
+            message?: string;
+            data?: components["schemas"]["MyBidPageResponse"];
         };
         GetCurrentUserInfoResponse: {
             /** Format: int64 */
@@ -625,6 +1049,28 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    getProduct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                productId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataProductSearchResponse"];
+                };
+            };
+        };
+    };
     updateProduct: {
         parameters: {
             query?: never;
@@ -657,6 +1103,72 @@ export interface operations {
             header?: never;
             path: {
                 productId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataVoid"];
+                };
+            };
+        };
+    };
+    getNotificationById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                notificationId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataNotificationResponse"];
+                };
+            };
+        };
+    };
+    readNotification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                notificationId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataNotificationResponse"];
+                };
+            };
+        };
+    };
+    deleteNotification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                notificationId: number;
             };
             cookie?: never;
         };
@@ -767,6 +1279,30 @@ export interface operations {
             };
         };
     };
+    getProfileImageUrl: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreSignedUrlRequest"][];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataListString"];
+                };
+            };
+        };
+    };
     addProduct: {
         parameters: {
             query?: never;
@@ -868,28 +1404,6 @@ export interface operations {
             };
         };
     };
-    deleteAnswer: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                qnaId: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["RsDataVoid"];
-                };
-            };
-        };
-    };
     addBookmark: {
         parameters: {
             query?: never;
@@ -930,6 +1444,30 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["RsDataBookmarkCreateResponse"];
+                };
+            };
+        };
+    };
+    getImageUrl: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreSignedUrlRequest"][];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataListString"];
                 };
             };
         };
@@ -1120,6 +1658,146 @@ export interface operations {
             };
         };
     };
+    buyNow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                auctionId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BuyNowRequestDto"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataBuyNowResponseDto"];
+                };
+            };
+        };
+    };
+    placeBid: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                auctionId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BidRequestDto"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataBidResponseDto"];
+                };
+            };
+        };
+    };
+    updateProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateProfileRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataUpdateProfileResponse"];
+                };
+            };
+        };
+    };
+    me: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataMyPageResponse"];
+                };
+            };
+        };
+    };
+    getMyBookmarks: {
+        parameters: {
+            query?: {
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataMyBookmarkPageResponse"];
+                };
+            };
+        };
+    };
+    getNotification: {
+        parameters: {
+            query: {
+                pageable: components["schemas"]["Pageable"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataListNotificationResponse"];
+                };
+            };
+        };
+    };
     subscribe: {
         parameters: {
             query: {
@@ -1142,7 +1820,52 @@ export interface operations {
             };
         };
     };
-    me: {
+    getMyProducts: {
+        parameters: {
+            query?: {
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataMyProductPageResponse"];
+                };
+            };
+        };
+    };
+    getMyBids: {
+        parameters: {
+            query?: {
+                page?: number;
+                status?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataMyBidPageResponse"];
+                };
+            };
+        };
+    };
+    me_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -1178,6 +1901,29 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["RsDataProductHelpResponse"];
+                };
+            };
+        };
+    };
+    deleteAnswer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                qnaId: number;
+                answerId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataVoid"];
                 };
             };
         };

@@ -254,17 +254,34 @@ export async function POST(
     let hasBody = false
     let headers = getCommonHeaders(request, false)
 
-    // FormData 처리 - 스트림으로 그대로 전달
+    // FormData 처리 - Next.js의 formData()를 사용하여 FormData를 재구성
     if (contentType.includes('multipart/form-data')) {
-      // 중요: request.body를 그대로 전달 (파싱하지 않음)
-      body = request.body
-      hasBody = true
+      try {
+        const formData = await request.formData()
+        // FormData를 다시 생성하여 전달
+        const newFormData = new FormData()
+        for (const [key, value] of formData.entries()) {
+          if (value instanceof File) {
+            newFormData.append(key, value, value.name)
+          } else {
+            newFormData.append(key, value)
+          }
+        }
+        body = newFormData
+        hasBody = true
 
-      // Content-Type도 boundary 포함해서 그대로 전달
-      headers['Content-Type'] = contentType
+        // Content-Type은 FormData를 보낼 때 설정하지 않음 (브라우저가 자동 설정)
+        // 하지만 프록시를 거치므로 명시적으로 제거하지 않음
 
-      console.log('📤 FormData 요청 - 스트림으로 전달')
-      console.log('📤 Content-Type:', contentType)
+        console.log('📤 FormData 요청 - FormData 재구성')
+        console.log('📤 Content-Type:', contentType)
+      } catch (error) {
+        console.error('FormData 파싱 실패:', error)
+        // FormData 파싱 실패 시 원본 body 사용
+        body = request.body
+        hasBody = true
+        headers['Content-Type'] = contentType
+      }
     }
     // JSON 처리
     else {

@@ -27,15 +27,11 @@ class ApiClient {
     // 요청 인터셉터 설정
     this.axiosInstance.interceptors.request.use(
       (config) => {
-        // FormData인 경우 Content-Type 헤더 완전 제거 (브라우저가 자동으로 설정)
+        // FormData인 경우 axios가 자동으로 multipart/form-data를 설정하도록 둠
+        // 프록시에서 Content-Type을 확인해야 하므로 제거하지 않음
         if (config.data instanceof FormData) {
-          // 모든 Content-Type 관련 헤더 제거
-          delete config.headers['Content-Type']
-          delete config.headers['content-type']
-          // axios 기본 헤더에서도 제거
-          if (config.headers && config.headers.common) {
-            delete config.headers.common['Content-Type']
-          }
+          // Content-Type을 명시적으로 설정하지 않으면 axios가 자동으로 설정함
+          // boundary가 포함된 multipart/form-data가 자동으로 설정됨
         } else {
           // JSON 요청인 경우 Content-Type 설정
           if (

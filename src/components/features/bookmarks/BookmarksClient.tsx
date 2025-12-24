@@ -1,14 +1,14 @@
 'use client'
 
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { useAuth } from '@/contexts/AuthContext'
 import { productApi } from '@/lib/api'
 import { handleApiError } from '@/lib/api/common'
+import { getFullImageUrl } from '@/lib/utils/image-url'
 import { showErrorToast } from '@/lib/utils/toast'
 import { Product } from '@/types'
-import { Heart, Trash2 } from 'lucide-react'
+import { Heart } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
@@ -41,24 +41,38 @@ export function BookmarksClient({ initialBookmarks }: BookmarksClientProps) {
     setIsLoading(true)
     setApiError('')
     try {
-      const response = (await productApi.getBookmarks({
-        page: 0,
-        size: 100,
-      })) as any
+      const response = (await productApi.getBookmarks()) as any
 
       if (response && response.success && response.data) {
-        // API 응답 데이터 구조에 맞게 변환
-        let bookmarksData: Product[] = []
+        // API 응답 데이터 구조: { data: { bookmarks: [...] } }
+        let bookmarksData: any[] = []
         const data = response.data
-        if (Array.isArray(data)) {
+        if (data.bookmarks && Array.isArray(data.bookmarks)) {
+          bookmarksData = data.bookmarks
+        } else if (Array.isArray(data)) {
           bookmarksData = data
         } else if (data.content && Array.isArray(data.content)) {
           bookmarksData = data.content
-        } else if (data.bookmarks && Array.isArray(data.bookmarks)) {
-          bookmarksData = data.bookmarks
         }
 
-        setBookmarks(bookmarksData)
+        // 북마크 응답 구조를 Product 타입에 맞게 변환
+        // 응답: { id, productId, title, productImageUrl, bookmarkedAt }
+        // Product: { productId, name, thumbnailUrl, ... }
+        const mappedBookmarks = bookmarksData.map((bookmark: any) => ({
+          productId: bookmark.productId,
+          name: bookmark.title || bookmark.name,
+          thumbnailUrl: bookmark.productImageUrl || bookmark.imageUrl,
+          bookmarkedAt: bookmark.bookmarkedAt,
+          bookmarkId: bookmark.id,
+          // 기타 필드는 기본값 설정
+          status: bookmark.status || 'PENDING',
+          currentPrice: bookmark.currentPrice || 0,
+          initialPrice: bookmark.initialPrice || 0,
+          bidderCount: bookmark.bidderCount || 0,
+          auctionEndTime: bookmark.auctionEndTime || null,
+        }))
+
+        setBookmarks(mappedBookmarks as any[])
       } else if (response && response.message) {
         setApiError(
           response.message ||
@@ -116,25 +130,6 @@ export function BookmarksClient({ initialBookmarks }: BookmarksClientProps) {
     })
   }
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case '경매 시작 전':
-      case 'BEFORE_START':
-        return { label: '경매 시작 전', variant: 'neutral' as const }
-      case '경매 중':
-      case 'SELLING':
-        return { label: '경매 중', variant: 'primary' as const }
-      case '낙찰':
-      case 'SOLD':
-        return { label: '낙찰', variant: 'success' as const }
-      case '유찰':
-      case 'FAILED':
-        return { label: '유찰', variant: 'warning' as const }
-      default:
-        return { label: status || '알 수 없음', variant: 'neutral' as const }
-    }
-  }
-
   // 초기 데이터가 있으면 사용, 없으면 API 호출
   useEffect(() => {
     if (isLoggedIn && (!initialBookmarks || initialBookmarks.length === 0)) {
@@ -172,8 +167,6 @@ export function BookmarksClient({ initialBookmarks }: BookmarksClientProps) {
           </Card>
         ) : (
           bookmarks.map((bookmark) => {
-            const statusBadge = getStatusBadge(bookmark.status || '')
-
             return (
               <Card
                 key={bookmark.productId}
@@ -186,88 +179,55 @@ export function BookmarksClient({ initialBookmarks }: BookmarksClientProps) {
                     {/* 상품 이미지 */}
                     <div className="shrink-0">
                       <div className="h-24 w-24 overflow-hidden rounded-xl bg-neutral-100 shadow-sm">
-                        {bookmark.thumbnailUrl ? (
-                          <img
-                            src={bookmark.thumbnailUrl}
-                            alt={bookmark.name}
-                            className="h-24 w-24 rounded-xl object-cover transition-transform duration-200 hover:scale-105"
-                          />
-                        ) : (
-                          <div className="flex h-24 w-24 items-center justify-center rounded-xl bg-neutral-100">
-                            <span className="text-2xl text-neutral-400">
-                              📦
-                            </span>
-                          </div>
-                        )}
+                        {(() => {
+                          const imageUrl = getFullImageUrl(
+                            bookmark.thumbnailUrl,
+                          )
+                          return imageUrl ? (
+                            <img
+                              src={imageUrl}
+                              alt={bookmark.name}
+                              className="h-24 w-24 rounded-xl object-cover transition-transform duration-200 hover:scale-105"
+                            />
+                          ) : (
+                            <div className="flex h-24 w-24 items-center justify-center rounded-xl bg-neutral-100">
+                              <span className="text-2xl text-neutral-400">
+                                📦
+                              </span>
+                            </div>
+                          )
+                        })()}
                       </div>
                     </div>
 
                     {/* 상품 정보 */}
                     <div className="min-w-0 flex-1">
-                      <div className="mb-3 flex items-center justify-between">
-                        <div className="min-w-0 flex-1">
-                          <h3 className="mb-1 truncate text-lg font-semibold text-neutral-900">
+                      <div className="mb-3 flex items-start justify-between">
+                        <div className="min-w-0 flex-1 pr-4">
+                          <h3 className="hover:text-primary-600 mb-2 line-clamp-2 text-lg font-semibold text-neutral-900">
                             {bookmark.name}
                           </h3>
-                          <div className="flex items-center space-x-2">
-                            <Badge variant={statusBadge.variant}>
-                              {statusBadge.label}
-                            </Badge>
-                            {bookmark.currentPrice && (
-                              <span className="text-sm text-neutral-500">
-                                현재가: {formatPrice(bookmark.currentPrice)}원
+                          {(bookmark as any).bookmarkedAt && (
+                            <div className="flex items-center space-x-1 text-xs text-neutral-500">
+                              <Heart className="h-3 w-3 fill-red-500 text-red-500" />
+                              <span>
+                                {formatDate((bookmark as any).bookmarkedAt)}
                               </span>
-                            )}
-                          </div>
+                            </div>
+                          )}
                         </div>
-                      </div>
-
-                      <div className="mb-3 flex items-center justify-between text-sm text-neutral-600">
-                        <div>
-                          <span className="font-semibold text-neutral-900">
-                            시작가:
-                          </span>{' '}
-                          {formatPrice(bookmark.initialPrice || 0)}원
-                        </div>
-                        {(bookmark as any).bidCount !== undefined && (
-                          <div>
-                            <span className="font-semibold text-neutral-900">
-                              입찰 수:
-                            </span>{' '}
-                            {(bookmark as any).bidCount}건
-                          </div>
-                        )}
-                        {bookmark.bidderCount !== undefined && (
-                          <div>
-                            <span className="font-semibold text-neutral-900">
-                              입찰자 수:
-                            </span>{' '}
-                            {bookmark.bidderCount}명
-                          </div>
-                        )}
-                      </div>
-
-                      {bookmark.auctionEndTime && (
-                        <div className="mb-3 text-xs text-neutral-500">
-                          경매 종료: {formatDate(bookmark.auctionEndTime)}
-                        </div>
-                      )}
-
-                      {/* 찜 해제 버튼 */}
-                      <div className="flex justify-end">
-                        <Button
-                          variant="outline"
-                          size="sm"
+                        {/* 찜 해제 버튼 */}
+                        <button
                           onClick={(e) => {
                             e.stopPropagation()
                             handleRemoveBookmark(bookmark.productId)
                           }}
                           disabled={isLoading}
-                          className="flex items-center space-x-1 text-red-500 hover:border-red-300 hover:text-red-700"
+                          className="group flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-neutral-200 bg-white text-neutral-400 transition-all hover:border-red-300 hover:bg-red-50 hover:text-red-500 disabled:opacity-50"
+                          title="찜 해제"
                         >
-                          <Trash2 className="h-4 w-4" />
-                          <span>찜 해제</span>
-                        </Button>
+                          <Heart className="h-4 w-4 fill-current transition-transform group-hover:scale-110" />
+                        </button>
                       </div>
                     </div>
                   </div>

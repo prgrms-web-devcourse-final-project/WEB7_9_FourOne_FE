@@ -117,7 +117,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setUser(null)
 
-      // 리다이렉트는 각 컴포넌트에서 필요할 때만 처리
+      // 홈으로 리다이렉트
+      if (typeof window !== 'undefined') {
+        window.location.href = '/'
+      }
     }
   }
 

@@ -2,6 +2,7 @@ import { LoginPrompt } from '@/components/auth/LoginPrompt'
 import { BookmarksClient } from '@/components/features/bookmarks/BookmarksClient'
 import { HomeLayout } from '@/components/layout/HomeLayout'
 import { PageHeader } from '@/components/layout/PageHeader'
+import { serverApi } from '@/lib/api/server-api-client'
 import { cookies } from 'next/headers'
 
 export const dynamic = 'force-dynamic'
@@ -28,16 +29,48 @@ export default async function BookmarksPage() {
       )
     }
 
-    // TODO: 서버 API로 찜 목록 가져오기 (API가 준비되면 활성화)
-    // const response = await serverApi.getBookmarks()
-    // let bookmarks = []
-    // if (response.success && response.data) {
-    //   if (Array.isArray(response.data)) {
-    //     bookmarks = response.data
-    //   } else if (response.data.content && Array.isArray(response.data.content)) {
-    //     bookmarks = response.data.content
-    //   }
-    // }
+    // 서버 API로 찜 목록 가져오기
+    let bookmarks: any[] = []
+    try {
+      const response = await serverApi.getBookmarks({
+        page: 1,
+        size: 100,
+      })
+
+      if (response.success && response.data) {
+        const data = response.data as any
+        let bookmarksData: any[] = []
+
+        // API 응답 구조: { data: { bookmarks: [...] } }
+        if (data.bookmarks && Array.isArray(data.bookmarks)) {
+          bookmarksData = data.bookmarks
+        } else if (Array.isArray(data)) {
+          bookmarksData = data
+        } else if (data.content && Array.isArray(data.content)) {
+          bookmarksData = data.content
+        }
+
+        // 북마크 응답 구조를 Product 타입에 맞게 변환
+        // 응답: { id, productId, title, productImageUrl, bookmarkedAt }
+        // Product: { productId, name, thumbnailUrl, ... }
+        bookmarks = bookmarksData.map((bookmark: any) => ({
+          productId: bookmark.productId,
+          name: bookmark.title || bookmark.name,
+          thumbnailUrl: bookmark.productImageUrl || bookmark.imageUrl,
+          bookmarkedAt: bookmark.bookmarkedAt,
+          bookmarkId: bookmark.id,
+          // 기타 필드는 기본값 설정
+          status: bookmark.status || 'PENDING',
+          currentPrice: bookmark.currentPrice || 0,
+          initialPrice: bookmark.initialPrice || 0,
+          bidderCount: bookmark.bidderCount || 0,
+          auctionEndTime: bookmark.auctionEndTime || null,
+        }))
+      }
+    } catch (error) {
+      console.error('북마크 목록 조회 실패:', error)
+      // 에러가 발생해도 빈 배열로 전달하여 클라이언트에서 재시도 가능하도록 함
+    }
 
     return (
       <HomeLayout isLoggedIn={!!accessToken}>
@@ -46,7 +79,7 @@ export default async function BookmarksPage() {
           description="관심 있는 상품을 찜해보세요"
           showBackButton
         />
-        <BookmarksClient initialBookmarks={[]} />
+        <BookmarksClient initialBookmarks={bookmarks} />
       </HomeLayout>
     )
   } catch (error: any) {

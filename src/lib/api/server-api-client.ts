@@ -63,11 +63,9 @@ class ServerApiClient {
     return normalizeApiResponse(data)
   }
 
-  // ❌ Swagger에 없음 - API 호출 비활성화 (UI는 유지)
+  // 상품 상세 조회 (GET /api/v1/products/{productId}) - Swagger 스펙
   async getProduct(productId: number) {
-    throw new Error(
-      'GET /api/v1/products/{productId}는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.',
-    )
+    return this.makeRequest(`/products/${productId}`)
   }
 
   // ❌ Swagger에 없음 - API 호출 비활성화 (UI는 유지)
@@ -86,13 +84,19 @@ class ServerApiClient {
     )
   }
 
-  // ❌ Swagger에 없음 - API 호출 비활성화 (UI는 유지)
-  async getMyProducts(params?: {
-    page?: number
-    size?: number
-    status?: string
-    sort?: string
-  }) {
+  // 내가 등록한 상품 조회 (GET /api/v1/me/products)
+  // Swagger 스펙: 쿼리 파라미터 없음
+  async getMyProducts() {
+    return this.makeRequest('/me/products')
+  }
+
+  // 사용자 정보 API (GET /api/v1/user/me)
+  async getMyInfo() {
+    return this.makeRequest('/user/me')
+  }
+
+  // 북마크 목록 조회 (GET /api/v1/user/me/bookmarks)
+  async getBookmarks(params?: { page?: number; size?: number }) {
     const searchParams = new URLSearchParams()
     if (params?.page !== undefined) {
       searchParams.append('page', params.page.toString())
@@ -100,27 +104,16 @@ class ServerApiClient {
     if (params?.size !== undefined) {
       searchParams.append('size', params.size.toString())
     }
-    if (params?.status) {
-      searchParams.append('status', params.status)
-    }
-    if (params?.sort) {
-      searchParams.append('sort', params.sort)
-    }
 
     const queryString = searchParams.toString()
     const endpoint = queryString
-      ? `/users/me/products?${queryString}`
-      : `/users/me/products`
+      ? `/user/me/bookmarks?${queryString}`
+      : `/user/me/bookmarks`
 
     return this.makeRequest(endpoint)
   }
 
-  // 사용자 정보 API (새로운 엔드포인트: /api/v1/auth/me)
-  async getMyInfo() {
-    return this.makeRequest('/auth/me')
-  }
-
-  // ❌ Swagger에 없음 - API 호출 비활성화 (UI는 유지)
+  // 참여한 경매 목록 조회 (GET /api/v1/me/bids)
   async getMyBids(params?: { page?: number; size?: number; status?: string }) {
     const searchParams = new URLSearchParams()
     if (params?.page !== undefined) {
@@ -134,9 +127,7 @@ class ServerApiClient {
     }
 
     const queryString = searchParams.toString()
-    const endpoint = queryString
-      ? `/users/me/bids?${queryString}`
-      : `/users/me/bids`
+    const endpoint = queryString ? `/me/bids?${queryString}` : `/me/bids`
 
     return this.makeRequest(endpoint)
   }
@@ -196,10 +187,11 @@ export const serverApi = {
   // 상품 관련
   getProduct: (productId: number) => serverApiClient.getProduct(productId),
   getProducts: (params?: any) => serverApiClient.getProducts(params),
-  getMyProducts: (params?: any) => serverApiClient.getMyProducts(params),
+  getMyProducts: () => serverApiClient.getMyProducts(),
 
   // 사용자 관련
   getMyInfo: () => serverApiClient.getMyInfo(),
+  getBookmarks: (params?: any) => serverApiClient.getBookmarks(params),
 
   // 입찰 관련
   getMyBids: (params?: any) => serverApiClient.getMyBids(params),

@@ -6,24 +6,24 @@ import { Input } from '@/components/ui/input'
 import { useAuth } from '@/contexts/AuthContext'
 import { authApi } from '@/lib/api'
 import { showErrorToast, showSuccessToast } from '@/lib/utils/toast'
-import { Edit } from 'lucide-react'
+import { Upload, User, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 interface MyInfoEditClientProps {
   initialProfile?: {
     nickname?: string
-    phoneNumber?: string
-    address?: string
+    profileImageUrl?: string
   }
 }
 
 export function MyInfoEditClient({ initialProfile }: MyInfoEditClientProps) {
   const router = useRouter()
   const { user, updateUser } = useAuth()
-  const [isEditing, setIsEditing] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [isUploadingImage, setIsUploadingImage] = useState(false)
   const [apiError, setApiError] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // apiError가 변경되면 토스트로 표시
   useEffect(() => {
@@ -35,17 +35,91 @@ export function MyInfoEditClient({ initialProfile }: MyInfoEditClientProps) {
 
   const [formData, setFormData] = useState({
     nickname: user?.nickname || initialProfile?.nickname || '',
-    phoneNumber:
-      (user as any)?.phoneNumber || initialProfile?.phoneNumber || '',
-    address: (user as any)?.address || initialProfile?.address || '',
+    profileImageUrl:
+      (user as any)?.profileImageUrl || initialProfile?.profileImageUrl || '',
   })
+  const [previewImage, setPreviewImage] = useState<string | null>(
+    formData.profileImageUrl || null,
+  )
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const handleInputChange = (field: string, value: string) => {
-    if (field === 'phoneNumber') {
-      setFormData((prev) => ({ ...prev, [field]: value }))
-    } else {
-      setFormData((prev) => ({ ...prev, [field]: value }))
+    setFormData((prev) => ({ ...prev, [field]: value }))
+  }
+
+  // 프로필 이미지 선택
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // 이미지 파일 검증
+    if (!file.type.startsWith('image/')) {
+      showErrorToast('이미지 파일만 업로드 가능합니다.')
+      return
+    }
+
+    // 파일 크기 검증 (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      showErrorToast('이미지 크기는 5MB 이하여야 합니다.')
+      return
+    }
+
+    // 미리보기 생성
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setPreviewImage(reader.result as string)
+    }
+    reader.readAsDataURL(file)
+
+    // 이미지 업로드
+    handleImageUpload(file)
+  }
+
+  // 프로필 이미지 업로드
+  const handleImageUpload = async (file: File) => {
+    setIsUploadingImage(true)
+    try {
+      const response = await authApi.uploadProfileImage(file)
+      if (response.success && response.data) {
+        // 응답에서 파일명 추출 (파일명만 반환됨)
+        const fileName =
+          response.data?.profileImageUrl ||
+          response.data?.url ||
+          response.data?.imageUrl ||
+          response.data?.fileName ||
+          response.data
+
+        if (fileName) {
+          // 파일명만 저장 (프로필 업데이트 시 파일명만 전달)
+          setFormData((prev) => ({ ...prev, profileImageUrl: fileName }))
+
+          // 미리보기를 위해 선택한 파일의 로컬 URL 사용
+          const localImageUrl = URL.createObjectURL(file)
+          setPreviewImage(localImageUrl)
+
+          showSuccessToast('프로필 이미지가 업로드되었습니다.')
+        } else {
+          showErrorToast('이미지 파일명을 받아오지 못했습니다.')
+        }
+      } else {
+        showErrorToast(
+          response.msg || response.message || '이미지 업로드에 실패했습니다.',
+        )
+      }
+    } catch (error: any) {
+      console.error('이미지 업로드 실패:', error)
+      showErrorToast('이미지 업로드 중 오류가 발생했습니다.')
+    } finally {
+      setIsUploadingImage(false)
+    }
+  }
+
+  // 프로필 이미지 제거
+  const handleRemoveImage = () => {
+    setPreviewImage(null)
+    setFormData((prev) => ({ ...prev, profileImageUrl: '' }))
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
     }
   }
 
@@ -60,41 +134,46 @@ export function MyInfoEditClient({ initialProfile }: MyInfoEditClientProps) {
       newErrors.nickname = '닉네임을 입력해주세요'
     }
 
-    if (!formData.phoneNumber.trim()) {
-      newErrors.phoneNumber = '전화번호를 입력해주세요'
-    } else if (!/^010\d{8}$/.test(formData.phoneNumber.replace(/-/g, ''))) {
-      newErrors.phoneNumber =
-        '올바른 전화번호 형식을 입력해주세요 (010-1234-5678)'
-    }
-
-    if (!formData.address.trim()) {
-      newErrors.address = '주소를 입력해주세요'
-    }
-
     setErrors(newErrors)
 
     if (Object.keys(newErrors).length === 0) {
       try {
-        // API 호출
-        const response = await authApi.updateProfile({
+        // API 호출 - nickname과 profileImageUrl만 전송
+        const updateData: any = {
           nickname: formData.nickname,
-        })
+        }
 
-        console.log('🔍 프로필 수정 API 응답:', response)
+        // profileImageUrl이 있으면 포함
+        if (formData.profileImageUrl) {
+          updateData.profileImageUrl = formData.profileImageUrl
+        }
 
-        // 200-4 등 성공 응답 코드 처리
+        const response = await authApi.updateProfile(updateData)
+
+        // 성공 응답 처리
         if (response.success || response.resultCode?.startsWith('200')) {
+          // 응답에서 전체 이미지 URL 가져오기 (프로필 업데이트 후 반환된 전체 URL)
+          const fullImageUrl =
+            (response.data as any)?.profileImageUrl ||
+            (response.data as any)?.profileImage ||
+            formData.profileImageUrl
+
           // 성공 시 AuthContext 업데이트
           const updatedUser = {
             ...user,
             nickname: formData.nickname,
-            phone: formData.phoneNumber,
-            address: formData.address,
+            profileImageUrl: fullImageUrl,
           } as any
           updateUser(updatedUser)
 
+          // 미리보기 이미지 업데이트 (전체 URL이 있으면)
+          if (fullImageUrl && fullImageUrl.startsWith('http')) {
+            setPreviewImage(fullImageUrl)
+          }
+
           showSuccessToast('프로필이 성공적으로 수정되었습니다.')
-          setIsEditing(false)
+          // 수정 완료 후 내 정보 페이지로 이동
+          router.push('/my-info')
         } else {
           setApiError(response.msg || '프로필 수정에 실패했습니다.')
         }
@@ -110,15 +189,7 @@ export function MyInfoEditClient({ initialProfile }: MyInfoEditClientProps) {
   }
 
   const handleCancel = () => {
-    setFormData({
-      nickname: user?.nickname || initialProfile?.nickname || '',
-      phoneNumber:
-        (user as any)?.phoneNumber || initialProfile?.phoneNumber || '',
-      address: (user as any)?.address || initialProfile?.address || '',
-    })
-    setErrors({})
-    setApiError('')
-    setIsEditing(false)
+    router.push('/my-info')
   }
 
   return (
@@ -131,23 +202,77 @@ export function MyInfoEditClient({ initialProfile }: MyInfoEditClientProps) {
               <h2 className="text-lg font-semibold text-neutral-900">
                 기본 정보
               </h2>
-              {!isEditing ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsEditing(true)}
-                >
-                  <Edit className="mr-2 h-4 w-4" />
-                  수정
-                </Button>
-              ) : (
-                <Button variant="outline" size="sm" onClick={handleCancel}>
-                  취소
-                </Button>
-              )}
+              <Button variant="outline" size="sm" onClick={handleCancel}>
+                취소
+              </Button>
             </div>
 
             <div className="space-y-4">
+              {/* 프로필 이미지 */}
+              <div>
+                <label className="mb-2 block text-sm font-medium text-neutral-700">
+                  프로필 이미지
+                </label>
+                <div className="flex items-center space-x-4">
+                  {/* 이미지 미리보기 */}
+                  <div className="relative">
+                    {previewImage ? (
+                      <div className="relative">
+                        <img
+                          src={previewImage}
+                          alt="프로필 미리보기"
+                          className="h-24 w-24 rounded-full border-2 border-neutral-200 object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleRemoveImage}
+                          className="absolute -top-2 -right-2 rounded-full bg-red-500 p-1 text-white hover:bg-red-600"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex h-24 w-24 items-center justify-center rounded-full border-2 border-dashed border-neutral-300 bg-neutral-50">
+                        <User className="h-8 w-8 text-neutral-400" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 이미지 업로드 버튼 */}
+                  <div className="flex flex-col space-y-2">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageSelect}
+                      className="hidden"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploadingImage}
+                    >
+                      {isUploadingImage ? (
+                        <>
+                          <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-neutral-600 border-t-transparent"></div>
+                          업로드 중...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="mr-2 h-4 w-4" />
+                          이미지 선택
+                        </>
+                      )}
+                    </Button>
+                    <p className="text-xs text-neutral-500">
+                      JPG, PNG (최대 5MB)
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <label className="mb-2 block text-sm font-medium text-neutral-700">
                   닉네임
@@ -158,75 +283,26 @@ export function MyInfoEditClient({ initialProfile }: MyInfoEditClientProps) {
                   onChange={(e) =>
                     handleInputChange('nickname', e.target.value)
                   }
-                  disabled={!isEditing}
                   error={errors.nickname}
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-neutral-700">
-                  이메일
-                </label>
-                <Input
-                  name="email"
-                  type="email"
-                  value={user?.email || ''}
-                  disabled={true}
-                  className="bg-neutral-100"
-                />
-                <p className="mt-1 text-xs text-neutral-500">
-                  이메일은 변경할 수 없습니다
-                </p>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-neutral-700">
-                  전화번호
-                </label>
-                <Input
-                  name="phoneNumber"
-                  value={formData.phoneNumber}
-                  onChange={(e) =>
-                    handleInputChange('phoneNumber', e.target.value)
-                  }
-                  disabled={!isEditing}
-                  placeholder="010-1234-5678"
-                  error={errors.phoneNumber}
-                  maxLength={13}
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-neutral-700">
-                  주소
-                </label>
-                <Input
-                  name="address"
-                  value={formData.address}
-                  onChange={(e) => handleInputChange('address', e.target.value)}
-                  disabled={!isEditing}
-                  placeholder="주소를 입력하세요"
-                  error={errors.address}
+                  placeholder="닉네임을 입력하세요"
                 />
               </div>
             </div>
 
-            {isEditing && (
-              <Button
-                onClick={handleSave}
-                className="mt-6 w-full"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <div className="flex items-center">
-                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
-                    저장 중...
-                  </div>
-                ) : (
-                  '저장'
-                )}
-              </Button>
-            )}
+            <Button
+              onClick={handleSave}
+              className="mt-6 w-full"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <div className="flex items-center">
+                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                  저장 중...
+                </div>
+              ) : (
+                '저장'
+              )}
+            </Button>
           </CardContent>
         </Card>
       </div>

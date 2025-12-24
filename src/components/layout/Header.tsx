@@ -1,10 +1,12 @@
 'use client'
 
 import { useAuth } from '@/contexts/AuthContext'
+import { authApi } from '@/lib/api'
+import { getFullImageUrl } from '@/lib/utils/image-url'
 import { User } from '@/types'
 import { Heart, Menu, X } from 'lucide-react'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 interface HeaderProps {
   isLoggedIn?: boolean
@@ -28,6 +30,38 @@ export function Header({
   const isLoggedIn =
     (contextIsLoggedIn && !!contextUser) || (propIsLoggedIn && !!propUser)
   const user = contextUser || propUser
+
+  // 헤더에서 user/me 호출하여 인증 상태 확인
+  useEffect(() => {
+    const checkUserAuth = async () => {
+      // 로그인 상태일 때만 확인
+      if (!isLoggedIn) {
+        return
+      }
+
+      try {
+        const response = await authApi.getMyInfoV2()
+        if (response.success && response.data) {
+          // 사용자 정보 업데이트 (필요한 경우)
+          // AuthContext에서 이미 관리하므로 여기서는 확인만
+        }
+      } catch (error: any) {
+        // 403 Forbidden 에러인 경우 로그아웃 처리
+        const status =
+          error?.response?.status ||
+          error?.status ||
+          error?.httpStatus ||
+          error?.code
+
+        if (status === 403) {
+          console.warn('403 Forbidden - 로그아웃 처리')
+          await logout()
+        }
+      }
+    }
+
+    checkUserAuth()
+  }, [isLoggedIn, logout])
 
   // // WebSocket 실시간 알림 구독 (로그인된 경우에만)
   // const { unreadCount: wsUnreadCount } = useWebSocketNotifications(isLoggedIn)
@@ -160,12 +194,25 @@ export function Header({
                       onClick={() => setIsProfileOpen(!isProfileOpen)}
                       className="hover:bg-primary-50 flex items-center space-x-3 rounded-xl p-2 transition-all duration-200"
                     >
-                      <div className="bg-primary-500 flex h-9 w-9 items-center justify-center rounded-full shadow-lg">
-                        <span className="text-sm font-bold text-white">
-                          {(user.nickname || user.email || 'U')
-                            .charAt(0)
-                            .toUpperCase()}
-                        </span>
+                      <div className="bg-primary-500 flex h-9 w-9 items-center justify-center overflow-hidden rounded-full shadow-lg">
+                        {(() => {
+                          const imageUrl = getFullImageUrl(
+                            (user as any)?.profileImageUrl,
+                          )
+                          return imageUrl ? (
+                            <img
+                              src={imageUrl}
+                              alt={user.nickname || user.email || '프로필'}
+                              className="h-9 w-9 object-cover"
+                            />
+                          ) : (
+                            <span className="text-sm font-bold text-white">
+                              {(user.nickname || user.email || 'U')
+                                .charAt(0)
+                                .toUpperCase()}
+                            </span>
+                          )
+                        })()}
                       </div>
                       <span className="hidden text-sm font-semibold text-neutral-900 sm:block">
                         {user.nickname || user.email?.split('@')[0] || '사용자'}

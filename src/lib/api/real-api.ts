@@ -2,7 +2,6 @@
 import type {
   ApiResponse,
   BoardWriteRequest,
-  MyProductsParams,
   PaymentMethodCreateRequest,
   PaymentMethodEditRequest,
   ProductCreateRequest,
@@ -182,8 +181,9 @@ export const authApi = {
     return normalizeApiResponse(response.data)
   },
 
-  // 로그인 상태 확인 (새로운 엔드포인트: /api/v1/auth/me)
+  // 로그인 상태 확인 (새로운 엔드포인트: /api/v1/auth/me 또는 /api/v1/user/me)
   check: async () => {
+    // Swagger에 /api/v1/user/me도 있으므로 우선 /api/v1/auth/me 사용
     const response = await apiClient.get<ApiResponse<any>>('/api/v1/auth/me')
     return normalizeApiResponse(response.data)
   },
@@ -195,25 +195,97 @@ export const authApi = {
     return normalizeApiResponse(response.data)
   },
 
-  // 내 정보 수정 (TODO: 새로운 백엔드에서 수정 API 확인 필요)
+  // 내 정보 조회 (GET /api/v1/user/me)
+  getMyInfoV2: async () => {
+    const response =
+      await apiClient.get<ApiResponse<UserInfo>>('/api/v1/user/me')
+    return normalizeApiResponse(response.data)
+  },
+
+  // 내 정보 수정 (Swagger 스펙: PATCH /api/v1/user/me/profile)
   updateProfile: async (userData: UserInfoUpdate) => {
-    // TODO: 새로운 백엔드의 사용자 정보 수정 API 확인 필요
-    // 임시로 기존 엔드포인트 사용
-    const response = await apiClient.put<ApiResponse<UserInfo>>(
-      '/api/v1/auth/me', // TODO: 실제 수정 엔드포인트 확인 필요
+    const response = await apiClient.patch<ApiResponse<UserInfo>>(
+      '/api/v1/user/me/profile',
       userData,
     )
     return normalizeApiResponse(response.data)
   },
 
-  // 내 정보 수정 (JSON)
+  // 내 정보 수정 (JSON) - 별칭
   updateMyInfo: async (userData: any) => {
-    // TODO: 새로운 백엔드의 사용자 정보 수정 API 확인 필요
-    const response = await apiClient.put<ApiResponse<UserInfo>>(
-      '/api/v1/auth/me', // TODO: 실제 수정 엔드포인트 확인 필요
-      userData,
+    return authApi.updateProfile(userData)
+  },
+
+  // 프로필 이미지 업로드 (POST /api/v1/user/me/profile/img) - PreSigned URL 방식
+  // 1. PreSigned URL 요청 → 2. S3에 이미지 업로드 → 3. 최종 이미지 URL 반환
+  uploadProfileImage: async (imageFile: File) => {
+    // 1. PreSigned URL 요청
+    const preSignedUrlRequest = [
+      {
+        contentType: imageFile.type || 'image/jpeg',
+        contentLength: imageFile.size,
+      },
+    ]
+
+    const axiosResponse = await apiClient.post<ApiResponse<string[]>>(
+      '/api/v1/user/me/profile/img',
+      preSignedUrlRequest,
     )
-    return normalizeApiResponse(response.data)
+    const preSignedResponse = normalizeApiResponse(axiosResponse.data)
+
+    if (!preSignedResponse.success || !preSignedResponse.data?.[0]) {
+      throw new Error(
+        preSignedResponse.msg ||
+          preSignedResponse.message ||
+          'PreSigned URL 요청 실패',
+      )
+    }
+
+    const preSignedUrl = preSignedResponse.data[0]
+
+    // 2. PreSigned URL에서 파일명 추출
+    // URL 형식: https://{bucket}.s3.{region}.amazonaws.com/{파일명}?X-Amz-Algorithm=...
+    const urlObj = new URL(preSignedUrl)
+    const fileName = urlObj.pathname.split('/').pop() || ''
+
+    if (!fileName) {
+      throw new Error('PreSigned URL에서 파일명을 추출할 수 없습니다.')
+    }
+
+    // 3. PreSigned URL로 S3에 이미지 업로드
+    const s3Response = await fetch(preSignedUrl, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': imageFile.type || 'image/jpeg', // PreSigned URL 요청 시 전달한 contentType과 일치
+        'Content-Length': imageFile.size.toString(), // PreSigned URL 요청 시 전달한 contentLength와 일치
+        'x-amz-tagging': 'status=pending', // 필수 헤더
+      },
+      body: imageFile,
+    })
+
+    if (!s3Response.ok) {
+      throw new Error('S3 이미지 업로드 실패')
+    }
+
+    // S3 PUT 응답 본문을 읽을 필요 없음 (성공 여부는 상태 코드로만 확인)
+    // 응답 본문을 읽으려고 하면 에러가 발생할 수 있음
+
+    // 4. 파일명만 반환 (프로필 업데이트 API에 파일명만 전달해야 함)
+    return {
+      success: true,
+      data: {
+        profileImageUrl: fileName, // 파일명만 반환
+        url: fileName,
+        imageUrl: fileName,
+        fileName: fileName, // 명시적으로 파일명 필드 추가
+      },
+      resultCode: 'SUCCESS',
+      msg: '',
+      code: 'SUCCESS',
+      status: 200,
+      httpStatus: 200,
+      message: '',
+    } as ApiResponse<any>
   },
 
   // 회원 탈퇴 (Swagger 스펙: POST /api/v1/auth/delete)
@@ -325,21 +397,109 @@ export const productApi = {
     // return normalizeApiResponse(response.data)
   },
 
-  // ❌ Swagger에 없음 - API 호출 비활성화 (UI는 유지)
+  // 상품 상세 조회 (GET /api/v1/products/{productId}) - Swagger 스펙
   getProduct: async (productId: number) => {
-    throw new Error(
-      'GET /api/v1/products/{productId}는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.',
+    const response = await apiClient.get<ApiResponse<any>>(
+      `/api/v1/products/${productId}`,
     )
-    // const response = await apiClient.get<ApiResponse<any>>(
-    //   `/api/v1/products/${productId}`,
-    // )
-    // return normalizeApiResponse(response.data)
+    return normalizeApiResponse(response.data)
+  },
+
+  // 상품 이미지 PreSigned URL 요청 (POST /api/v1/products/img) - 여러 이미지
+  // PreSigned URL 방식: 1. PreSigned URL 요청 → 2. 파일명 추출 → 3. S3에 이미지 업로드 → 4. 파일명 반환
+  uploadProductImages: async (imageFiles: File[]) => {
+    if (imageFiles.length === 0) {
+      throw new Error('이미지 파일이 없습니다.')
+    }
+
+    if (imageFiles.length > 10) {
+      throw new Error('이미지는 최대 10개까지 등록 가능합니다.')
+    }
+
+    // 1. PreSigned URL 요청 (여러 이미지)
+    const preSignedUrlRequests = imageFiles.map((file) => ({
+      contentType: file.type || 'image/jpeg',
+      contentLength: file.size,
+    }))
+
+    const axiosResponse = await apiClient.post<ApiResponse<string[]>>(
+      '/api/v1/products/img',
+      preSignedUrlRequests,
+    )
+    const preSignedResponse = normalizeApiResponse(axiosResponse.data)
+
+    if (!preSignedResponse.success || !preSignedResponse.data) {
+      throw new Error(
+        preSignedResponse.msg ||
+          preSignedResponse.message ||
+          'PreSigned URL 요청 실패',
+      )
+    }
+
+    const preSignedUrls = preSignedResponse.data
+
+    if (preSignedUrls.length !== imageFiles.length) {
+      throw new Error(
+        'PreSigned URL 개수가 이미지 파일 개수와 일치하지 않습니다.',
+      )
+    }
+
+    // 2. 각 PreSigned URL에서 파일명 추출
+    const fileNames = preSignedUrls.map((url: string) => {
+      const urlObj = new URL(url)
+      const fileName = urlObj.pathname.split('/').pop() || ''
+      if (!fileName) {
+        throw new Error('PreSigned URL에서 파일명을 추출할 수 없습니다.')
+      }
+      return fileName
+    })
+
+    // 3. S3에 각 이미지 업로드
+    const uploadPromises = imageFiles.map(async (file, index) => {
+      const preSignedUrl = preSignedUrls[index]
+
+      const s3Response = await fetch(preSignedUrl, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': file.type || 'image/jpeg', // PreSigned URL 요청 시 전달한 contentType과 일치
+          'Content-Length': file.size.toString(), // PreSigned URL 요청 시 전달한 contentLength와 일치
+          'x-amz-tagging': 'status=pending', // 필수 헤더
+        },
+        body: file,
+      })
+
+      if (!s3Response.ok) {
+        throw new Error(`이미지 업로드 실패: ${index + 1}번째 이미지`)
+      }
+    })
+
+    await Promise.all(uploadPromises)
+
+    // 4. 파일명 배열 반환
+    return {
+      success: true,
+      data: fileNames,
+      resultCode: 'SUCCESS',
+      msg: '',
+      code: 'SUCCESS',
+      status: 200,
+      httpStatus: 200,
+      message: '',
+    } as ApiResponse<string[]>
+  },
+
+  // 상품 이미지 업로드 (레거시 - 단일 파일, 호환성 유지)
+  uploadProductImage: async (imageFile: File) => {
+    const result = await productApi.uploadProductImages([imageFile])
+    return {
+      ...result,
+      data: result.data?.[0] || '',
+    } as ApiResponse<any>
   },
 
   // 상품 등록 (새로운 백엔드: POST /api/v1/products)
   // JSON 형식: { name, description, category, subCategory, imagesFiles: string[] }
   // imagesFiles는 이미 업로드된 이미지 URL 배열이어야 함
-  // TODO: 이미지 업로드 API가 별도로 있다면 먼저 업로드하고 URL을 받아야 함
   createProduct: async (
     productData: ProductCreateRequest,
     images: File[], // File 객체 배열 (현재는 사용하지 않음, 추후 이미지 업로드 API 연동 필요)
@@ -382,29 +542,12 @@ export const productApi = {
     return normalizeApiResponse(response.data)
   },
 
-  // 내가 등록한 상품 조회 (GET /api/v1/users/me/products)
-  // TODO: 아직 백엔드 개발 안됨 - API가 준비되면 활성화
-  getMyProducts: async (params?: MyProductsParams) => {
-    const searchParams = new URLSearchParams()
-    if (params?.page !== undefined) {
-      searchParams.append('page', params.page.toString())
-    }
-    if (params?.size !== undefined) {
-      searchParams.append('size', params.size.toString())
-    }
-    if (params?.status) {
-      searchParams.append('status', params.status)
-    }
-    if (params?.sort) {
-      searchParams.append('sort', params.sort)
-    }
-
-    const queryString = searchParams.toString()
-    const endpoint = queryString
-      ? `/api/v1/users/me/products?${queryString}`
-      : `/api/v1/users/me/products`
-
-    const response = await apiClient.get<ApiResponse<any>>(endpoint)
+  // 내가 등록한 상품 조회 (GET /api/v1/me/products)
+  // Swagger 스펙: 쿼리 파라미터 없음
+  getMyProducts: async () => {
+    const response = await apiClient.get<ApiResponse<any>>(
+      '/api/v1/me/products',
+    )
     return normalizeApiResponse(response.data)
   },
 
@@ -491,8 +634,7 @@ export const productApi = {
     return normalizeApiResponse(response.data)
   },
 
-  // 찜 목록 조회 (GET /api/v1/users/me/bookmarks)
-  // TODO: 아직 백엔드 개발 안됨 - API가 준비되면 활성화
+  // 찜 목록 조회 (GET /api/v1/user/me/bookmarks)
   getBookmarks: async (params?: { page?: number; size?: number }) => {
     const searchParams = new URLSearchParams()
     if (params?.page !== undefined) {
@@ -504,8 +646,8 @@ export const productApi = {
 
     const queryString = searchParams.toString()
     const endpoint = queryString
-      ? `/api/v1/users/me/bookmarks?${queryString}`
-      : `/api/v1/users/me/bookmarks`
+      ? `/api/v1/user/me/bookmarks?${queryString}`
+      : `/api/v1/user/me/bookmarks`
 
     const response = await apiClient.get<ApiResponse<any>>(endpoint)
     return normalizeApiResponse(response.data)
@@ -675,8 +817,7 @@ export const auctionApi = {
     return normalizeApiResponse(response.data)
   },
 
-  // 즉시 구매 (POST /api/v1/auctions/{auctionId}/buy-now)
-  // TODO: 곧 배포 예정 - API가 준비되면 활성화
+  // 즉시 구매 (POST /api/v1/auctions/{auctionId}/buy-now) - Swagger 스펙
   buyNow: async (
     auctionId: number,
     buyNowData: { amount: number; methodId: number },
@@ -694,8 +835,7 @@ export const auctionApi = {
 
 // 입찰 관련 API
 export const bidApi = {
-  // 경매 입찰 (POST /api/v1/auctions/{auctionId}/bids)
-  // TODO: 곧 배포 예정 - API가 준비되면 활성화
+  // 경매 입찰 (POST /api/v1/auctions/{auctionId}/bids) - Swagger 스펙
   createBid: async (auctionId: number, bidData: { bidAmount: number }) => {
     const response = await apiClient.post<ApiResponse<any>>(
       `/api/v1/auctions/${auctionId}/bids`,
@@ -706,8 +846,7 @@ export const bidApi = {
     return normalizeApiResponse(response.data)
   },
 
-  // 참여한 경매 목록 조회 (GET /api/v1/users/me/bids)
-  // TODO: 아직 백엔드 개발 안됨 - API가 준비되면 활성화
+  // 참여한 경매 목록 조회 (GET /api/v1/me/bids)
   getMyBids: async (params?: {
     page?: number
     size?: number
@@ -726,8 +865,8 @@ export const bidApi = {
 
     const queryString = searchParams.toString()
     const endpoint = queryString
-      ? `/api/v1/users/me/bids?${queryString}`
-      : `/api/v1/users/me/bids`
+      ? `/api/v1/me/bids?${queryString}`
+      : `/api/v1/me/bids`
 
     const response = await apiClient.get<ApiResponse<any>>(endpoint)
     return normalizeApiResponse(response.data)
@@ -793,34 +932,92 @@ export const reviewApi = {
   },
 }
 
-// ❌ 알림 관련 API - Swagger에 없음 (UI는 유지)
+// 알림 관련 API (Swagger 스펙 기반)
 export const notificationApi = {
-  // ❌ Swagger에 없음
+  // 알림 목록 조회 (GET /api/v1/notifications)
   getNotifications: async (params?: { page?: number; size?: number }) => {
-    throw new Error(
-      '알림 목록 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.',
-    )
+    const searchParams = new URLSearchParams()
+    if (params?.page !== undefined) {
+      searchParams.append('page', params.page.toString())
+    }
+    if (params?.size !== undefined) {
+      searchParams.append('size', params.size.toString())
+    }
+
+    const queryString = searchParams.toString()
+    const endpoint = queryString
+      ? `/api/v1/notifications?${queryString}`
+      : `/api/v1/notifications`
+
+    const response = await apiClient.get<ApiResponse<any>>(endpoint)
+    return normalizeApiResponse(response.data)
   },
 
-  // ❌ Swagger에 없음
+  // 알림 상세 조회 (GET /api/v1/notifications/{notificationId})
+  getNotificationById: async (notificationId: number) => {
+    const response = await apiClient.get<ApiResponse<any>>(
+      `/api/v1/notifications/${notificationId}`,
+    )
+    return normalizeApiResponse(response.data)
+  },
+
+  // 알림 읽음 처리 (PUT /api/v1/notifications/{notificationId})
+  readNotification: async (notificationId: number) => {
+    const response = await apiClient.put<ApiResponse<any>>(
+      `/api/v1/notifications/${notificationId}`,
+      undefined,
+    )
+    return normalizeApiResponse(response.data)
+  },
+
+  // 알림 삭제 (DELETE /api/v1/notifications/{notificationId})
+  deleteNotification: async (notificationId: number) => {
+    const response = await apiClient.delete<ApiResponse<any>>(
+      `/api/v1/notifications/${notificationId}`,
+    )
+    return normalizeApiResponse(response.data)
+  },
+
+  // SSE 알림 구독 (GET /api/v1/notifications/subscribe?userId={userId})
+  // 반환값: EventSource (SSE 스트림)
+  subscribe: (userId: number): EventSource => {
+    const baseUrl =
+      process.env.NEXT_PUBLIC_API_BASE_URL || 'https://api.p-14626.khee.store'
+    const url = `${baseUrl}/api/v1/notifications/subscribe?userId=${userId}`
+
+    // EventSource는 브라우저 네이티브 API이므로 직접 사용
+    // 인증 토큰은 쿠키에서 자동으로 전송됨
+    return new EventSource(url, { withCredentials: true })
+  },
+
+  // 읽지 않은 알림 개수 (별칭 - getNotifications로 계산)
   getUnreadCount: async () => {
-    throw new Error(
-      '읽지 않은 알림 개수 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.',
-    )
+    const result = await notificationApi.getNotifications({ page: 0, size: 1 })
+    // TODO: 백엔드 응답 구조에 따라 unreadCount 필드 확인 필요
+    return {
+      success: result.success,
+      data: result.data?.unreadCount || 0,
+      resultCode: result.resultCode,
+      msg: result.msg,
+      code: result.code,
+      status: result.status,
+      httpStatus: result.httpStatus,
+      message: result.message,
+    }
   },
 
-  // ❌ Swagger에 없음
+  // 모든 알림 읽음 처리 (별칭 - 개별 처리 필요 시 반복 호출)
   markAllAsRead: async () => {
+    // TODO: Swagger에 일괄 읽음 처리 API가 없으므로 개별 처리 필요
+    // 또는 백엔드에 일괄 처리 API 추가 요청
     throw new Error(
-      '모든 알림 읽음 처리 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.',
+      '일괄 읽음 처리 API는 Swagger에 없습니다. 개별 알림에 대해 readNotification을 호출하세요.',
     )
   },
 
-  // ❌ Swagger에 없음
+  // 알림 읽음 처리 (별칭 - readNotification과 동일)
   markAsRead: async (notificationId: number) => {
-    throw new Error(
-      '알림 읽음 처리 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.',
-    )
+    return notificationApi.readNotification(notificationId)
   },
 }
 

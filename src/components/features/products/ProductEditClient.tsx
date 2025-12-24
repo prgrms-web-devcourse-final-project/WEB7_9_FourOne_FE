@@ -10,11 +10,12 @@ import {
   type CategoryValue,
   type SubCategoryValue,
 } from '@/lib/constants/categories'
+import { getFullImageUrl } from '@/lib/utils/image-url'
 import { showErrorToast, showSuccessToast } from '@/lib/utils/toast'
 import { Product } from '@/types'
-import { Save, Trash2, X } from 'lucide-react'
+import { Save, Trash2, Upload, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 interface ProductEditClientProps {
   product: Product
@@ -22,6 +23,7 @@ interface ProductEditClientProps {
 
 export function ProductEditClient({ product }: ProductEditClientProps) {
   const router = useRouter()
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // 경매 등록 여부 확인 (경매 시작 전이 아니면 수정/삭제 불가)
   const isAuctionRegistered =
@@ -31,11 +33,21 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
   const [formData, setFormData] = useState({
     name: product.name,
     description: product.description,
-    imageUrls: (product.images || []).map((img) =>
-      typeof img === 'string' ? img : img.imageUrl,
-    ) as string[],
   })
-  const [newImageUrl, setNewImageUrl] = useState('')
+  // 기존 이미지 URL (조회는 안되지만 표시용)
+  const [existingImageUrls] = useState<string[]>(
+    (product.images || [])
+      .map((img) => {
+        const url = typeof img === 'string' ? img : img.imageUrl
+        return getFullImageUrl(url)
+      })
+      .filter((url): url is string => url !== null && url !== undefined),
+  )
+  // 새로 선택한 이미지 파일 배열
+  const [selectedImages, setSelectedImages] = useState<File[]>([])
+  // 새로 선택한 이미지의 미리보기 URL 배열
+  const [imagePreviews, setImagePreviews] = useState<string[]>([])
+  const [isUploadingImages, setIsUploadingImages] = useState(false)
   const [category, setCategory] = useState<CategoryValue>(
     (product as any).category || 'STARGOODS',
   )
@@ -69,46 +81,79 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
     }
   }
 
-  const handleAddImageUrl = () => {
-    const trimmedUrl = newImageUrl.trim()
-    if (!trimmedUrl) {
-      showErrorToast('이미지 URL을 입력해주세요.', '입력 오류')
+  // 이미지 파일 선택
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+
+    const newFiles = Array.from(files)
+    const totalFiles = selectedImages.length + newFiles.length
+
+    // 최대 10개 제한
+    if (totalFiles > 10) {
+      showErrorToast('이미지는 최대 10개까지 등록 가능합니다.')
       return
     }
-    if (
-      !trimmedUrl.startsWith('http://') &&
-      !trimmedUrl.startsWith('https://')
-    ) {
-      showErrorToast(
-        '올바른 URL 형식이 아닙니다. http:// 또는 https://로 시작해야 합니다.',
-        '입력 오류',
-      )
-      return
+
+    // 이미지 파일 검증
+    const validFiles = newFiles.filter((file) => {
+      if (!file.type.startsWith('image/')) {
+        showErrorToast(`${file.name}은(는) 이미지 파일이 아닙니다.`)
+        return false
+      }
+      // 파일 크기 검증 (10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        showErrorToast(`${file.name}의 크기는 10MB 이하여야 합니다.`)
+        return false
+      }
+      return true
+    })
+
+    if (validFiles.length === 0) return
+
+    // 파일 추가
+    const updatedFiles = [...selectedImages, ...validFiles]
+    setSelectedImages(updatedFiles)
+
+    // 미리보기 생성
+    const newPreviews = validFiles.map((file) => URL.createObjectURL(file))
+    setImagePreviews([...imagePreviews, ...newPreviews])
+
+    // 에러 초기화
+    setErrors((prev) => {
+      const newErrors = { ...prev }
+      delete newErrors.images
+      return newErrors
+    })
+
+    // input 초기화
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
     }
-    if (formData.imageUrls.includes(trimmedUrl)) {
-      showErrorToast('이미 추가된 이미지입니다.', '중복 오류')
-      return
-    }
-    setFormData((prev) => ({
-      ...prev,
-      imageUrls: [...prev.imageUrls, trimmedUrl],
-    }))
-    setNewImageUrl('')
   }
 
-  const handleImageUrlDelete = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      imageUrls: prev.imageUrls.filter((_, i) => i !== index),
-    }))
+  // 이미지 삭제 (새로 선택한 이미지만)
+  const handleImageDelete = (indexToDelete: number) => {
+    // 미리보기 URL 해제
+    const previewUrl = imagePreviews[indexToDelete]
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl)
+    }
+
+    setSelectedImages((prev) =>
+      prev.filter((_, index) => index !== indexToDelete),
+    )
+    setImagePreviews((prev) =>
+      prev.filter((_, index) => index !== indexToDelete),
+    )
   }
 
-  const handleImageUrlKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      handleAddImageUrl()
+  // 컴포넌트 언마운트 시 미리보기 URL 정리
+  useEffect(() => {
+    return () => {
+      imagePreviews.forEach((url) => URL.revokeObjectURL(url))
     }
-  }
+  }, [imagePreviews])
 
   const handleDeleteProduct = async () => {
     if (isAuctionRegistered) {
@@ -163,12 +208,10 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
       newErrors.description = '상품 설명을 입력해주세요'
     }
 
-    if (formData.imageUrls.length === 0) {
-      showErrorToast(
-        '최소 1개 이상의 이미지 URL을 추가해주세요.',
-        '이미지 필요',
-      )
-      newErrors.imageUrls = '이미지를 추가해주세요'
+    // 기존 이미지가 없고 새로 선택한 이미지도 없으면 에러
+    if (existingImageUrls.length === 0 && selectedImages.length === 0) {
+      showErrorToast('최소 1개 이상의 이미지를 선택해주세요.', '이미지 필요')
+      newErrors.images = '이미지를 선택해주세요'
     }
 
     setErrors(newErrors)
@@ -190,14 +233,6 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
     setIsLoading(true)
     setApiError('')
 
-    console.log('📝 상품 수정 요청 데이터:', {
-      name: formData.name,
-      description: formData.description,
-      category: category,
-      subCategory: subCategory,
-      imagesFiles: formData.imageUrls,
-    })
-
     try {
       const productId = product.productId || (product as any).id
       if (!productId) {
@@ -206,6 +241,56 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
         return
       }
 
+      let imageFileNames: string[] = []
+
+      // 새로 선택한 이미지가 있으면 업로드
+      if (selectedImages.length > 0) {
+        setIsUploadingImages(true)
+
+        // 1. PreSigned URL 요청 및 S3 업로드
+        const uploadResponse =
+          await productApi.uploadProductImages(selectedImages)
+
+        if (!uploadResponse.success || !uploadResponse.data) {
+          throw new Error(
+            uploadResponse.msg ||
+              uploadResponse.message ||
+              '이미지 업로드에 실패했습니다.',
+          )
+        }
+
+        // 업로드된 파일명 배열
+        imageFileNames = uploadResponse.data
+        setIsUploadingImages(false)
+      }
+
+      // 기존 이미지 URL에서 파일명만 추출 (전체 URL이 아닌 파일명만 있는 경우)
+      const existingFileNames = existingImageUrls
+        .map((url) => {
+          // 전체 URL인 경우 파일명만 추출
+          if (url.includes('/')) {
+            const parts = url.split('/')
+            return parts[parts.length - 1].split('?')[0] // 쿼리 파라미터 제거
+          }
+          return url // 이미 파일명인 경우
+        })
+        .filter((name) => name) // 빈 문자열 제거
+
+      // 기존 이미지 파일명과 새로 업로드한 파일명 합치기
+      const allImageFileNames = [
+        ...existingFileNames,
+        ...imageFileNames,
+      ].filter((name, index, self) => self.indexOf(name) === index) // 중복 제거
+
+      console.log('📝 상품 수정 요청 데이터:', {
+        name: formData.name,
+        description: formData.description,
+        category: category,
+        subCategory: subCategory,
+        imagesFiles: allImageFileNames,
+      })
+
+      // 2. 상품 수정 API 호출
       const response = await productApi.updateProduct(
         productId,
         {
@@ -213,7 +298,7 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
           description: formData.description,
           category: category,
           subCategory: subCategory,
-          imagesFiles: formData.imageUrls,
+          imagesFiles: allImageFileNames, // 파일명만 전달
         } as any,
         [], // 파일 배열은 사용하지 않음
         [], // 삭제할 이미지 ID는 사용하지 않음
@@ -235,6 +320,7 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
       console.error('API 에러:', error)
       const apiError = handleApiError(error)
       setApiError(apiError.message)
+      setIsUploadingImages(false)
     }
 
     setIsLoading(false)
@@ -349,64 +435,118 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
           </CardContent>
         </Card>
 
-        {/* 이미지 URL 입력 */}
+        {/* 상품 이미지 */}
         <Card variant="outlined">
           <CardContent className="p-6">
             <h2 className="mb-4 text-lg font-semibold text-neutral-900">
-              이미지 URL *
+              상품 이미지 *
             </h2>
 
             <div className="space-y-4">
-              {/* URL 입력 */}
-              <div className="flex gap-2">
-                <Input
-                  value={newImageUrl}
-                  onChange={(e) => setNewImageUrl(e.target.value)}
-                  onKeyPress={handleImageUrlKeyPress}
-                  placeholder="이미지 URL을 입력하세요 (예: https://...)"
-                  disabled={isAuctionRegistered}
+              {/* 기존 이미지 표시 (조회는 안되지만 표시용) */}
+              {existingImageUrls.length > 0 && (
+                <div className="mb-4">
+                  <p className="mb-2 text-sm font-medium text-neutral-700">
+                    기존 이미지 ({existingImageUrls.length}개)
+                  </p>
+                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+                    {existingImageUrls.map((url, index) => (
+                      <div
+                        key={`existing-${index}`}
+                        className="group relative aspect-square overflow-hidden rounded-lg border-2 border-neutral-200"
+                      >
+                        <img
+                          src={url}
+                          alt={`기존 이미지 ${index + 1}`}
+                          className="h-full w-full object-cover"
+                          onError={(e) => {
+                            // 이미지 로드 실패 시 기본 이미지 표시
+                            ;(e.target as HTMLImageElement).src =
+                              'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2U1ZTdlYiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM5Y2EzYWYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj7slYzsiqTtirgg7Yq567OE7ZWYPC90ZXh0Pjwvc3ZnPg=='
+                          }}
+                        />
+                        <div className="absolute right-0 bottom-0 left-0 bg-black/50 p-1 text-xs text-white">
+                          기존 이미지
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 이미지 선택 버튼 */}
+              <div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleImageSelect}
+                  className="hidden"
                 />
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={handleAddImageUrl}
-                  disabled={isAuctionRegistered}
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={
+                    isUploadingImages ||
+                    isAuctionRegistered ||
+                    selectedImages.length >= 10
+                  }
                 >
-                  추가
+                  {isUploadingImages ? (
+                    <>
+                      <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-neutral-600 border-t-transparent"></div>
+                      업로드 중...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="mr-2 h-4 w-4" />
+                      이미지 선택
+                    </>
+                  )}
                 </Button>
+                <p className="mt-2 text-sm text-neutral-500">
+                  이미지를 선택하세요 (최대 10개, 각 10MB 이하)
+                </p>
               </div>
 
-              {/* URL 목록 */}
-              {formData.imageUrls.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-neutral-700">
-                    등록된 이미지 URL ({formData.imageUrls.length}개)
+              {/* 선택된 이미지 미리보기 */}
+              {selectedImages.length > 0 && (
+                <div className="mt-4">
+                  <p className="mb-2 text-sm text-neutral-600">
+                    새로 선택한 이미지 ({selectedImages.length}/10)
                   </p>
-                  {formData.imageUrls.map((url, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between rounded-md border border-neutral-200 bg-neutral-50 p-3"
-                    >
-                      <span className="truncate text-sm text-neutral-600">
-                        {url}
-                      </span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleImageUrlDelete(index)}
-                        disabled={isAuctionRegistered}
-                        className="ml-2 shrink-0"
+                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+                    {selectedImages.map((file, index) => (
+                      <div
+                        key={index}
+                        className="group relative aspect-square overflow-hidden rounded-lg border-2 border-neutral-200"
                       >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
+                        <img
+                          src={imagePreviews[index]}
+                          alt={`미리보기 ${index + 1}`}
+                          className="h-full w-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleImageDelete(index)}
+                          disabled={isAuctionRegistered}
+                          className="absolute top-2 right-2 rounded-full bg-red-500 p-1.5 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-600 disabled:opacity-50"
+                          title="이미지 삭제"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                        <div className="absolute right-0 bottom-0 left-0 bg-black/50 p-1 text-xs text-white">
+                          {file.name}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
-
-              {errors.imageUrls && (
-                <p className="text-sm text-red-600">{errors.imageUrls}</p>
+              {errors.images && (
+                <p className="mt-2 text-sm text-red-600">{errors.images}</p>
               )}
             </div>
           </CardContent>
@@ -436,10 +576,22 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
           )}
           <Button
             type="submit"
-            disabled={isLoading || isDeleting || isAuctionRegistered}
+            disabled={
+              isLoading ||
+              isDeleting ||
+              isAuctionRegistered ||
+              isUploadingImages
+            }
           >
             <Save className="mr-2 h-4 w-4" />
-            {isLoading ? '저장 중...' : '수정 완료'}
+            {isLoading || isUploadingImages ? (
+              <div className="flex items-center">
+                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                {isUploadingImages ? '이미지 업로드 중...' : '저장 중...'}
+              </div>
+            ) : (
+              '수정 완료'
+            )}
           </Button>
         </div>
       </form>

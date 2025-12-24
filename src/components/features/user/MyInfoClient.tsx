@@ -5,14 +5,25 @@ import { Card, CardContent } from '@/components/ui/card'
 import { useAuth } from '@/contexts/AuthContext'
 import { authApi } from '@/lib/api'
 import { handleApiError } from '@/lib/api/common'
+import { getFullImageUrl } from '@/lib/utils/image-url'
 import { showErrorToast, showSuccessToast } from '@/lib/utils/toast'
-import { AlertTriangle, Mail, Trash2, User } from 'lucide-react'
+import {
+  AlertTriangle,
+  Calendar,
+  Edit,
+  Mail,
+  MapPin,
+  Phone,
+  Trash2,
+  User,
+} from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
 interface MyInfoClientProps {
   user?: {
     id?: number
+    userId?: number
     email?: string
     nickname?: string
     phone?: string
@@ -23,6 +34,8 @@ interface MyInfoClientProps {
     creditScore?: number
     createDate?: string
     modifyDate?: string
+    createdAt?: string
+    updatedAt?: string
   }
 }
 
@@ -35,18 +48,46 @@ export function MyInfoClient({ user: propUser }: MyInfoClientProps) {
   const [isDeleting, setIsDeleting] = useState(false)
   const [deletePassword, setDeletePassword] = useState('')
 
-  // 로컬스토리지에서 사용자 정보 로드
+  // 사용자 정보 로드 (API 응답 우선, 서버에서 받은 정보, 없으면 localStorage 또는 AuthContext)
   useEffect(() => {
-    const loadUserInfo = () => {
+    const loadUserInfo = async () => {
       try {
+        // 1. API로 최신 사용자 정보 조회 (항상 최신 데이터 사용)
+        try {
+          const response = await authApi.getMyInfoV2()
+          if (response.success && response.data) {
+            // API 응답 데이터를 그대로 사용 (필드명: userId, email, nickname, profileImageUrl, createdAt)
+            setUserInfo(response.data)
+            setIsLoading(false)
+            return
+          }
+        } catch (error) {
+          console.error('사용자 정보 API 조회 실패:', error)
+        }
+
+        // 2. API 실패 시 서버에서 받은 propUser 사용 (실제 데이터가 있는 경우만)
+        if (
+          propUser &&
+          Object.keys(propUser).length > 0 &&
+          (propUser.email || propUser.userId)
+        ) {
+          setUserInfo(propUser)
+          setIsLoading(false)
+          return
+        }
+
+        // 3. AuthContext의 사용자 정보 사용 (임시)
+        if (authUser) {
+          setUserInfo(authUser)
+          setIsLoading(false)
+          return
+        }
+
+        // 4. localStorage에서 사용자 정보 로드 (임시)
         const savedUser = localStorage.getItem('user')
         if (savedUser) {
           const userData = JSON.parse(savedUser)
           setUserInfo(userData)
-        } else if (authUser) {
-          setUserInfo(authUser)
-        } else if (propUser && Object.keys(propUser).length > 0) {
-          setUserInfo(propUser)
         }
       } catch (error) {
         console.error('사용자 정보 로드 실패:', error)
@@ -71,7 +112,7 @@ export function MyInfoClient({ user: propUser }: MyInfoClientProps) {
       if (response.success) {
         showSuccessToast('회원탈퇴가 완료되었습니다.')
         await logout()
-        router.push('/')
+        // logout() 함수에서 자동으로 홈으로 리다이렉트됨
       } else {
         const errorMessage =
           response.message ||
@@ -121,18 +162,31 @@ export function MyInfoClient({ user: propUser }: MyInfoClientProps) {
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
       {/* 프로필 헤더 */}
-      <div className="from-primary-100 via-primary-50 border-primary-200 relative mb-8 overflow-hidden rounded-2xl border bg-gradient-to-br to-white p-8 shadow-lg">
+      <div className="from-primary-100 via-primary-50 border-primary-200 relative mb-8 overflow-hidden rounded-2xl border bg-linear-to-br to-white p-8 shadow-lg">
         <div className="relative">
           <div className="flex flex-col items-center space-y-6 lg:flex-row lg:items-start lg:space-y-0 lg:space-x-8">
             {/* 프로필 아바타 */}
             <div className="shrink-0">
               <div className="relative">
                 <div className="bg-primary-500 ring-primary-100 h-28 w-28 overflow-hidden rounded-full shadow-lg ring-4">
-                  <div className="flex h-28 w-28 items-center justify-center">
-                    <span className="text-4xl font-bold text-white">
-                      {getInitials(userInfo.nickname || 'U')}
-                    </span>
-                  </div>
+                  {(() => {
+                    const imageUrl = getFullImageUrl(
+                      userInfo.profileImageUrl || userInfo.profileImage,
+                    )
+                    return imageUrl ? (
+                      <img
+                        src={imageUrl}
+                        alt={userInfo.nickname || '프로필'}
+                        className="h-28 w-28 object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-28 w-28 items-center justify-center">
+                        <span className="text-4xl font-bold text-white">
+                          {getInitials(userInfo.nickname || 'U')}
+                        </span>
+                      </div>
+                    )
+                  })()}
                 </div>
                 <div className="absolute -right-2 -bottom-2 rounded-full bg-green-500 p-2.5 shadow-lg ring-2 ring-white">
                   <span className="text-sm text-white">✓</span>
@@ -157,7 +211,15 @@ export function MyInfoClient({ user: propUser }: MyInfoClientProps) {
             </div>
 
             {/* 액션 버튼 */}
-            <div className="shrink-0">
+            <div className="flex w-full shrink-0 flex-col gap-2 lg:w-auto">
+              <Button
+                variant="outline"
+                className="w-full lg:w-auto"
+                onClick={() => router.push('/my-info/edit')}
+              >
+                <Edit className="mr-2 h-4 w-4" />
+                수정
+              </Button>
               <Button
                 variant="outline"
                 className="w-full border-red-300 bg-red-50 text-red-600 hover:bg-red-100 lg:w-auto"
@@ -208,6 +270,107 @@ export function MyInfoClient({ user: propUser }: MyInfoClientProps) {
                 </div>
               </div>
             </div>
+
+            {(userInfo.phone || userInfo.phoneNumber) && (
+              <div className="flex items-center space-x-4 rounded-lg border border-neutral-200 bg-neutral-50/50 p-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-green-100">
+                  <Phone className="h-6 w-6 text-green-600" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-medium text-neutral-500">
+                    전화번호
+                  </div>
+                  <div className="mt-1 font-semibold text-neutral-900">
+                    {userInfo.phone || userInfo.phoneNumber || '전화번호 없음'}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {userInfo.address && (
+              <div className="flex items-center space-x-4 rounded-lg border border-neutral-200 bg-neutral-50/50 p-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-purple-100">
+                  <MapPin className="h-6 w-6 text-purple-600" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-medium text-neutral-500">
+                    주소
+                  </div>
+                  <div className="mt-1 font-semibold text-neutral-900">
+                    {userInfo.address}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {(() => {
+              const imageUrl = getFullImageUrl(
+                userInfo.profileImage || userInfo.profileImageUrl,
+              )
+              return imageUrl ? (
+                <div className="flex items-center space-x-4 rounded-lg border border-neutral-200 bg-neutral-50/50 p-4">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-orange-100">
+                    <User className="h-6 w-6 text-orange-600" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs font-medium text-neutral-500">
+                      프로필 이미지
+                    </div>
+                    <div className="mt-1">
+                      <img
+                        src={imageUrl}
+                        alt="프로필"
+                        className="h-16 w-16 rounded-full object-cover"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : null
+            })()}
+
+            {(userInfo.createDate || userInfo.createdAt) && (
+              <div className="flex items-center space-x-4 rounded-lg border border-neutral-200 bg-neutral-50/50 p-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gray-100">
+                  <Calendar className="h-6 w-6 text-gray-600" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-medium text-neutral-500">
+                    가입일
+                  </div>
+                  <div className="mt-1 font-semibold text-neutral-900">
+                    {new Date(
+                      userInfo.createdAt || userInfo.createDate,
+                    ).toLocaleDateString('ko-KR', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {(userInfo.modifyDate || userInfo.updatedAt) && (
+              <div className="flex items-center space-x-4 rounded-lg border border-neutral-200 bg-neutral-50/50 p-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gray-100">
+                  <Calendar className="h-6 w-6 text-gray-600" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-medium text-neutral-500">
+                    수정일
+                  </div>
+                  <div className="mt-1 font-semibold text-neutral-900">
+                    {new Date(
+                      userInfo.updatedAt || userInfo.modifyDate,
+                    ).toLocaleDateString('ko-KR', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
