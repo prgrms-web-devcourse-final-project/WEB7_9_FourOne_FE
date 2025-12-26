@@ -422,9 +422,10 @@ export const productApi = {
       contentLength: file.size,
     }))
 
+    // Swagger 스펙에 맞게 requests 객체로 감싸서 전송
     const axiosResponse = await apiClient.post<ApiResponse<string[]>>(
       '/api/v1/products/img',
-      preSignedUrlRequests,
+      { requests: preSignedUrlRequests },
     )
     const preSignedResponse = normalizeApiResponse(axiosResponse.data)
 
@@ -609,10 +610,10 @@ export const productApi = {
     return normalizeApiResponse(response.data)
   },
 
-  // QnA 답변 삭제 (새로운 API: DELETE /api/v1/products/{productId}/qna/{qnaId})
-  deleteAnswer: async (productId: number, qnaId: number) => {
+  // QnA 답변 삭제 (새로운 API: DELETE /api/v1/products/{productId}/qna/{qnaId}/{answerId})
+  deleteAnswer: async (productId: number, qnaId: number, answerId: number) => {
     const response = await apiClient.delete<ApiResponse<any>>(
-      `/api/v1/products/${productId}/qna/${qnaId}`,
+      `/api/v1/products/${productId}/qna/${qnaId}/${answerId}`,
     )
     return normalizeApiResponse(response.data)
   },
@@ -1220,6 +1221,8 @@ export const adminApi = {
 export const boardApi = {
   // ❌ Swagger에 없음
   createPost: async (data: BoardWriteRequest) => {
-    throw new Error('게시글 작성 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.')
+    throw new Error(
+      '게시글 작성 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.',
+    )
   },
 }

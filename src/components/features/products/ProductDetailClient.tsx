@@ -250,13 +250,17 @@ export function ProductDetailClient({
   }
 
   // QnA 답변 삭제
-  const handleDeleteAnswer = async (productId: number, qnaId: number) => {
+  const handleDeleteAnswer = async (
+    productId: number,
+    qnaId: number,
+    answerId: number,
+  ) => {
     if (!confirm('답변을 삭제하시겠습니까?')) {
       return
     }
 
     try {
-      const response = await productApi.deleteAnswer(productId, qnaId)
+      const response = await productApi.deleteAnswer(productId, qnaId, answerId)
       if (response.success) {
         fetchQnaList()
         showSuccessToast('답변이 삭제되었습니다.')
@@ -889,6 +893,7 @@ export function ProductDetailClient({
                                   handleDeleteAnswer(
                                     safeProductId,
                                     qnaData.qnaId,
+                                    answer.answerId,
                                   )
                                 }}
                                 className="h-6 px-2 text-xs text-red-500 hover:text-red-700"

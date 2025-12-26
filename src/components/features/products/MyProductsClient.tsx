@@ -337,7 +337,7 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
   }
 
   // QnA 답변 삭제
-  const handleDeleteAnswer = async (qnaId: number) => {
+  const handleDeleteAnswer = async (qnaId: number, answerId: number) => {
     if (!selectedProductId) return
 
     if (!confirm('답변을 삭제하시겠습니까?')) {
@@ -345,7 +345,11 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
     }
 
     try {
-      const response = await productApi.deleteAnswer(selectedProductId, qnaId)
+      const response = await productApi.deleteAnswer(
+        selectedProductId,
+        qnaId,
+        answerId,
+      )
       if (response.success) {
         fetchQnaList(selectedProductId)
         showSuccessToast('답변이 삭제되었습니다.')
@@ -405,7 +409,6 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
           </div>
         </div>
       )}
-
       {/* 실시간 연결 상태 */}
       {isMyAuctionsSubscribed && (
         <div className="mb-4 flex items-center justify-center space-x-2 rounded-lg bg-green-50 p-3">
@@ -415,9 +418,8 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
           </span>
         </div>
       )}
-
-      {/* 상품 목록 */}
-      ;<div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+      {/* 상품 목록 */};
+      <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
         {filteredProducts.length === 0 ? (
           <div className="col-span-full">
             <Card variant="outlined">
@@ -633,11 +635,8 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
           })
         )}
       </div>
-
-      {
-        /* QnA 관리 모달 */
-      }
-      ;<Dialog open={isQnaModalOpen} onOpenChange={setIsQnaModalOpen}>
+      {/* QnA 관리 모달 */};
+      <Dialog open={isQnaModalOpen} onOpenChange={setIsQnaModalOpen}>
         <DialogContent className="max-h-[85vh] max-w-3xl overflow-hidden p-0">
           <div className="flex flex-col">
             {/* 헤더 */}
@@ -756,7 +755,10 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
                                       variant="ghost"
                                       size="sm"
                                       onClick={() =>
-                                        handleDeleteAnswer(qnaData.qnaId)
+                                        handleDeleteAnswer(
+                                          qnaData.qnaId,
+                                          answer.answerId,
+                                        )
                                       }
                                       className="ml-2 h-8 w-8 shrink-0 p-0 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-50 hover:text-red-600"
                                       title="답변 삭제"

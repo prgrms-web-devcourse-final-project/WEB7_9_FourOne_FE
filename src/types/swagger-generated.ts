@@ -84,6 +84,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/payments/prepare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["prepare"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/payments/create": {
         parameters: {
             query?: never;
@@ -94,6 +110,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/payments/cards": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list"];
+        put?: never;
+        post: operations["register"];
         delete?: never;
         options?: never;
         head?: never;
@@ -372,6 +404,22 @@ export interface paths {
         patch: operations["updateProfile"];
         trace?: never;
     };
+    "/sse/auctions/{auctionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["subscribeAuction"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/user/me": {
         parameters: {
             query?: never;
@@ -484,6 +532,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auctions/{auctionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getBidHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/help": {
         parameters: {
             query?: never;
@@ -495,6 +559,22 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/payments/cards/{cardId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -586,6 +666,40 @@ export interface components {
             status?: number;
             message?: string;
             data?: Record<string, never>;
+        };
+        PaymentPrepareRequest: {
+            /** Format: int64 */
+            winnerId?: number;
+        };
+        PaymentPrepareResponse: {
+            /** Format: int64 */
+            paymentId?: number;
+            /** @enum {string} */
+            status?: "REQUESTED" | "PAID" | "FAILED" | "EXPIRED" | "CANCELED";
+            autoPaid?: boolean;
+            toss?: components["schemas"]["TossInfo"];
+        };
+        RsDataPaymentPrepareResponse: {
+            code?: string;
+            /** Format: int32 */
+            status?: number;
+            message?: string;
+            data?: components["schemas"]["PaymentPrepareResponse"];
+        };
+        TossInfo: {
+            orderId?: string;
+            /** Format: int64 */
+            amount?: number;
+        };
+        RegisterCardRequest: {
+            billingKey?: string;
+            /** @enum {string} */
+            cardCompany?: "KB" | "SHINHAN" | "HYUNDAI" | "SAMSUNG" | "LOTTE" | "NH" | "HANA" | "BC" | "WOORI";
+            cardNumberMasked?: string;
+            cardName?: string;
+        };
+        PreSignedUrlListRequest: {
+            requests: components["schemas"]["PreSignedUrlRequest"][];
         };
         PreSignedUrlRequest: {
             contentType: string;
@@ -826,8 +940,8 @@ export interface components {
             data?: components["schemas"]["BidResponseDto"];
         };
         UpdateProfileRequest: {
-            nickname: string;
-            profileImageUrl?: string;
+            nickname?: string;
+            profileImageKey?: string;
         };
         RsDataUpdateProfileResponse: {
             code?: string;
@@ -843,6 +957,21 @@ export interface components {
             profileImageUrl?: string;
             /** Format: date-time */
             updatedAt?: string;
+        };
+        CardResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** @enum {string} */
+            cardCompany?: "KB" | "SHINHAN" | "HYUNDAI" | "SAMSUNG" | "LOTTE" | "NH" | "HANA" | "BC" | "WOORI";
+            cardNumberMasked?: string;
+            cardName?: string;
+        };
+        RsDataListCardResponse: {
+            code?: string;
+            /** Format: int32 */
+            status?: number;
+            message?: string;
+            data?: components["schemas"]["CardResponse"][];
         };
         MyPageResponse: {
             /** Format: int64 */
@@ -1024,6 +1153,56 @@ export interface components {
             status?: number;
             message?: string;
             data?: components["schemas"]["GetCurrentUserInfoResponse"];
+        };
+        BidHistoryResponse: {
+            /** Format: int64 */
+            bidId?: number;
+            /** Format: int64 */
+            bidAmount?: number;
+            bidder?: string;
+            /** Format: date-time */
+            bidTime?: string;
+        };
+        PageBidHistoryResponse: {
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+            pageable?: components["schemas"]["PageableObject"];
+            /** Format: int32 */
+            size?: number;
+            content?: components["schemas"]["BidHistoryResponse"][];
+            /** Format: int32 */
+            number?: number;
+            sort?: components["schemas"]["SortObject"];
+            /** Format: int32 */
+            numberOfElements?: number;
+            first?: boolean;
+            last?: boolean;
+            empty?: boolean;
+        };
+        PageableObject: {
+            paged?: boolean;
+            /** Format: int32 */
+            pageNumber?: number;
+            /** Format: int32 */
+            pageSize?: number;
+            /** Format: int64 */
+            offset?: number;
+            sort?: components["schemas"]["SortObject"];
+            unpaged?: boolean;
+        };
+        RsDataPageBidHistoryResponse: {
+            code?: string;
+            /** Format: int32 */
+            status?: number;
+            message?: string;
+            data?: components["schemas"]["PageBidHistoryResponse"];
+        };
+        SortObject: {
+            sorted?: boolean;
+            empty?: boolean;
+            unsorted?: boolean;
         };
         GuideDto: {
             /** Format: int64 */
@@ -1225,7 +1404,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "*/*": components["schemas"]["RsDataVoid"];
+                };
             };
         };
     };
@@ -1257,9 +1438,34 @@ export interface operations {
             };
         };
     };
+    prepare: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PaymentPrepareRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataPaymentPrepareResponse"];
+                };
+            };
+        };
+    };
     create: {
         parameters: {
             query: {
+                winnerId: number;
                 amount: number;
             };
             header?: never;
@@ -1279,6 +1485,50 @@ export interface operations {
             };
         };
     };
+    list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataListCardResponse"];
+                };
+            };
+        };
+    };
+    register: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterCardRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataVoid"];
+                };
+            };
+        };
+    };
     getProfileImageUrl: {
         parameters: {
             query?: never;
@@ -1288,7 +1538,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["PreSignedUrlRequest"][];
+                "application/json": components["schemas"]["PreSignedUrlListRequest"];
             };
         };
         responses: {
@@ -1457,7 +1707,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["PreSignedUrlRequest"][];
+                "application/json": components["schemas"]["PreSignedUrlListRequest"];
             };
         };
         responses: {
@@ -1734,6 +1984,26 @@ export interface operations {
             };
         };
     };
+    subscribeAuction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                auctionId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     me: {
         parameters: {
             query?: never;
@@ -1885,6 +2155,30 @@ export interface operations {
             };
         };
     };
+    getBidHistory: {
+        parameters: {
+            query: {
+                page: components["schemas"]["Pageable"];
+            };
+            header?: never;
+            path: {
+                auctionId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataPageBidHistoryResponse"];
+                };
+            };
+        };
+    };
     getGuide: {
         parameters: {
             query?: never;
@@ -1905,11 +2199,34 @@ export interface operations {
             };
         };
     };
+    delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cardId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataVoid"];
+                };
+            };
+        };
+    };
     deleteAnswer: {
         parameters: {
             query?: never;
             header?: never;
             path: {
+                productId: number;
                 qnaId: number;
                 answerId: number;
             };
