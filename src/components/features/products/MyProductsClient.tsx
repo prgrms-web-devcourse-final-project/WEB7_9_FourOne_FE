@@ -72,17 +72,19 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
             (update) => update.productId === product.productId,
           )
           if (update) {
+            // WebSocket 업데이트는 경매 상태만 업데이트
             return {
               ...product,
               currentPrice: update.currentPrice,
               bidCount: update.bidCount,
-              status: mapApiStatusToDisplay(update.status, update),
+              status: update.status, // 직접 사용
             } as any
           }
           return product
         })
       })
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [myAuctionUpdates])
 
   // 내 상품 목록 조회
@@ -113,10 +115,21 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
         const processedProducts = productsData.map((product: any) => {
           // 가장 최근 경매 정보 가져오기 (auctions 배열이 있다면)
           const latestAuction = product.auctions?.[0] || product.auction
+          // 경매가 있으면 경매의 상태를, 없으면 상품의 상태를 사용
+          const statusToUse = latestAuction
+            ? latestAuction.status
+            : product.status
           const displayStatus = mapApiStatusToDisplay(
-            product.status,
+            statusToUse,
             latestAuction,
           )
+          console.log(`📦 상품 처리 #${product.productId}:`, {
+            name: product.name,
+            productStatus: product.status,
+            auctionStatus: latestAuction?.status,
+            usedStatus: statusToUse,
+            displayStatus,
+          })
           return {
             ...product,
             status: displayStatus,
@@ -226,23 +239,31 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
   // 정렬 변경 핸들러
   const handleSortChange = (sort: 'LATEST' | 'POPULAR') => {
     setSortBy(sort)
-    fetchMyProducts()
+    // API 재호출하지 않고 클라이언트에서 정렬만 수행
   }
 
   // 컴포넌트 마운트 시 상품 목록 조회
   useEffect(() => {
     if (!initialProducts || initialProducts.length === 0) {
       fetchMyProducts()
+    } else {
+      setProducts(initialProducts)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // 정렬이 변경될 때마다 API 호출
-  useEffect(() => {
-    if (initialProducts && initialProducts.length > 0) {
-      // 초기 데이터가 있는 경우에만 API 호출
-      fetchMyProducts()
+  // 정렬된 상품 목록 (클라이언트 정렬)
+  const sortedProducts = [...products].sort((a, b) => {
+    if (sortBy === 'LATEST') {
+      // 최신순: createdAt 기준 내림차순
+      const dateA = new Date((a as any).createdAt || 0).getTime()
+      const dateB = new Date((b as any).createdAt || 0).getTime()
+      return dateB - dateA
+    } else {
+      // 인기순: bookmarkCount 기준 내림차순
+      return ((b as any).bookmarkCount || 0) - ((a as any).bookmarkCount || 0)
     }
-  }, [sortBy, initialProducts])
+  })
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('ko-KR').format(price) + '원'
@@ -365,7 +386,7 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
   }
 
   // 전체 상품 목록을 상태별로 표시 (필터링 없음)
-  const filteredProducts = products
+  const filteredProducts = sortedProducts
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
@@ -418,7 +439,7 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
           </span>
         </div>
       )}
-      {/* 상품 목록 */};
+      {/* 상품 목록 */}
       <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
         {filteredProducts.length === 0 ? (
           <div className="col-span-full">
@@ -480,23 +501,6 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
                         {statusBadge.label}
                       </Badge>
                     </div>
-                    {/* 통계 정보 (이미지 위) */}
-                    <div className="absolute top-3 right-3 flex items-center space-x-2 rounded-full bg-black/50 px-3 py-1.5 text-xs text-white backdrop-blur-sm">
-                      {(product as any).bookmarkCount !== undefined &&
-                        (product as any).bookmarkCount > 0 && (
-                          <div className="flex items-center space-x-1">
-                            <Heart className="h-3 w-3 fill-current" />
-                            <span>{(product as any).bookmarkCount}</span>
-                          </div>
-                        )}
-                      {(product as any).bidCount !== undefined &&
-                        (product as any).bidCount > 0 && (
-                          <div className="flex items-center space-x-1">
-                            <TrendingUp className="h-3 w-3" />
-                            <span>{(product as any).bidCount}</span>
-                          </div>
-                        )}
-                    </div>
                   </div>
 
                   {/* 상품 정보 */}
@@ -509,7 +513,8 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
                     <div className="mb-4 grid grid-cols-2 gap-3">
                       <div className="from-primary-50 to-primary-100/50 rounded-xl bg-gradient-to-br p-3">
                         <div className="mb-1 flex items-center space-x-1 text-xs text-neutral-600">
-                          {(product as any).status === 'PENDING' ? (
+                          {(product as any).status === 'PENDING' ||
+                          (product as any).status === 'SCHEDULED' ? (
                             <>
                               <Zap className="h-3 w-3" />
                               <span>시작가</span>
@@ -522,20 +527,23 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
                           )}
                         </div>
                         <div className="text-primary-600 text-lg font-bold">
-                          {(product as any).status === 'PENDING'
+                          {(product as any).status === 'PENDING' ||
+                          (product as any).status === 'SCHEDULED'
                             ? formatPrice((product as any).initialPrice || 0)
                             : formatPrice((product as any).currentPrice || 0)}
                         </div>
                       </div>
                       <div className="rounded-xl bg-neutral-50 p-3">
                         <div className="mb-1 text-xs text-neutral-600">
-                          {(product as any).status === 'PENDING'
-                            ? '상태'
+                          {(product as any).status === 'PENDING' ||
+                          (product as any).status === 'SCHEDULED'
+                            ? '찜'
                             : '입찰 수'}
                         </div>
                         <div className="text-lg font-semibold text-neutral-900">
-                          {(product as any).status === 'PENDING'
-                            ? '경매 등록 전'
+                          {(product as any).status === 'PENDING' ||
+                          (product as any).status === 'SCHEDULED'
+                            ? `${(product as any).bookmarkCount || 0}개`
                             : `${(product as any).bidCount || 0}건`}
                         </div>
                       </div>
@@ -636,7 +644,7 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
           })
         )}
       </div>
-      {/* QnA 관리 모달 */};
+      {/* QnA 관리 모달 */}
       <Dialog open={isQnaModalOpen} onOpenChange={setIsQnaModalOpen}>
         <DialogContent className="max-h-[90vh] max-w-4xl overflow-hidden bg-white p-0">
           <div className="flex h-full flex-col">
