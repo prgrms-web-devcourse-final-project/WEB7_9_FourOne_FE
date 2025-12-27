@@ -188,9 +188,6 @@ export function MyInfoClient({ user: propUser }: MyInfoClientProps) {
                     )
                   })()}
                 </div>
-                <div className="absolute -right-2 -bottom-2 rounded-full bg-green-500 p-2.5 shadow-lg ring-2 ring-white">
-                  <span className="text-sm text-white">✓</span>
-                </div>
               </div>
             </div>
 
@@ -244,20 +241,6 @@ export function MyInfoClient({ user: propUser }: MyInfoClientProps) {
 
           <div className="space-y-4">
             <div className="flex items-center space-x-4 rounded-lg border border-neutral-200 bg-neutral-50/50 p-4">
-              <div className="bg-primary-100 flex h-12 w-12 shrink-0 items-center justify-center rounded-full">
-                <Mail className="text-primary-600 h-6 w-6" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="text-xs font-medium text-neutral-500">
-                  이메일
-                </div>
-                <div className="mt-1 font-semibold text-neutral-900">
-                  {userInfo.email || '이메일 없음'}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-4 rounded-lg border border-neutral-200 bg-neutral-50/50 p-4">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-100">
                 <User className="h-6 w-6 text-blue-600" />
               </div>
@@ -302,31 +285,6 @@ export function MyInfoClient({ user: propUser }: MyInfoClientProps) {
                 </div>
               </div>
             )}
-
-            {(() => {
-              const imageUrl = getFullImageUrl(
-                userInfo.profileImage || userInfo.profileImageUrl,
-              )
-              return imageUrl ? (
-                <div className="flex items-center space-x-4 rounded-lg border border-neutral-200 bg-neutral-50/50 p-4">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-orange-100">
-                    <User className="h-6 w-6 text-orange-600" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-xs font-medium text-neutral-500">
-                      프로필 이미지
-                    </div>
-                    <div className="mt-1">
-                      <img
-                        src={imageUrl}
-                        alt="프로필"
-                        className="h-16 w-16 rounded-full object-cover"
-                      />
-                    </div>
-                  </div>
-                </div>
-              ) : null
-            })()}
 
             {(userInfo.createDate || userInfo.createdAt) && (
               <div className="flex items-center space-x-4 rounded-lg border border-neutral-200 bg-neutral-50/50 p-4">

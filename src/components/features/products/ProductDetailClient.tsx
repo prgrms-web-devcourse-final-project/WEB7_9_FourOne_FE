@@ -541,168 +541,198 @@ export function ProductDetailClient({
 
         {/* 상품 정보 */}
         <div className="space-y-6">
-          {/* 기본 정보 */}
-          <div>
-            <div className="mb-2 flex items-center space-x-2">
-              <Badge variant="primary">{productData.category}</Badge>
-              {productData.status === 'LIVE' && (
-                <Badge variant="success">경매중</Badge>
-              )}
-              {productData.status === 'SCHEDULED' && (
-                <Badge variant="secondary">시작전</Badge>
-              )}
-              {productData.status === 'ENDED' && (
-                <Badge variant="error">종료</Badge>
-              )}
-            </div>
-
-            <div className="mb-4 flex items-center justify-between">
-              <h1 className="text-2xl font-bold text-neutral-900">
-                {productData.name}
-              </h1>
+          {/* 헤더 */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <Badge variant="primary" className="px-3 py-1.5 text-base">
+                  {productData.category}
+                </Badge>
+                {productData.status === 'LIVE' && (
+                  <Badge variant="success" className="animate-pulse">
+                    <Zap className="mr-1 h-3 w-3" />
+                    경매중
+                  </Badge>
+                )}
+                {productData.status === 'SCHEDULED' && (
+                  <Badge variant="secondary">
+                    <Clock className="mr-1 h-3 w-3" />
+                    시작전
+                  </Badge>
+                )}
+                {productData.status === 'ENDED' && (
+                  <Badge variant="error">종료</Badge>
+                )}
+              </div>
               <div className="flex items-center space-x-2">
-                {/* 북마크 버튼 */}
                 {isLoggedIn && (
                   <Button
                     variant="outline"
-                    size="sm"
+                    size="lg"
                     onClick={handleBookmarkToggle}
                     disabled={isBookmarkLoading}
-                    className="flex items-center space-x-1"
+                    className="hover:bg-red-50"
                   >
                     <Heart
-                      className={`h-4 w-4 ${
-                        isBookmarked ? 'fill-red-500 text-red-500' : ''
+                      className={`h-5 w-5 transition-all ${
+                        isBookmarked
+                          ? 'fill-red-500 text-red-500'
+                          : 'text-neutral-400'
                       }`}
                     />
                   </Button>
                 )}
-                {isOwner && (
-                  <>
-                    {productData.status === 'SCHEDULED' && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          router.push(`/products/${productData.productId}/edit`)
-                        }}
-                        className="flex items-center space-x-2"
-                      >
-                        <Edit className="h-4 w-4" />
-                        <span>상품 수정</span>
-                      </Button>
-                    )}
-                  </>
-                )}
               </div>
             </div>
 
-            <div className="space-y-3 text-sm text-neutral-600">
-              <div className="flex items-center justify-between">
-                <span>현재가:</span>
-                <div className="flex items-center space-x-2">
+            <h1 className="text-3xl leading-tight font-bold text-neutral-900">
+              {productData.name}
+            </h1>
+
+            {isOwner && productData.status === 'SCHEDULED' && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  router.push(`/products/${productData.productId}/edit`)
+                }}
+                className="border-primary-300 text-primary-600 hover:bg-primary-50 w-full"
+              >
+                <Edit className="mr-2 h-4 w-4" />
+                상품 수정
+              </Button>
+            )}
+          </div>
+
+          {/* 가격 정보 - 강조된 카드 */}
+          <Card
+            variant="elevated"
+            className="from-primary-50 to-primary-100/50 border-0 bg-gradient-to-br"
+          >
+            <CardContent className="space-y-4 p-6">
+              {/* 현재가 */}
+              <div className="space-y-2">
+                <span className="text-sm font-medium text-neutral-600">
+                  현재 입찰가
+                </span>
+                <div className="flex items-baseline justify-between">
                   <span
-                    className={`text-lg font-semibold transition-all duration-500 ${
+                    className={`text-4xl font-bold transition-all duration-500 ${
                       isPriceUpdated
-                        ? 'animate-pulse rounded bg-yellow-100 px-2 py-1 text-red-600'
-                        : 'text-success-600'
+                        ? 'animate-pulse text-red-600'
+                        : 'text-primary-600'
                     }`}
                   >
                     {formatPrice(currentPrice)}
                   </span>
                   {bidUpdate && (
                     <div className="flex items-center space-x-1">
-                      <span className="animate-pulse text-xs text-green-500">
-                        실시간
+                      <span className="animate-pulse rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-700">
+                        🔴 실시간
                       </span>
                       {isPriceUpdated && (
-                        <span className="text-xs font-semibold text-red-600">
-                          (새 입찰!)
+                        <span className="animate-bounce rounded-full bg-red-100 px-2 py-1 text-xs font-bold text-red-600">
+                          새 입찰!
                         </span>
                       )}
                     </div>
                   )}
                 </div>
               </div>
-              <div className="flex items-center justify-between">
-                <span>시작가:</span>
-                <span>{formatPrice(productData.startPrice)}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>즉시 구매가:</span>
-                <span className="text-primary-600 font-semibold">
-                  {formatPrice(productData.buyNowPrice)}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>최소 입찰 단위:</span>
-                <span>{formatPrice(productData.minBidStep)}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>경매 시작:</span>
-                <span className="flex items-center space-x-1">
-                  <Clock className="h-4 w-4" />
-                  <span>{formatDateTime(productData.startAt)}</span>
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>경매 종료:</span>
-                <span className="flex items-center space-x-1">
-                  <Clock className="h-4 w-4" />
-                  <span>{formatDateTime(productData.endAt)}</span>
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>경매 종료까지:</span>
-                <span className="flex items-center space-x-1">
-                  <Clock className="h-4 w-4" />
-                  <span
-                    className={
-                      remainingTime && remainingTime < 3600
-                        ? 'animate-pulse font-semibold text-red-500'
-                        : ''
-                    }
-                  >
-                    {formatRemainingTime(remainingTime)}
-                  </span>
-                  {isTimerSubscribed && (
-                    <span className="ml-1 animate-pulse text-xs text-green-500">
-                      실시간
-                    </span>
-                  )}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>총 입찰 횟수:</span>
-                <div className="flex items-center space-x-2">
-                  <span
-                    className={`font-semibold transition-all duration-500 ${
-                      isBidCountUpdated
-                        ? 'animate-pulse rounded bg-blue-100 px-2 py-1 text-blue-600'
-                        : ''
-                    }`}
-                  >
-                    {bidUpdate?.bidCount || productData.totalBidCount || 0}회
-                  </span>
-                  {bidUpdate && (
-                    <div className="flex items-center space-x-1">
-                      <span className="animate-pulse text-xs text-green-500">
-                        실시간
-                      </span>
-                      {isBidCountUpdated && (
-                        <span className="text-xs font-semibold text-blue-600">
-                          (새 입찰!)
-                        </span>
-                      )}
-                    </div>
-                  )}
+
+              <div className="border-primary-200 grid grid-cols-3 gap-3 border-t pt-4">
+                <div className="text-center">
+                  <div className="mb-1 text-xs text-neutral-600">시작가</div>
+                  <div className="text-sm font-semibold text-neutral-900">
+                    {formatPrice(productData.startPrice)}
+                  </div>
+                </div>
+                <div className="border-primary-200 border-r border-l text-center">
+                  <div className="mb-1 text-xs text-neutral-600">
+                    즉시 구매가
+                  </div>
+                  <div className="text-primary-600 text-sm font-semibold">
+                    {formatPrice(productData.buyNowPrice)}
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className="mb-1 text-xs text-neutral-600">입찰 단위</div>
+                  <div className="text-sm font-semibold text-neutral-900">
+                    {formatPrice(productData.minBidStep)}
+                  </div>
                 </div>
               </div>
-            </div>
+            </CardContent>
+          </Card>
+
+          {/* 경매 정보 - 두 개의 카드 */}
+          <div className="grid grid-cols-2 gap-3">
+            <Card variant="outlined">
+              <CardContent className="space-y-2 p-4">
+                <div className="flex items-center space-x-2 text-neutral-600">
+                  <Clock className="h-4 w-4" />
+                  <span className="text-xs font-medium">남은 시간</span>
+                </div>
+                <div
+                  className={`text-xl font-bold ${
+                    remainingTime && remainingTime < 3600
+                      ? 'text-red-600'
+                      : 'text-neutral-900'
+                  }`}
+                >
+                  {formatRemainingTime(remainingTime)}
+                </div>
+                {isTimerSubscribed && (
+                  <span className="animate-pulse text-xs font-medium text-green-600">
+                    ✓ 실시간 연동
+                  </span>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card variant="outlined">
+              <CardContent className="space-y-2 p-4">
+                <div className="flex items-center space-x-2 text-neutral-600">
+                  <Zap className="h-4 w-4" />
+                  <span className="text-xs font-medium">입찰 횟수</span>
+                </div>
+                <div
+                  className={`text-xl font-bold transition-all duration-500 ${
+                    isBidCountUpdated ? 'animate-pulse text-blue-600' : ''
+                  }`}
+                >
+                  {bidUpdate?.bidCount || productData.totalBidCount || 0}회
+                </div>
+                {bidUpdate && (
+                  <span className="animate-pulse text-xs font-medium text-green-600">
+                    ✓ 실시간 연동
+                  </span>
+                )}
+              </CardContent>
+            </Card>
           </div>
 
+          {/* 상세 정보 */}
+          <Card variant="outlined" className="hidden lg:block">
+            <CardContent className="p-4">
+              <div className="space-y-3 text-sm">
+                <div className="flex items-center justify-between border-b border-neutral-100 pb-2">
+                  <span className="text-neutral-600">경매 시작</span>
+                  <span className="font-medium text-neutral-900">
+                    {formatDateTime(productData.startAt)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between border-b border-neutral-100 pb-2">
+                  <span className="text-neutral-600">경매 종료</span>
+                  <span className="font-medium text-neutral-900">
+                    {formatDateTime(productData.endAt)}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* 판매자 정보 */}
-          <Card variant="outlined">
+          {/* <Card variant="outlined">
             <CardContent className="p-4">
               <div className="mb-3 flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-neutral-900">
@@ -723,18 +753,25 @@ export function ProductDetailClient({
                 </div>
               </div>
             </CardContent>
-          </Card>
+          </Card> */}
 
           {/* 입찰 섹션 */}
           {productData.status === 'LIVE' && !isOwner && (
-            <Card variant="outlined">
-              <CardContent className="p-6">
-                <h3 className="mb-4 text-lg font-semibold text-neutral-900">
-                  입찰하기
-                </h3>
-                <div className="space-y-4">
+            <Card
+              variant="elevated"
+              className="from-primary-600 to-primary-700 border-0 bg-gradient-to-br text-white"
+            >
+              <CardContent className="space-y-4 p-6">
+                <div>
+                  <h3 className="mb-1 text-xl font-bold">입찰에 참여하세요</h3>
+                  <p className="text-primary-100 text-sm">
+                    최소 입찰가 이상으로 입찰하면 경매에 참여할 수 있습니다
+                  </p>
+                </div>
+
+                <div className="space-y-3 rounded-lg bg-white/10 p-4 backdrop-blur-sm">
                   <div>
-                    <label className="mb-2 block text-sm font-medium text-neutral-700">
+                    <label className="text-primary-50 mb-2 block text-sm font-semibold">
                       입찰 금액
                     </label>
                     <Input
@@ -742,34 +779,67 @@ export function ProductDetailClient({
                       value={bidAmount}
                       onChange={handleBidAmountChange}
                       placeholder={`최소 ${formatPrice(currentPrice + productData.minBidStep)}`}
-                      className="text-lg"
+                      className="border-0 bg-white text-lg font-semibold text-neutral-900"
                     />
-                    <p className="mt-1 text-xs text-neutral-500">
+                    <p className="text-primary-100 mt-2 text-xs">
                       최소 입찰가:{' '}
-                      {formatPrice(currentPrice + productData.minBidStep)}
+                      <span className="font-bold">
+                        {formatPrice(currentPrice + productData.minBidStep)}
+                      </span>
                     </p>
                     {apiError && (
-                      <p className="mt-1 text-sm text-red-600">{apiError}</p>
+                      <div className="mt-2 rounded bg-red-500/20 p-2 text-sm font-medium text-red-200">
+                        {apiError}
+                      </div>
                     )}
                   </div>
+                </div>
+
+                <div className="space-y-2 pt-2">
                   <Button
                     onClick={handleBid}
                     disabled={isLoading || !bidAmount}
-                    className="w-full"
+                    className="text-primary-600 hover:bg-primary-50 h-auto w-full bg-white py-3 text-base font-bold"
                   >
-                    {isLoading ? '입찰 중...' : '입찰하기'}
+                    {isLoading ? (
+                      <>
+                        <span className="mr-2 animate-spin">⏳</span>
+                        입찰 중...
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="mr-2 h-5 w-5" />
+                        입찰하기
+                      </>
+                    )}
                   </Button>
                   <Button
                     onClick={handleBuyNow}
                     disabled={isLoading}
-                    variant="outline"
-                    className="border-primary-500 text-primary-600 hover:bg-primary-50 w-full"
+                    className="h-auto w-full border border-white/30 bg-white/20 py-3 text-base font-bold text-white hover:bg-white/30"
                   >
                     {isLoading
                       ? '처리 중...'
-                      : `즉시 구매 (${formatPrice(productData.buyNowPrice)})`}
+                      : `즉시 구매 ${formatPrice(productData.buyNowPrice)}`}
                   </Button>
                 </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {productData.status === 'ENDED' && !isOwner && (
+            <Card
+              variant="outlined"
+              className="border-neutral-300 bg-neutral-50"
+            >
+              <CardContent className="p-6 text-center">
+                <Clock className="mx-auto mb-3 h-8 w-8 text-neutral-400" />
+                <h3 className="mb-1 text-lg font-semibold text-neutral-900">
+                  경매가 종료되었습니다
+                </h3>
+                <p className="text-sm text-neutral-600">
+                  다른 상품을 확인해보세요
+                </p>
               </CardContent>
             </Card>
           )}
@@ -777,12 +847,17 @@ export function ProductDetailClient({
           {/* 상품 설명 */}
           <Card variant="outlined">
             <CardContent className="p-6">
-              <h3 className="mb-4 text-lg font-semibold text-neutral-900">
-                상품 설명
-              </h3>
-              <p className="text-sm whitespace-pre-wrap text-neutral-700">
-                {productData.description}
-              </p>
+              <div className="mb-4 flex items-center space-x-2">
+                <div className="bg-primary-600 h-1 w-8 rounded-full"></div>
+                <h3 className="text-lg font-bold text-neutral-900">
+                  상품 설명
+                </h3>
+              </div>
+              <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-5">
+                <p className="text-base leading-relaxed whitespace-pre-wrap text-neutral-700">
+                  {productData.description || '상품 설명이 없습니다.'}
+                </p>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -791,53 +866,100 @@ export function ProductDetailClient({
       {/* QnA 섹션 */}
       <Card variant="outlined" className="mt-6">
         <CardContent className="p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-neutral-900">
-              상품 문의 (QnA)
-            </h3>
-            <MessageSquare className="h-5 w-5 text-neutral-400" />
+          <div className="mb-6 flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="bg-primary-100 flex h-10 w-10 items-center justify-center rounded-lg">
+                <MessageSquare className="text-primary-600 h-6 w-6" />
+              </div>
+              <h3 className="text-2xl font-bold text-neutral-900">
+                상품 문의 (Q&A)
+              </h3>
+            </div>
+            {qnaList.length > 0 && (
+              <Badge variant="primary" className="px-3 py-1.5 text-base">
+                {qnaList.length}개
+              </Badge>
+            )}
           </div>
 
           {/* QnA 질문 작성 */}
-          {isLoggedIn && (
-            <div className="mb-6 space-y-2">
-              <Input
-                placeholder="상품에 대해 궁금한 점을 질문해주세요"
-                value={newQuestion}
-                onChange={(e) => setNewQuestion(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault()
-                    handleAddQna()
-                  }
-                }}
-              />
+          {isLoggedIn ? (
+            <div className="border-primary-300 bg-primary-50 mb-6 rounded-lg border-2 border-dashed p-4">
+              <div className="mb-3 flex items-center space-x-2">
+                <Send className="text-primary-600 h-4 w-4" />
+                <span className="text-primary-900 text-sm font-semibold">
+                  새로운 질문 작성
+                </span>
+              </div>
+              <div className="space-y-2">
+                <Input
+                  placeholder="상품에 대해 궁금한 점을 질문해주세요..."
+                  value={newQuestion}
+                  onChange={(e) => setNewQuestion(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault()
+                      handleAddQna()
+                    }
+                  }}
+                  className="border-primary-300 focus:border-primary-500 focus:ring-primary-500"
+                />
+                <Button
+                  onClick={handleAddQna}
+                  disabled={!newQuestion.trim()}
+                  className="bg-primary-600 hover:bg-primary-700 w-full"
+                >
+                  <Send className="mr-2 h-4 w-4" />
+                  질문 등록
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="mb-6 rounded-lg border border-neutral-200 bg-neutral-50 p-4 text-center">
+              <p className="mb-3 text-sm text-neutral-600">
+                로그인 후 질문을 등록할 수 있습니다
+              </p>
               <Button
-                onClick={handleAddQna}
-                disabled={!newQuestion.trim()}
+                onClick={() => router.push('/login')}
                 size="sm"
-                className="w-full"
+                className="bg-primary-600 hover:bg-primary-700"
               >
-                <Send className="mr-2 h-4 w-4" />
-                질문 등록
+                로그인
               </Button>
             </div>
           )}
 
           {/* QnA 목록 */}
           {isQnaLoading ? (
-            <div className="py-8 text-center text-neutral-500">
-              <div className="border-t-primary-500 mx-auto mb-2 h-8 w-8 animate-spin rounded-full border-2 border-neutral-300"></div>
-              <p>로딩 중...</p>
+            <div className="flex items-center justify-center py-12">
+              <div className="space-y-3 text-center">
+                <div className="flex justify-center">
+                  <div className="border-t-primary-500 h-10 w-10 animate-spin rounded-full border-4 border-neutral-200"></div>
+                </div>
+                <p className="text-sm text-neutral-600">
+                  Q&A 목록을 불러오는 중...
+                </p>
+              </div>
             </div>
           ) : qnaList.length === 0 ? (
-            <div className="py-8 text-center text-neutral-500">
-              <MessageSquare className="mx-auto mb-2 h-8 w-8 text-neutral-300" />
-              <p>등록된 문의가 없습니다.</p>
+            <div className="flex items-center justify-center py-12">
+              <div className="space-y-3 text-center">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-neutral-100">
+                  <MessageSquare className="h-8 w-8 text-neutral-400" />
+                </div>
+                <div>
+                  <p className="text-lg font-semibold text-neutral-900">
+                    등록된 문의가 없습니다
+                  </p>
+                  <p className="text-sm text-neutral-600">
+                    첫 번째 질문을 작성해보세요
+                  </p>
+                </div>
+              </div>
             </div>
           ) : (
-            <div className="space-y-4">
-              {qnaList.map((qna: any) => {
+            <div className="space-y-3">
+              {qnaList.map((qna: any, index: number) => {
                 const qnaData = qna.productQnaCreateResponse || qna
                 const answers = qna.answers || []
                 const isExpanded = expandedQnaId === qnaData.qnaId
@@ -845,103 +967,129 @@ export function ProductDetailClient({
                 return (
                   <div
                     key={qnaData.qnaId}
-                    className="rounded-lg border border-neutral-200 p-4"
+                    className="group hover:border-primary-300 animate-fade-in overflow-hidden rounded-lg border border-neutral-200 transition-all duration-300 hover:shadow-md"
+                    style={{ animationDelay: `${index * 50}ms` }}
                   >
+                    {/* 질문 영역 */}
                     <div
-                      className="cursor-pointer"
+                      className="from-primary-50 via-primary-50/70 hover:bg-primary-50 cursor-pointer bg-gradient-to-r to-transparent p-4 transition-colors"
                       onClick={() =>
                         setExpandedQnaId(isExpanded ? null : qnaData.qnaId)
                       }
                     >
-                      <div className="mb-2 flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
-                          <span className="text-primary-600 text-sm font-semibold">
-                            Q.
-                          </span>
-                          <span className="text-sm font-medium text-neutral-900">
-                            {qnaData.question}
-                          </span>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex flex-1 items-start gap-3">
+                          <div className="bg-primary-600 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white shadow-md">
+                            Q
+                          </div>
+                          <div className="flex-1 pt-0.5">
+                            <p className="text-base font-semibold text-neutral-900">
+                              {qnaData.question}
+                            </p>
+                            <p className="mt-1 text-xs text-neutral-500">
+                              {qnaData.questionedAt
+                                ? new Date(
+                                    qnaData.questionedAt,
+                                  ).toLocaleDateString('ko-KR')
+                                : ''}
+                            </p>
+                          </div>
                         </div>
-                        <span className="text-xs text-neutral-400">
-                          {qnaData.questionedAt
-                            ? new Date(qnaData.questionedAt).toLocaleDateString(
-                                'ko-KR',
-                              )
-                            : ''}
-                        </span>
+                        {answers.length > 0 && (
+                          <div className="shrink-0 rounded-full bg-green-100 px-2 py-1 text-xs font-medium whitespace-nowrap text-green-700">
+                            ✓ 답변 {answers.length}
+                          </div>
+                        )}
                       </div>
                     </div>
 
-                    {/* 답변 목록 */}
-                    {answers.length > 0 && (
-                      <div className="ml-4 space-y-2 border-l-2 border-neutral-200 pl-4">
-                        {answers.map((answer: any) => (
-                          <div key={answer.answerId} className="py-2">
-                            <div className="mb-1 flex items-center justify-between">
-                              <div className="flex items-center space-x-2">
-                                <span className="text-primary-600 text-sm font-semibold">
-                                  A.
-                                </span>
-                                <span className="text-sm text-neutral-700">
-                                  {answer.answer}
-                                </span>
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  handleDeleteAnswer(
-                                    safeProductId,
-                                    qnaData.qnaId,
-                                    answer.answerId,
-                                  )
-                                }}
-                                className="h-6 px-2 text-xs text-red-500 hover:text-red-700"
+                    {/* 답변 목록 및 작성 */}
+                    {isExpanded && (
+                      <div className="space-y-3 border-t border-neutral-200 bg-neutral-50 p-4">
+                        {/* 답변 목록 */}
+                        {answers.length > 0 && (
+                          <div className="space-y-2">
+                            {answers.map((answer: any) => (
+                              <div
+                                key={answer.answerId}
+                                className="group/answer hover:border-primary-300 rounded-lg border border-neutral-200 bg-white p-3 transition-all"
                               >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </div>
-                            <span className="text-xs text-neutral-400">
-                              {answer.answeredAt
-                                ? new Date(
-                                    answer.answeredAt,
-                                  ).toLocaleDateString('ko-KR')
-                                : ''}
-                            </span>
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex flex-1 items-start gap-2">
+                                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-green-100 text-xs font-bold text-green-700">
+                                      A
+                                    </div>
+                                    <div className="flex-1">
+                                      <p className="text-sm text-neutral-800">
+                                        {answer.answer}
+                                      </p>
+                                      <p className="mt-1 text-xs text-neutral-500">
+                                        {answer.answeredAt
+                                          ? new Date(
+                                              answer.answeredAt,
+                                            ).toLocaleDateString('ko-KR')
+                                          : ''}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  {isOwner && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        handleDeleteAnswer(
+                                          safeProductId,
+                                          qnaData.qnaId,
+                                          answer.answerId,
+                                        )
+                                      }}
+                                      className="h-6 p-0 px-2 opacity-0 transition-opacity group-hover/answer:opacity-100 hover:bg-red-100 hover:text-red-600"
+                                      title="답변 삭제"
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
-                    )}
+                        )}
 
-                    {/* 답변 작성 (모든 사용자에게 표시, 권한 없으면 API에서 에러) */}
-                    {isLoggedIn && (
-                      <div className="mt-3 ml-4 space-y-2 border-l-2 border-neutral-200 pl-4">
-                        <Input
-                          placeholder="답변을 입력해주세요"
-                          value={newAnswers[qnaData.qnaId] || ''}
-                          onChange={(e) =>
-                            setNewAnswers((prev) => ({
-                              ...prev,
-                              [qnaData.qnaId]: e.target.value,
-                            }))
-                          }
-                          onKeyPress={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                              e.preventDefault()
-                              handleAddAnswer(qnaData.qnaId)
-                            }
-                          }}
-                          size={2}
-                        />
-                        <Button
-                          onClick={() => handleAddAnswer(qnaData.qnaId)}
-                          disabled={!newAnswers[qnaData.qnaId]?.trim()}
-                          size="sm"
-                          className="w-full"
-                        >
-                          <Send className="mr-2 h-4 w-4" />
-                          답변 등록
-                        </Button>
+                        {/* 답변 작성 */}
+                        {isLoggedIn && (
+                          <div className="space-y-2 rounded-lg border-2 border-dashed border-neutral-300 bg-white p-3">
+                            <p className="text-xs font-medium text-neutral-600">
+                              답변 작성
+                            </p>
+                            <Input
+                              placeholder="답변을 입력해주세요..."
+                              value={newAnswers[qnaData.qnaId] || ''}
+                              onChange={(e) =>
+                                setNewAnswers((prev) => ({
+                                  ...prev,
+                                  [qnaData.qnaId]: e.target.value,
+                                }))
+                              }
+                              onKeyPress={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                  e.preventDefault()
+                                  handleAddAnswer(qnaData.qnaId)
+                                }
+                              }}
+                              size={2}
+                              className="border-neutral-300 text-sm"
+                            />
+                            <Button
+                              onClick={() => handleAddAnswer(qnaData.qnaId)}
+                              disabled={!newAnswers[qnaData.qnaId]?.trim()}
+                              size="sm"
+                              className="bg-primary-600 hover:bg-primary-700 w-full"
+                            >
+                              <Send className="mr-2 h-4 w-4" />
+                              답변 등록
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

@@ -227,9 +227,10 @@ export const authApi = {
       },
     ]
 
+    // Swagger 스펙에 맞게 requests 객체로 감싸서 전송
     const axiosResponse = await apiClient.post<ApiResponse<string[]>>(
       '/api/v1/user/me/profile/img',
-      preSignedUrlRequest,
+      { requests: preSignedUrlRequest },
     )
     const preSignedResponse = normalizeApiResponse(axiosResponse.data)
 

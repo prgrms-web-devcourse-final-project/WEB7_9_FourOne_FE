@@ -275,6 +275,9 @@ export function LoginClient() {
                 1,
               email: responseData?.email || formData.email,
               nickname: responseData?.nickname || responseData?.name || '',
+              // 로그인 응답에는 프로필 이미지가 없으므로 undefined로 설정
+              profileImageUrl: undefined,
+              createdAt: undefined,
             }
 
             // real-api.ts에서 이미 토큰을 저장했으므로, 여기서는 확인만
@@ -294,7 +297,7 @@ export function LoginClient() {
             const refreshToken = '' // 쿠키에 자동으로 있으므로 빈 문자열로 처리
 
             // 로그인 응답에서 받은 사용자 정보로 로그인 처리
-            // auth/me API를 사용하지 않고 로그인 응답 데이터 사용
+            // 주의: 로그인 응답에는 프로필 이미지가 없으므로 별도 조회 필요
             await login(userData, {
               accessToken,
               refreshToken,

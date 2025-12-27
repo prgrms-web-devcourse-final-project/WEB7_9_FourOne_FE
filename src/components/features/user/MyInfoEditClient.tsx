@@ -138,14 +138,14 @@ export function MyInfoEditClient({ initialProfile }: MyInfoEditClientProps) {
 
     if (Object.keys(newErrors).length === 0) {
       try {
-        // API 호출 - nickname과 profileImageUrl만 전송
+        // API 호출 - nickname과 profileImageKey만 전송
         const updateData: any = {
           nickname: formData.nickname,
         }
 
-        // profileImageUrl이 있으면 포함
+        // profileImageUrl이 있으면 profileImageKey로 전달 (Swagger 스펙)
         if (formData.profileImageUrl) {
-          updateData.profileImageUrl = formData.profileImageUrl
+          updateData.profileImageKey = formData.profileImageUrl
         }
 
         const response = await authApi.updateProfile(updateData)

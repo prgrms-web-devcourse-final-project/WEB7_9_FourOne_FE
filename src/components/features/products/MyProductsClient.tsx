@@ -443,6 +443,7 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
           </div>
         ) : (
           filteredProducts.map((product, index) => {
+            console.log(product)
             const statusBadge = getStatusBadge(product.status)
             const imageUrl = getFullImageUrl(
               (product as any).thumbnailUrl || (product as any).imageUrl,
@@ -637,174 +638,202 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
       </div>
       {/* QnA 관리 모달 */};
       <Dialog open={isQnaModalOpen} onOpenChange={setIsQnaModalOpen}>
-        <DialogContent className="max-h-[85vh] max-w-3xl overflow-hidden p-0">
-          <div className="flex flex-col">
-            {/* 헤더 */}
-            <div className="border-b border-neutral-200 bg-white px-6 py-4">
-              <DialogHeader className="space-y-1">
-                <DialogTitle className="flex items-center space-x-2 text-xl">
-                  <MessageSquare className="text-primary-600 h-5 w-5" />
-                  <span>QnA 관리</span>
+        <DialogContent className="max-h-[90vh] max-w-4xl overflow-hidden bg-white p-0">
+          <div className="flex h-full flex-col">
+            {/* 헤더 - 개선된 스타일 */}
+            <div className="from-primary-50 to-primary-100/50 shrink-0 border-b border-neutral-200 bg-gradient-to-r px-6 py-5">
+              <DialogHeader className="space-y-2">
+                <DialogTitle className="flex items-center space-x-3 text-2xl font-bold text-neutral-900">
+                  <div className="bg-primary-600 flex h-10 w-10 items-center justify-center rounded-lg shadow-lg">
+                    <MessageSquare className="h-6 w-6 text-white" />
+                  </div>
+                  <span>Q&A 관리</span>
                 </DialogTitle>
-                <DialogDescription className="text-sm">
-                  상품에 대한 문의를 확인하고 답변을 작성할 수 있습니다.
+                <DialogDescription className="flex items-center space-x-2 text-sm text-neutral-600">
+                  <span>
+                    상품에 대한 고객 문의를 확인하고 답변을 작성하세요
+                  </span>
                 </DialogDescription>
               </DialogHeader>
             </div>
 
             {/* 콘텐츠 영역 (스크롤 가능) */}
-            <div className="overflow-y-auto px-6 py-4">
+            <div className="flex-1 overflow-y-auto">
               {isQnaLoading ? (
-                <div className="flex min-h-[300px] items-center justify-center">
-                  <div className="text-center">
-                    <div className="border-t-primary-500 mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-neutral-200"></div>
-                    <p className="text-sm text-neutral-500">
-                      QnA 목록을 불러오는 중...
-                    </p>
+                <div className="flex min-h-[400px] items-center justify-center">
+                  <div className="space-y-4 text-center">
+                    <div className="flex justify-center">
+                      <div className="border-t-primary-500 relative h-12 w-12 animate-spin rounded-full border-4 border-neutral-200"></div>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-neutral-700">
+                        Q&A 목록을 불러오는 중...
+                      </p>
+                      <p className="mt-1 text-xs text-neutral-500">
+                        잠시만 기다려주세요
+                      </p>
+                    </div>
                   </div>
                 </div>
               ) : qnaList.length === 0 ? (
-                <div className="flex min-h-[300px] items-center justify-center">
-                  <div className="text-center">
-                    <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-neutral-100">
-                      <MessageSquare className="h-8 w-8 text-neutral-400" />
+                <div className="flex min-h-[400px] items-center justify-center">
+                  <div className="space-y-4 text-center">
+                    <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-neutral-100 to-neutral-200">
+                      <MessageSquare className="h-10 w-10 text-neutral-400" />
                     </div>
-                    <p className="mb-2 text-lg font-semibold text-neutral-900">
-                      등록된 문의가 없습니다
-                    </p>
-                    <p className="text-sm text-neutral-500">
-                      아직 상품에 대한 문의가 없습니다.
-                    </p>
+                    <div>
+                      <p className="text-lg font-semibold text-neutral-900">
+                        아직 문의가 없습니다
+                      </p>
+                      <p className="mt-1 text-sm text-neutral-500">
+                        고객으로부터의 첫 질문을 기다리는 중입니다
+                      </p>
+                    </div>
                   </div>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {qnaList.map((qna: any) => {
+                <div className="space-y-3 p-6">
+                  <div className="mb-4 flex items-center justify-between">
+                    <span className="text-sm font-medium text-neutral-600">
+                      총 {qnaList.length}개의 문의
+                    </span>
+                  </div>
+                  {qnaList.map((qna: any, index: number) => {
                     const qnaData = qna.productQnaCreateResponse || qna
                     const answers = qna.answers || []
 
                     return (
-                      <Card
+                      <div
                         key={qnaData.qnaId}
-                        variant="outlined"
-                        className="overflow-hidden transition-shadow hover:shadow-md"
+                        className="group hover:border-primary-300 animate-fade-in overflow-hidden rounded-xl border border-neutral-200 transition-all duration-300 hover:shadow-lg"
+                        style={{ animationDelay: `${index * 50}ms` }}
                       >
-                        <CardContent className="p-5">
-                          {/* 질문 */}
-                          <div className="from-primary-50 to-primary-100/50 mb-4 rounded-xl bg-gradient-to-r p-4">
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="mb-2 flex items-center space-x-2">
-                                  <span className="bg-primary-600 flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold text-white">
-                                    Q
-                                  </span>
-                                  <span className="text-base font-semibold text-neutral-900">
-                                    {qnaData.question}
-                                  </span>
+                        {/* 질문 영역 */}
+                        <div className="from-primary-50 via-primary-50/70 border-b border-neutral-100 bg-gradient-to-r to-transparent p-5">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex flex-1 items-start gap-3">
+                              <div className="bg-primary-600 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white shadow-md">
+                                Q
+                              </div>
+                              <div className="flex-1 pt-0.5">
+                                <p className="text-base leading-relaxed font-semibold text-neutral-900">
+                                  {qnaData.question}
+                                </p>
+                                <div className="mt-2 flex items-center space-x-2 text-xs text-neutral-500">
+                                  <Clock className="h-3 w-3" />
+                                  <time>
+                                    {qnaData.questionedAt
+                                      ? new Date(
+                                          qnaData.questionedAt,
+                                        ).toLocaleDateString('ko-KR', {
+                                          year: 'numeric',
+                                          month: '2-digit',
+                                          day: '2-digit',
+                                          hour: '2-digit',
+                                          minute: '2-digit',
+                                        })
+                                      : ''}
+                                  </time>
                                 </div>
                               </div>
-                              <span className="ml-4 shrink-0 text-xs text-neutral-500">
-                                {qnaData.questionedAt
-                                  ? new Date(
-                                      qnaData.questionedAt,
-                                    ).toLocaleDateString('ko-KR', {
-                                      year: 'numeric',
-                                      month: '2-digit',
-                                      day: '2-digit',
-                                      hour: '2-digit',
-                                      minute: '2-digit',
-                                    })
-                                  : ''}
-                              </span>
                             </div>
+                            {answers.length > 0 && (
+                              <div className="flex shrink-0 items-center space-x-1 rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700">
+                                <span>✓</span>
+                                <span>답변 {answers.length}</span>
+                              </div>
+                            )}
                           </div>
+                        </div>
 
-                          {/* 답변 목록 */}
-                          {answers.length > 0 && (
-                            <div className="border-primary-200 mb-4 space-y-3 border-l-2 pl-4">
-                              {answers.map((answer: any) => (
-                                <div
-                                  key={answer.answerId}
-                                  className="group rounded-lg bg-neutral-50 p-4 transition-colors hover:bg-neutral-100"
-                                >
-                                  <div className="flex items-start justify-between">
-                                    <div className="flex-1">
-                                      <div className="mb-2 flex items-center space-x-2">
-                                        <span className="bg-primary-600 flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white">
-                                          A
-                                        </span>
-                                        <span className="text-sm text-neutral-700">
-                                          {answer.answer}
-                                        </span>
-                                      </div>
-                                      <span className="ml-8 text-xs text-neutral-500">
-                                        {answer.answeredAt
-                                          ? new Date(
-                                              answer.answeredAt,
-                                            ).toLocaleDateString('ko-KR', {
-                                              year: 'numeric',
-                                              month: '2-digit',
-                                              day: '2-digit',
-                                              hour: '2-digit',
-                                              minute: '2-digit',
-                                            })
-                                          : ''}
-                                      </span>
+                        {/* 답변 목록 */}
+                        {answers.length > 0 && (
+                          <div className="space-y-3 border-b border-neutral-100 bg-neutral-50/50 px-5 py-4">
+                            {answers.map((answer: any, answerIndex: number) => (
+                              <div
+                                key={answer.answerId}
+                                className="group/answer hover:border-primary-300 relative rounded-lg border border-neutral-200 bg-white p-4 transition-all duration-300"
+                              >
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="flex flex-1 items-start gap-3">
+                                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-green-100 text-xs font-bold text-green-700">
+                                      A
                                     </div>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() =>
-                                        handleDeleteAnswer(
-                                          qnaData.qnaId,
-                                          answer.answerId,
-                                        )
-                                      }
-                                      className="ml-2 h-8 w-8 shrink-0 p-0 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-50 hover:text-red-600"
-                                      title="답변 삭제"
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
+                                    <div className="flex-1">
+                                      <p className="text-sm leading-relaxed text-neutral-800">
+                                        {answer.answer}
+                                      </p>
+                                      <div className="mt-2 flex items-center space-x-2 text-xs text-neutral-500">
+                                        <Clock className="h-3 w-3" />
+                                        <time>
+                                          {answer.answeredAt
+                                            ? new Date(
+                                                answer.answeredAt,
+                                              ).toLocaleDateString('ko-KR', {
+                                                year: 'numeric',
+                                                month: '2-digit',
+                                                day: '2-digit',
+                                                hour: '2-digit',
+                                                minute: '2-digit',
+                                              })
+                                            : ''}
+                                        </time>
+                                      </div>
+                                    </div>
                                   </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() =>
+                                      handleDeleteAnswer(
+                                        qnaData.qnaId,
+                                        answer.answerId,
+                                      )
+                                    }
+                                    className="h-8 w-8 p-0 opacity-0 transition-opacity group-hover/answer:opacity-100 hover:bg-red-100 hover:text-red-600"
+                                    title="답변 삭제"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
                                 </div>
-                              ))}
-                            </div>
-                          )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
 
-                          {/* 답변 작성 */}
-                          <div className="rounded-lg border-2 border-dashed border-neutral-200 bg-neutral-50/50 p-4">
-                            <div className="mb-2 flex items-center space-x-2">
-                              <MessageSquare className="h-4 w-4 text-neutral-400" />
-                              <span className="text-sm font-medium text-neutral-700">
+                        {/* 답변 작성 섹션 */}
+                        <div className="bg-white p-5">
+                          <div className="space-y-3">
+                            <div className="flex items-center space-x-2">
+                              <Send className="text-primary-600 h-4 w-4" />
+                              <span className="text-sm font-semibold text-neutral-900">
                                 답변 작성
                               </span>
                             </div>
-                            <div className="space-y-2">
-                              <textarea
-                                placeholder="답변을 입력해주세요..."
-                                value={newAnswers[qnaData.qnaId] || ''}
-                                onChange={(e) =>
-                                  setNewAnswers((prev) => ({
-                                    ...prev,
-                                    [qnaData.qnaId]: e.target.value,
-                                  }))
-                                }
-                                rows={3}
-                                className="focus:border-primary-500 focus:ring-primary-500 w-full rounded-md border border-neutral-300 px-3 py-2 text-sm focus:ring-1 focus:outline-none"
-                              />
-                              <Button
-                                onClick={() => handleAddAnswer(qnaData.qnaId)}
-                                disabled={!newAnswers[qnaData.qnaId]?.trim()}
-                                size="sm"
-                                className="bg-primary-600 hover:bg-primary-700 w-full"
-                              >
-                                <Send className="mr-2 h-4 w-4" />
-                                답변 등록
-                              </Button>
-                            </div>
+                            <textarea
+                              placeholder="고객의 문의에 대해 답변해주세요..."
+                              value={newAnswers[qnaData.qnaId] || ''}
+                              onChange={(e) =>
+                                setNewAnswers((prev) => ({
+                                  ...prev,
+                                  [qnaData.qnaId]: e.target.value,
+                                }))
+                              }
+                              rows={2}
+                              className="focus:border-primary-500 focus:ring-primary-100 w-full resize-none rounded-lg border border-neutral-300 px-4 py-3 text-sm text-neutral-900 placeholder-neutral-400 transition-all focus:ring-2 focus:outline-none"
+                            />
+                            <Button
+                              onClick={() => handleAddAnswer(qnaData.qnaId)}
+                              disabled={!newAnswers[qnaData.qnaId]?.trim()}
+                              size="sm"
+                              className="bg-primary-600 hover:bg-primary-700 w-full font-medium text-white transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              <Send className="mr-2 h-4 w-4" />
+                              답변 등록
+                            </Button>
                           </div>
-                        </CardContent>
-                      </Card>
+                        </div>
+                      </div>
                     )
                   })}
                 </div>
