@@ -33,6 +33,36 @@ export function AuctionRegistrationClient({
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isLoading, setIsLoading] = useState(false)
 
+  // 개발 모드 감지
+  const isDev = process.env.NODE_ENV === 'development'
+
+  // datetime-local 입력에 맞는 포맷으로 변환 (YYYY-MM-DDTHH:MM)
+  const toLocalDateTimeInput = (date: Date) => {
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const year = date.getFullYear()
+    const month = pad(date.getMonth() + 1)
+    const day = pad(date.getDate())
+    const hours = pad(date.getHours())
+    const minutes = pad(date.getMinutes())
+    return `${year}-${month}-${day}T${hours}:${minutes}`
+  }
+
+  // 개발 모드: 기본값 자동 입력
+  const fillDevDefaults = () => {
+    const now = new Date()
+    const start = new Date(now.getTime() + 5 * 60 * 1000) // 지금으로부터 5분 후 시작
+    const end = new Date(start.getTime() + 60 * 60 * 1000) // 시작 후 60분 후 종료
+
+    setFormData({
+      startPrice: '50000',
+      buyNowPrice: '100000',
+      minBidStep: '1000',
+      startAt: toLocalDateTimeInput(start),
+      endAt: toLocalDateTimeInput(end),
+    })
+    setErrors({})
+  }
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({
@@ -114,6 +144,7 @@ export function AuctionRegistrationClient({
           if (onSuccess) {
             onSuccess()
           } else {
+            // 요구사항: 경매 등록 후 상품 상세 페이지로 이동 (productId 기준)
             router.push(`/products/${productId}`)
           }
         } else {
@@ -135,11 +166,23 @@ export function AuctionRegistrationClient({
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6 sm:px-6 lg:px-8">
+      {/* 개발 모드: 기본값 자동 입력 버튼 */}
+      {isDev && (
+        <div className="mb-6">
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            onClick={fillDevDefaults}
+            className="w-full border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100"
+          >
+            🚀 개발 모드: 경매 기본값 자동 입력
+          </Button>
+        </div>
+      )}
       <Card variant="outlined">
         <CardContent className="p-6">
-          <h2 className="mb-2 text-xl font-bold text-neutral-900">
-            경매 등록
-          </h2>
+          <h2 className="mb-2 text-xl font-bold text-neutral-900">경매 등록</h2>
           <p className="mb-6 text-sm text-neutral-600">
             상품: <span className="font-medium">{productName}</span>
           </p>
@@ -274,4 +317,3 @@ export function AuctionRegistrationClient({
     </div>
   )
 }
-

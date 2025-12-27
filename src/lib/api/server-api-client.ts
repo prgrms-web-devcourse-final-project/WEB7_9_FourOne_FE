@@ -53,13 +53,21 @@ class ServerApiClient {
     const response = await fetch(`${this.baseURL}${endpoint}`, {
       ...options,
       headers,
+      cache: 'no-store', // SSR에서 매번 최신 데이터 가져오기
     })
 
+    const data = await response.json()
+    
+    // HTTP 에러도 정상 처리 (백엔드 에러 메시지 포함)
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+      return {
+        data: data.data || null,
+        success: false,
+        resultCode: String(data.code || response.status),
+        msg: data.message || `HTTP error! status: ${response.status}`,
+      }
     }
 
-    const data = await response.json()
     return normalizeApiResponse(data)
   }
 

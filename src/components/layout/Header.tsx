@@ -4,9 +4,12 @@ import { useAuth } from '@/contexts/AuthContext'
 import { authApi } from '@/lib/api'
 import { getFullImageUrl } from '@/lib/utils/image-url'
 import { User } from '@/types'
-import { Heart, Menu, X } from 'lucide-react'
+import { Bell, Heart, Menu, X } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { Badge } from '@/components/ui/badge'
+import { notificationApi } from '@/lib/api'
+import { useSseNotifications } from '@/hooks/useSseNotifications'
 
 interface HeaderProps {
   isLoggedIn?: boolean
@@ -24,6 +27,11 @@ export function Header({
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [unreadNotificationCount, setUnreadNotificationCount] =
     useState(notificationCount)
+  // SSE 알림 개수
+  const { unreadCount: sseUnreadCount } = useSseNotifications({
+    userId: contextUser?.id || null,
+    enabled: (contextIsLoggedIn && !!contextUser) || false,
+  })
 
   // Context 우선, props는 fallback
   // user가 실제로 존재할 때만 로그인 상태로 간주
@@ -63,57 +71,54 @@ export function Header({
     checkUserAuth()
   }, [isLoggedIn, logout])
 
-  // // WebSocket 실시간 알림 구독 (로그인된 경우에만)
-  // const { unreadCount: wsUnreadCount } = useWebSocketNotifications(isLoggedIn)
+  // SSE 알림 개수와 API 알림 개수 합산
+  useEffect(() => {
+    if (isLoggedIn) {
+      const totalCount = (unreadNotificationCount || 0) + (sseUnreadCount || 0)
+      setUnreadNotificationCount(totalCount)
+    }
+  }, [sseUnreadCount, isLoggedIn])
 
-  // // WebSocket 실시간 알림 개수와 API 알림 개수 합산
-  // useEffect(() => {
-  //   if (isLoggedIn) {
-  //     const totalCount = (unreadNotificationCount || 0) + (wsUnreadCount || 0)
-  //     setUnreadNotificationCount(totalCount)
-  //   }
-  // }, [wsUnreadCount, isLoggedIn])
+  // 읽지 않은 알림 개수 가져오기 (REST 기반)
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      if (isLoggedIn) {
+        try {
+          const response = await notificationApi.getUnreadCount()
+          if (response.success) {
+            const count =
+              (response as any)?.data?.count ?? (response as any)?.data ?? 0
+            setUnreadNotificationCount(Number(count) || 0)
+          }
+        } catch (error) {
+          console.error('읽지 않은 알림 개수 조회 실패:', error)
+        }
+      }
+    }
 
-  // // 읽지 않은 알림 개수 가져오기
-  // useEffect(() => {
-  //   const fetchUnreadCount = async () => {
-  //     if (isLoggedIn) {
-  //       try {
-  //         const response = await notificationApi.getUnreadCount()
-  //         if (response.success && response.data) {
-  //           setUnreadNotificationCount(
-  //             response.data.count || response.data || 0,
-  //           )
-  //         }
-  //       } catch (error) {
-  //         console.error('읽지 않은 알림 개수 조회 실패:', error)
-  //       }
-  //     }
-  //   }
+    fetchUnreadCount()
 
-  //   fetchUnreadCount()
+    // 5분마다 알림 개수 새로고침 (성능 최적화)
+    const interval = setInterval(fetchUnreadCount, 300000)
 
-  //   // 5분마다 알림 개수 새로고침 (성능 최적화)
-  //   const interval = setInterval(fetchUnreadCount, 300000)
+    // 알림 개수 업데이트 이벤트 리스너
+    const handleNotificationCountUpdate = (event: CustomEvent) => {
+      setUnreadNotificationCount(event.detail.count)
+    }
 
-  //   // 알림 개수 업데이트 이벤트 리스너
-  //   const handleNotificationCountUpdate = (event: CustomEvent) => {
-  //     setUnreadNotificationCount(event.detail.count)
-  //   }
+    window.addEventListener(
+      'notificationCountUpdate',
+      handleNotificationCountUpdate as EventListener,
+    )
 
-  //   window.addEventListener(
-  //     'notificationCountUpdate',
-  //     handleNotificationCountUpdate as EventListener,
-  //   )
-
-  //   return () => {
-  //     clearInterval(interval)
-  //     window.removeEventListener(
-  //       'notificationCountUpdate',
-  //       handleNotificationCountUpdate as EventListener,
-  //     )
-  //   }
-  // }, [isLoggedIn])
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener(
+        'notificationCountUpdate',
+        handleNotificationCountUpdate as EventListener,
+      )
+    }
+  }, [isLoggedIn])
 
   return (
     <header className="sticky top-0 z-50 border-b border-neutral-200/50 bg-white/95 shadow-sm backdrop-blur-md">
@@ -185,6 +190,22 @@ export function Header({
                   className="hover:text-primary-600 hover:bg-primary-50 relative rounded-lg p-2.5 text-neutral-600 transition-all duration-200"
                 >
                   <Heart className="h-5 w-5" />
+                </Link>
+
+                {/* 알림 */}
+                <Link
+                  href="/notifications"
+                  className="hover:text-primary-600 hover:bg-primary-50 relative rounded-lg p-2.5 text-neutral-600 transition-all duration-200"
+                >
+                  <Bell className="h-5 w-5" />
+                  {unreadNotificationCount > 0 && (
+                    <Badge
+                      variant="error"
+                      className="absolute -top-1 -right-1 h-5 min-w-5 px-1 text-[10px]"
+                    >
+                      {unreadNotificationCount}
+                    </Badge>
+                  )}
                 </Link>
 
                 {/* 사용자 프로필 */}
