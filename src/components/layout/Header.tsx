@@ -216,24 +216,19 @@ export function Header({
                       className="hover:bg-primary-50 flex items-center space-x-3 rounded-xl p-2 transition-all duration-200"
                     >
                       <div className="bg-primary-500 flex h-9 w-9 items-center justify-center overflow-hidden rounded-full shadow-lg">
-                        {(() => {
-                          const imageUrl = getFullImageUrl(
-                            (user as any)?.profileImageUrl,
-                          )
-                          return imageUrl ? (
-                            <img
-                              src={imageUrl}
-                              alt={user.nickname || user.email || '프로필'}
-                              className="h-9 w-9 object-cover"
-                            />
-                          ) : (
-                            <span className="text-sm font-bold text-white">
-                              {(user.nickname || user.email || 'U')
-                                .charAt(0)
-                                .toUpperCase()}
-                            </span>
-                          )
-                        })()}
+                        {user.profileImageUrl ? (
+                          <img
+                            src={user.profileImageUrl}
+                            alt={user.nickname || user.email || '프로필'}
+                            className="h-9 w-9 object-cover"
+                          />
+                        ) : (
+                          <span className="text-sm font-bold text-white">
+                            {(user.nickname || user.email || 'U')
+                              .charAt(0)
+                              .toUpperCase()}
+                          </span>
+                        )}
                       </div>
                       <span className="hidden text-sm font-semibold text-neutral-900 sm:block">
                         {user.nickname || user.email?.split('@')[0] || '사용자'}

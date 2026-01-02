@@ -2,12 +2,7 @@
 
 import { authApi } from '@/lib/api'
 import { createContext, useContext, useEffect, useState } from 'react'
-
-interface User {
-  id: number
-  email: string
-  nickname: string
-}
+import { User } from '@/types'
 
 interface AuthContextType {
   user: User | null
@@ -48,31 +43,76 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return
       }
 
-      console.log('🔑 토큰 발견, 로컬스토리지에서 사용자 정보 로드')
+      console.log('🔑 토큰 발견, /me API 호출하여 최신 사용자 정보 가져오기')
 
-      // 로컬스토리지에서 사용자 정보 읽기
-      const savedUser = localStorage.getItem('user')
-      if (savedUser) {
-        try {
-          const userInfo = JSON.parse(savedUser)
-          setUser(userInfo)
-          console.log('✅ 로컬스토리지에서 사용자 정보 로드 완료:', userInfo)
-        } catch (parseError) {
-          console.error('❌ 사용자 정보 파싱 실패:', parseError)
-          // 파싱 실패 시 로컬스토리지 정리
+      // /me API를 호출하여 최신 사용자 정보(프로필 이미지 포함) 가져오기
+      try {
+        const meResponse = await authApi.getMyInfoV2()
+        if (meResponse.success && meResponse.data) {
+          const meData = meResponse.data as any
+          const userData: User = {
+            id: meData.userId || meData.id,
+            email: meData.email,
+            nickname: meData.nickname,
+            profileImageUrl: meData.profileImageUrl,
+            createdAt: meData.createdAt,
+          }
+          setUser(userData)
+          localStorage.setItem('user', JSON.stringify(userData))
+          console.log('✅ /me API에서 사용자 정보 로드 완료:', userData)
+        } else {
+          // /me API 실패 시 로컬스토리지에서 읽기
+          const savedUser = localStorage.getItem('user')
+          if (savedUser) {
+            try {
+              const userInfo = JSON.parse(savedUser)
+              setUser(userInfo)
+              console.log(
+                '✅ 로컬스토리지에서 사용자 정보 로드 완료:',
+                userInfo,
+              )
+            } catch (parseError) {
+              console.error('❌ 사용자 정보 파싱 실패:', parseError)
+              localStorage.removeItem('user')
+              localStorage.removeItem('accessToken')
+            }
+          }
+        }
+      } catch (error: any) {
+        console.error('❌ /me API 호출 실패:', error)
+        // 403 에러인 경우 로그아웃 처리는 Header에서 이미 처리됨
+        const status =
+          error?.response?.status ||
+          error?.status ||
+          error?.httpStatus ||
+          error?.code
+
+        if (status === 403 || status === 401) {
+          console.warn('인증 오류 - 로그인 정보 초기화')
           localStorage.removeItem('user')
           localStorage.removeItem('accessToken')
-                }
-              } else {
-        console.log('⚠️ 로컬스토리지에 사용자 정보가 없습니다')
-        // 사용자 정보가 없으면 토큰도 정리
-        localStorage.removeItem('accessToken')
-        document.cookie =
-          'accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+          document.cookie =
+            'accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+        } else {
+          // 다른 에러인 경우 로컬스토리지에서 읽기
+          const savedUser = localStorage.getItem('user')
+          if (savedUser) {
+            try {
+              const userInfo = JSON.parse(savedUser)
+              setUser(userInfo)
+              console.log(
+                '✅ 로컬스토리지에서 사용자 정보 로드 완료:',
+                userInfo,
+              )
+            } catch (parseError) {
+              console.error('❌ 사용자 정보 파싱 실패:', parseError)
+            }
+          }
+        }
       }
 
-        setLoading(false)
-        console.log('✅ 로그인 상태 확인 완료')
+      setLoading(false)
+      console.log('✅ 로그인 상태 확인 완료')
     }
 
     checkAuthStatus()
@@ -90,6 +130,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateUser = (updatedUser: User) => {
     setUser(updatedUser)
+    localStorage.setItem('user', JSON.stringify(updatedUser))
+    console.log('✅ 사용자 정보 업데이트:', updatedUser)
   }
 
   const logout = async () => {

@@ -267,19 +267,6 @@ export function LoginClient() {
               return
             }
 
-            const userData = {
-              id:
-                responseData?.id ||
-                responseData?.memberId ||
-                responseData?.userId ||
-                1,
-              email: responseData?.email || formData.email,
-              nickname: responseData?.nickname || responseData?.name || '',
-              // 로그인 응답에는 프로필 이미지가 없으므로 undefined로 설정
-              profileImageUrl: undefined,
-              createdAt: undefined,
-            }
-
             // real-api.ts에서 이미 토큰을 저장했으므로, 여기서는 확인만
             const cookies = document.cookie.split(';')
             const hasAccessTokenCookie = cookies.some((cookie) =>
@@ -296,13 +283,61 @@ export function LoginClient() {
             // 백엔드가 자동으로 쿠키에서 읽어서 사용함
             const refreshToken = '' // 쿠키에 자동으로 있으므로 빈 문자열로 처리
 
-            // 로그인 응답에서 받은 사용자 정보로 로그인 처리
-            // 주의: 로그인 응답에는 프로필 이미지가 없으므로 별도 조회 필요
-            await login(userData, {
-              accessToken,
-              refreshToken,
-            })
-            localStorage.setItem('user', JSON.stringify(userData))
+            // /me API를 호출하여 전체 사용자 정보(프로필 이미지 포함) 가져오기
+            try {
+              const meResponse = await authApi.getMyInfoV2()
+              if (meResponse.success && meResponse.data) {
+                const meData = meResponse.data as any
+                const userData = {
+                  id: meData.userId || meData.id || 1,
+                  email: meData.email || formData.email,
+                  nickname: meData.nickname || '',
+                  profileImageUrl: meData.profileImageUrl,
+                  createdAt: meData.createdAt,
+                }
+
+                await login(userData, {
+                  accessToken,
+                  refreshToken,
+                })
+                localStorage.setItem('user', JSON.stringify(userData))
+              } else {
+                // /me 호출 실패 시 기본 정보로 로그인 처리
+                const userData = {
+                  id:
+                    responseData?.id ||
+                    responseData?.memberId ||
+                    responseData?.userId ||
+                    1,
+                  email: responseData?.email || formData.email,
+                  nickname: responseData?.nickname || responseData?.name || '',
+                }
+
+                await login(userData, {
+                  accessToken,
+                  refreshToken,
+                })
+                localStorage.setItem('user', JSON.stringify(userData))
+              }
+            } catch (meError) {
+              console.error('❌ /me API 호출 실패:', meError)
+              // /me 호출 실패 시 기본 정보로 로그인 처리
+              const userData = {
+                id:
+                  responseData?.id ||
+                  responseData?.memberId ||
+                  responseData?.userId ||
+                  1,
+                email: responseData?.email || formData.email,
+                nickname: responseData?.nickname || responseData?.name || '',
+              }
+
+              await login(userData, {
+                accessToken,
+                refreshToken,
+              })
+              localStorage.setItem('user', JSON.stringify(userData))
+            }
 
             // 홈페이지로 리다이렉트
             router.push('/')
