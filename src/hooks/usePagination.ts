@@ -108,19 +108,17 @@ export function usePagination<T>(
             // 알림/입찰 API 구조 (content + 직접 페이지네이션 정보)
             content = response.data.content
             pageable = {
-              currentPage: response.data.currentPage
-                ? response.data.currentPage + 1
-                : page,
+              currentPage: response.data.currentPage || page,
               pageSize: response.data.pageSize || size,
               totalPages: response.data.totalPages,
               totalElements: response.data.totalElements,
               hasNext:
                 response.data.currentPage !== undefined
-                  ? response.data.currentPage + 1 < response.data.totalPages
+                  ? response.data.currentPage < response.data.totalPages
                   : response.data.hasNext || false,
               hasPrevious:
                 response.data.currentPage !== undefined
-                  ? response.data.currentPage > 0
+                  ? response.data.currentPage > 1
                   : page > 1,
             }
           } else if (Array.isArray(response.data)) {

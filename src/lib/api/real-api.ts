@@ -908,7 +908,7 @@ export const bidApi = {
   },
 
   // ❌ Swagger에 없음
-  payBid: async (bidId: number) => {
+  payBid: async (auctionId: number) => {
     throw new Error(
       '낙찰 결제 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.',
     )
@@ -975,7 +975,7 @@ export const notificationApi = {
 
   // 읽지 않은 알림 개수 (별칭 - getNotifications로 계산)
   getUnreadCount: async () => {
-    const result = await notificationApi.getNotifications({ page: 0, size: 1 })
+    const result = await notificationApi.getNotifications({ page: 1, size: 1 })
     // TODO: 백엔드 응답 구조에 따라 unreadCount 필드 확인 필요
     return {
       success: result.success,

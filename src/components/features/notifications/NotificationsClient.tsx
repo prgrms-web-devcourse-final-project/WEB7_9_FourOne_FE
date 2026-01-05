@@ -1,6 +1,5 @@
 'use client'
 
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
@@ -11,16 +10,16 @@ import {
 import { usePagination } from '@/hooks/usePagination'
 import { notificationApi } from '@/lib/api'
 import { showErrorToast } from '@/lib/utils/toast'
-import { Bell, Check } from 'lucide-react'
+import { Bell } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
+// Swagger 스펙에 맞는 Notification 타입
 interface Notification {
   id: number
-  title: string
+  userId: number
   message: string
-  type: string
-  isRead: boolean
-  createdAt: string
+  sendAt: string
+  readAt?: string
 }
 
 interface NotificationsClientProps {
@@ -32,7 +31,6 @@ export function NotificationsClient({
   initialNotifications = [],
   onUnreadCountChange,
 }: NotificationsClientProps) {
-  const [selectedType, setSelectedType] = useState('all')
   const [error, setError] = useState('')
   const [unreadCount, setUnreadCount] = useState(0)
 
@@ -40,7 +38,7 @@ export function NotificationsClient({
   const fetchNotifications = useCallback(
     async ({ page, size }: { page: number; size: number }) => {
       return await notificationApi.getNotifications({
-        page: page - 1, // API는 0-based 페이지네이션 사용
+        page: page,
         size,
       })
     },
@@ -81,14 +79,6 @@ export function NotificationsClient({
     }
   }, [paginationError])
 
-  // 초기 데이터가 있으면 설정
-  useEffect(() => {
-    if (initialNotifications && initialNotifications.length > 0) {
-      // 초기 데이터를 페이지네이션 상태에 맞게 설정
-      // 이 경우는 서버사이드에서 데이터를 받아온 경우
-    }
-  }, [initialNotifications])
-
   // 알림 데이터 변환 함수
   const transformNotificationData = (
     notificationsData: any[],
@@ -117,53 +107,6 @@ export function NotificationsClient({
     loadUnreadCount()
   }, [])
 
-  // 알림 읽음 처리
-  const handleMarkAsRead = async (notificationId: number) => {
-    try {
-      const response = await notificationApi.markAsRead(notificationId)
-      if (response.success) {
-        // 페이지 새로고침으로 최신 데이터 가져오기
-        refresh()
-
-        const newCount = Math.max(0, unreadCount - 1)
-        setUnreadCount(newCount)
-        onUnreadCountChange?.(newCount)
-
-        // 헤더의 알림 개수 업데이트를 위한 이벤트 발생
-        window.dispatchEvent(
-          new CustomEvent('notificationCountUpdate', {
-            detail: { count: newCount },
-          }),
-        )
-      }
-    } catch (err) {
-      console.error('알림 읽음 처리 에러:', err)
-    }
-  }
-
-  // 전체 읽음 처리
-  const handleMarkAllAsRead = async () => {
-    try {
-      const response = await notificationApi.markAllAsRead()
-      if (response.success) {
-        // 페이지 새로고침으로 최신 데이터 가져오기
-        refresh()
-
-        setUnreadCount(0)
-        onUnreadCountChange?.(0)
-
-        // 헤더의 알림 개수 업데이트를 위한 이벤트 발생
-        window.dispatchEvent(
-          new CustomEvent('notificationCountUpdate', {
-            detail: { count: 0 },
-          }),
-        )
-      }
-    } catch (err) {
-      console.error('전체 읽음 처리 에러:', err)
-    }
-  }
-
   const formatDate = (dateString: string) => {
     if (!dateString) return ''
 
@@ -179,27 +122,10 @@ export function NotificationsClient({
     })
   }
 
-  const filteredNotifications = transformedNotifications.filter(
-    (notification) => {
-      if (selectedType === 'all') return true
-      if (selectedType === 'unread') return !notification.isRead
-      return false
-    },
-  )
-
   const stats = {
     total: totalElements || transformedNotifications.length,
     unread: unreadCount,
-    bid: transformedNotifications.filter((n) => n.type === 'bid').length,
-    payment: transformedNotifications.filter((n) => n.type === 'payment')
-      .length,
-    system: transformedNotifications.filter((n) => n.type === 'system').length,
   }
-
-  const typeTabs = [
-    { id: 'all', label: '전체', count: stats.total },
-    { id: 'unread', label: '안읽음', count: stats.unread },
-  ]
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
@@ -224,25 +150,6 @@ export function NotificationsClient({
         </Card>
       </div>
 
-      {/* 알림 목록 탭 */}
-      <div className="mb-6">
-        <div className="flex space-x-1 rounded-lg bg-neutral-100 p-1">
-          {typeTabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setSelectedType(tab.id)}
-              className={`flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                selectedType === tab.id
-                  ? 'text-primary-600 bg-white shadow-sm'
-                  : 'text-neutral-600 hover:text-neutral-900'
-              }`}
-            >
-              {tab.label} ({tab.count})
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* 알림 목록 */}
       <div className="space-y-4">
         {isLoading ? (
@@ -256,7 +163,7 @@ export function NotificationsClient({
               </div>
             </CardContent>
           </Card>
-        ) : filteredNotifications.length === 0 ? (
+        ) : transformedNotifications.length === 0 ? (
           <Card variant="outlined">
             <CardContent className="py-12 text-center">
               <div className="mb-4">
@@ -266,68 +173,32 @@ export function NotificationsClient({
                 <h3 className="mb-2 text-lg font-semibold text-neutral-900">
                   알림이 없습니다
                 </h3>
-                <p className="text-neutral-600">
-                  {selectedType === 'all' && '아직 받은 알림이 없습니다.'}
-                  {selectedType === 'unread' && '읽지 않은 알림이 없습니다.'}
-                </p>
+                <p className="text-neutral-600">아직 받은 알림이 없습니다.</p>
               </div>
             </CardContent>
           </Card>
         ) : (
           <>
-            {filteredNotifications.map((notification) => {
+            {transformedNotifications.map((notification) => {
               return (
-                <Card
-                  key={notification.id}
-                  variant="outlined"
-                  className={
-                    !notification.isRead
-                      ? 'border-primary-200 bg-primary-50'
-                      : ''
-                  }
-                >
+                <Card key={notification.id} variant="outlined">
                   <CardContent className="p-6">
                     <div className="flex items-start space-x-4">
-                      <div className="flex-shrink-0">
+                      <div className="shrink-0">
                         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100">
                           <Bell className="h-5 w-5 text-neutral-600" />
                         </div>
                       </div>
 
                       <div className="min-w-0 flex-1">
-                        <div className="mb-2 flex items-center space-x-2">
-                          {!notification.isRead && (
-                            <Badge variant="warning">새 알림</Badge>
-                          )}
-                        </div>
-
-                        <h3 className="mb-2 text-lg font-semibold text-neutral-900">
-                          {notification.title}
-                        </h3>
-
-                        <p className="mb-3 text-sm text-neutral-600">
+                        <p className="mb-3 text-sm text-neutral-700">
                           {notification.message}
                         </p>
 
                         <div className="flex items-center justify-between">
                           <span className="text-sm text-neutral-500">
-                            {formatDate(notification.createdAt)}
+                            {formatDate(notification.sendAt)}
                           </span>
-
-                          <div className="flex space-x-2">
-                            {!notification.isRead && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() =>
-                                  handleMarkAsRead(notification.id)
-                                }
-                              >
-                                <Check className="mr-1 h-3 w-3" />
-                                읽음
-                              </Button>
-                            )}
-                          </div>
                         </div>
                       </div>
                     </div>
@@ -368,16 +239,6 @@ export function NotificationsClient({
           </>
         )}
       </div>
-
-      {/* 전체 읽음 처리 버튼 */}
-      {stats.unread > 0 && (
-        <div className="mt-8 text-center">
-          <Button variant="outline" onClick={handleMarkAllAsRead}>
-            <Check className="mr-2 h-4 w-4" />
-            전체 읽음 처리
-          </Button>
-        </div>
-      )}
     </div>
   )
 }
