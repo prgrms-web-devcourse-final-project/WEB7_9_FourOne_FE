@@ -28,14 +28,16 @@ export function HelpClient() {
           setGuides(response.data.guides || [])
         } else {
           setError(
-            response.message || response.msg || '도움말을 불러올 수 없습니다.',
+            response.message ||
+              response.msg ||
+              '판매 가이드를 불러올 수 없습니다.',
           )
         }
       } catch (error: any) {
         console.error('도움말 조회 실패:', error)
         const apiError = handleApiError(error)
         setError(apiError.message)
-        showErrorToast(apiError.message, '도움말 조회 실패')
+        showErrorToast(apiError.message, '판매 가이드 조회 실패')
       } finally {
         setIsLoading(false)
       }

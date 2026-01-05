@@ -168,7 +168,7 @@ export function Header({
               href="/help"
               className="hover:text-primary-600 hover:bg-primary-50 relative rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 transition-all duration-200"
             >
-              도움말
+              이용 가이드
             </Link>
           </nav>
 
@@ -361,7 +361,7 @@ export function Header({
                   className="rounded-lg px-3 py-3 text-neutral-700 transition-colors hover:bg-neutral-100"
                   onClick={() => setIsMenuOpen(false)}
                 >
-                  도움말
+                  이용 가이드
                 </Link>
               </nav>
             </div>

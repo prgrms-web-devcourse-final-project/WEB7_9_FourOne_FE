@@ -13,7 +13,7 @@ export default async function HelpPage() {
   return (
     <HomeLayout isLoggedIn={isLoggedIn}>
       <PageHeader
-        title="도움말"
+        title="이용 가이드"
         description="서비스 이용 안내"
         showBackButton
       />
