@@ -285,7 +285,9 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
         }
 
         // 업로드된 파일명 배열 (이미 image/product/{filename.ext}로 반환되지만 안전하게 normalize)
-        imageFileNames = uploadResponse.data.map((key) => normalizeProductKey(key))
+        imageFileNames = uploadResponse.data.map((key) =>
+          normalizeProductKey(key),
+        )
         setIsUploadingImages(false)
       }
 
