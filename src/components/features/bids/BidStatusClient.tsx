@@ -7,7 +7,7 @@ import {
   Pagination,
   PaginationInfo,
 } from '@/components/ui/pagination'
-import { bidApi, cashApi, paymentApi } from '@/lib/api'
+import { bidApi, paymentApi } from '@/lib/api'
 import { showErrorToast, showSuccessToast } from '@/lib/utils/toast'
 import { Bid } from '@/types'
 import { ExternalLink, StarIcon } from 'lucide-react'
@@ -178,120 +178,73 @@ export function BidStatusClient({
     return bid.status === 'WIN' && !bid.paidAt
   }
 
-  // 잔액 확인
-  const checkBalance = async (bidAmount: number) => {
-    try {
-      const cashInfo = await cashApi.getMyCash()
-      if (cashInfo.success && cashInfo.data) {
-        const balance = (cashInfo.data as any).balance || 0
-        if (balance < bidAmount) {
-          const shouldGoToWallet = confirm(
-            `잔액이 부족합니다.\n현재 잔액: ${balance.toLocaleString()}원\n필요 금액: ${bidAmount.toLocaleString()}원\n\n지갑을 충전하시겠습니까?`,
-          )
-          if (shouldGoToWallet) {
-            router.push('/wallet')
-          }
-          return false
-        }
-        return true
-      }
-      return false
-    } catch (error: any) {
-      console.error('잔액 확인 실패:', error)
-
-      // 지갑이 생성되지 않은 경우
-      if (error.response?.status === 404) {
-        const shouldGoToWallet = confirm(
-          '잔액이 없습니다.\n잔액을 충전하시겠습니까?',
-        )
-        if (shouldGoToWallet) {
-          router.push('/wallet')
-        }
-        return false
-      }
-
-      showErrorToast('잔액 확인 중 오류가 발생했습니다.')
-      return false
-    }
-  }
-
-  // 낙찰 결제 처리
-  const handlePayBid = async (auctionId: number, bidAmount: number) => {
+  // 완전한 결제 플로우 (새로운 결제 API 사용)
+  const completePaymentFlow = async (auctionId: number, bidAmount: number) => {
     setPayingBidId(auctionId)
+
     try {
-      const result = (await bidApi.payBid(auctionId)) as any
+      // 1. 결제 준비 API 호출
+      const prepareResult = await paymentApi.prepare(auctionId)
 
-      if (result.success) {
-        const resultData = result.data as any
-        showSuccessToast(
-          `결제가 완료되었습니다! 금액: ${resultData?.amount?.toLocaleString()}원, 잔액: ${resultData?.balanceAfter?.toLocaleString()}원`,
-        )
+      if (!prepareResult.success) {
+        showErrorToast(prepareResult.msg || '결제 준비에 실패했습니다.')
+        return
+      }
 
-        // UI 업데이트 - 페이지 새로고침으로 최신 데이터 가져오기
+      const { paymentId, autoPaid, status, toss } = prepareResult.data as any
+
+      // 2-1. 자동결제 성공한 경우
+      if (autoPaid && status === 'PAID') {
+        showSuccessToast('결제가 완료되었습니다!')
         refresh()
+        return
+      }
 
-        // 지갑의 거래내역 탭으로 이동
-        router.push('/wallet?tab=transactions')
-      } else {
-        // 결제 실패 처리
-        const resultMsg = result.msg || result.message || ''
-        if (resultMsg.includes('잔액') || resultMsg.includes('지갑')) {
-          const shouldGoToWallet = confirm(
-            `결제 실패: ${resultMsg}\n\n지갑을 충전하시겠습니까?`,
+      // 2-2. 수동 결제 필요한 경우 (토스 결제창 호출)
+      if (!autoPaid && toss) {
+        const { orderId, amount } = toss
+
+        // 토스 SDK 로드 확인
+        if (typeof window === 'undefined' || !(window as any).TossPayments) {
+          showErrorToast(
+            '결제 시스템 로딩 중입니다. 잠시 후 다시 시도해주세요.',
           )
-          if (shouldGoToWallet) {
-            router.push('/wallet')
+          return
+        }
+
+        try {
+          const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY
+          if (!clientKey) {
+            showErrorToast('결제 설정이 올바르지 않습니다.')
+            return
           }
-        } else {
-          showErrorToast(`결제 실패: ${resultMsg}`)
+
+          // 토스 Payments 인스턴스 생성
+          const tossPayments = (window as any).TossPayments(clientKey)
+
+          // 결제 요청
+          await tossPayments.requestPayment('카드', {
+            amount: amount,
+            orderId: orderId,
+            orderName: 'DROP 경매 낙찰',
+            customerEmail: localStorage.getItem('userEmail') || '',
+            customerName: localStorage.getItem('userName') || '',
+            successUrl: `${window.location.origin}/payments/success`,
+            failUrl: `${window.location.origin}/payments/fail`,
+          })
+        } catch (tossError: any) {
+          // 사용자 취소 제외 에러 처리
+          if (tossError.code !== 'USER_CANCEL') {
+            showErrorToast(tossError.message || '결제 중 오류가 발생했습니다.')
+          }
         }
       }
     } catch (error: any) {
       console.error('결제 오류:', error)
-
-      // 지갑 관련 에러 처리
-      if (
-        error.response?.status === 404 ||
-        error.message?.includes('지갑이 아직 생성되지 않았습니다')
-      ) {
-        const shouldGoToWallet = confirm(
-          '지갑이 아직 생성되지 않았습니다.\n지갑을 생성하고 충전하시겠습니까?',
-        )
-        if (shouldGoToWallet) {
-          router.push('/wallet')
-        }
-      } else if (
-        error.response?.status === 400 &&
-        error.response?.data?.msg?.includes('잔액')
-      ) {
-        const shouldGoToWallet = confirm(
-          `결제 실패: ${error.response.data.msg}\n\n지갑을 충전하시겠습니까?`,
-        )
-        if (shouldGoToWallet) {
-          router.push('/wallet')
-        }
-      } else {
-        showErrorToast('결제 중 오류가 발생했습니다.')
-      }
+      showErrorToast('결제 중 오류가 발생했습니다.')
     } finally {
       setPayingBidId(null)
     }
-  }
-
-  // 완전한 결제 플로우
-  const completePaymentFlow = async (auctionId: number, bidAmount: number) => {
-    // 1. 잔액 확인
-    const hasEnoughBalance = await checkBalance(bidAmount)
-    if (!hasEnoughBalance) return
-
-    // 2. 사용자 확인
-    const confirmed = confirm(
-      `정말로 ${bidAmount.toLocaleString()}원을 결제하시겠습니까?`,
-    )
-    if (!confirmed) return
-
-    // 3. 결제 처리
-    await handlePayBid(auctionId, bidAmount)
   }
 
   return (

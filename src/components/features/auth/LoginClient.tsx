@@ -301,6 +301,9 @@ export function LoginClient() {
                   refreshToken,
                 })
                 localStorage.setItem('user', JSON.stringify(userData))
+                // 토스 결제용 사용자 정보 저장
+                localStorage.setItem('userEmail', userData.email)
+                localStorage.setItem('userName', userData.nickname)
               } else {
                 // /me 호출 실패 시 기본 정보로 로그인 처리
                 const userData = {
@@ -318,6 +321,9 @@ export function LoginClient() {
                   refreshToken,
                 })
                 localStorage.setItem('user', JSON.stringify(userData))
+                // 토스 결제용 사용자 정보 저장
+                localStorage.setItem('userEmail', userData.email)
+                localStorage.setItem('userName', userData.nickname)
               }
             } catch (meError) {
               console.error('❌ /me API 호출 실패:', meError)

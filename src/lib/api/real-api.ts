@@ -1159,6 +1159,43 @@ export const tossApi = {
 
 // ❌ 결제 내역 API - Swagger에 없음 (UI는 유지)
 export const paymentApi = {
+  // 등록된 카드 목록 조회 (GET /payments/cards)
+  getCards: async () => {
+    const response = await apiClient.get<ApiResponse<any>>('/payments/cards')
+    return normalizeApiResponse(response.data)
+  },
+
+  // 새 카드 등록 (POST /payments/cards)
+  registerCard: async (data: {
+    billingKey: string
+    cardCompany: string
+    cardNumberMasked: string
+    cardName: string
+  }) => {
+    const response = await apiClient.post<ApiResponse<any>>(
+      '/payments/cards',
+      data,
+    )
+    return normalizeApiResponse(response.data)
+  },
+
+  // 카드 삭제 (DELETE /payments/cards/{cardId})
+  deleteCard: async (cardId: number) => {
+    const response = await apiClient.delete<ApiResponse<any>>(
+      `/payments/cards/${cardId}`,
+    )
+    return normalizeApiResponse(response.data)
+  },
+
+  // 결제 준비 (POST /payments/prepare)
+  prepare: async (winnerId: number) => {
+    const response = await apiClient.post<ApiResponse<any>>(
+      '/payments/prepare',
+      { winnerId },
+    )
+    return normalizeApiResponse(response.data)
+  },
+
   // ❌ Swagger에 없음
   getMyPayments: async (params?: { page?: number; size?: number }) => {
     // TODO: 결제 내역 목록 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.

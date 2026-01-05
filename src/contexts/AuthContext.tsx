@@ -125,12 +125,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // 사용자 정보를 로컬스토리지에 저장
     setUser(user)
     localStorage.setItem('user', JSON.stringify(user))
+    // 토스 결제용 사용자 정보 저장
+    localStorage.setItem('userEmail', user.email)
+    localStorage.setItem('userName', user.nickname)
     console.log('✅ 로그인 완료, 사용자 정보 저장:', user)
   }
 
   const updateUser = (updatedUser: User) => {
     setUser(updatedUser)
     localStorage.setItem('user', JSON.stringify(updatedUser))
+    // 토스 결제용 사용자 정보 저장
+    localStorage.setItem('userEmail', updatedUser.email)
+    localStorage.setItem('userName', updatedUser.nickname)
     console.log('✅ 사용자 정보 업데이트:', updatedUser)
   }
 
@@ -146,6 +152,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // 로컬 스토리지 정리
       localStorage.removeItem('auth_state')
       localStorage.removeItem('user')
+      localStorage.removeItem('userEmail')
+      localStorage.removeItem('userName')
       localStorage.removeItem('last_login_time')
       localStorage.removeItem('accessToken')
       localStorage.removeItem('refreshToken')
