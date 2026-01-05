@@ -67,7 +67,7 @@ function normalizeApiResponse<T>(response: any) {
   }
 }
 
-// 인증 관련 API (새로운 백엔드 구조)
+// 인증 관련 API
 export const authApi = {
   // 로그인
   login: async (email: string, password: string) => {
@@ -244,13 +244,16 @@ export const authApi = {
 
     const preSignedUrl = preSignedResponse.data[0]
 
-    // 2. PreSigned URL에서 파일명 추출
-    // URL 형식: https://{bucket}.s3.{region}.amazonaws.com/{파일명}?X-Amz-Algorithm=...
+    // 2. PreSigned URL에서 S3 object key 추출
+    // URL 형식: https://{bucket}.s3.{region}.amazonaws.com/{key}?X-Amz-...
     const urlObj = new URL(preSignedUrl)
-    const fileName = urlObj.pathname.split('/').pop() || ''
+    const objectKey = urlObj.pathname.startsWith('/')
+      ? urlObj.pathname.slice(1)
+      : urlObj.pathname
+    const fileName = objectKey.split('/').pop() || ''
 
-    if (!fileName) {
-      throw new Error('PreSigned URL에서 파일명을 추출할 수 없습니다.')
+    if (!objectKey || !fileName) {
+      throw new Error('PreSigned URL에서 object key를 추출할 수 없습니다.')
     }
 
     // 3. PreSigned URL로 S3에 이미지 업로드
@@ -271,14 +274,14 @@ export const authApi = {
     // S3 PUT 응답 본문을 읽을 필요 없음 (성공 여부는 상태 코드로만 확인)
     // 응답 본문을 읽으려고 하면 에러가 발생할 수 있음
 
-    // 4. 파일명만 반환 (프로필 업데이트 API에 파일명만 전달해야 함)
+    // 4. S3 object key 반환 (프로필 업데이트 API에 key를 전달)
     return {
       success: true,
       data: {
-        profileImageUrl: fileName, // 파일명만 반환
-        url: fileName,
-        imageUrl: fileName,
-        fileName: fileName, // 명시적으로 파일명 필드 추가
+        profileImageUrl: objectKey, // 전체 key (ex. image/profile/xxx.png)
+        url: objectKey,
+        imageUrl: objectKey,
+        fileName: fileName,
       },
       resultCode: 'SUCCESS',
       msg: '',
@@ -371,7 +374,7 @@ export const authApi = {
   },
 }
 
-// 상품 관련 API (새로운 백엔드 구조)
+// 상품 관련 API
 export const productApi = {
   // ❌ Swagger에 없음 - API 호출 비활성화 (UI는 유지)
   getProducts: async (params?: ProductListParams) => {
@@ -446,14 +449,14 @@ export const productApi = {
       )
     }
 
-    // 2. 각 PreSigned URL에서 파일명 추출
-    const fileNames = preSignedUrls.map((url: string) => {
+    // 2. 각 PreSigned URL에서 S3 경로 추출 (예: image/product/abc.png)
+    const imagePaths = preSignedUrls.map((url: string) => {
       const urlObj = new URL(url)
-      const fileName = urlObj.pathname.split('/').pop() || ''
-      if (!fileName) {
-        throw new Error('PreSigned URL에서 파일명을 추출할 수 없습니다.')
+      const pathname = urlObj.pathname.replace(/^\//, '') // 선행 슬래시 제거
+      if (!pathname) {
+        throw new Error('PreSigned URL에서 경로를 추출할 수 없습니다.')
       }
-      return fileName
+      return pathname
     })
 
     // 3. S3에 각 이미지 업로드
@@ -477,10 +480,10 @@ export const productApi = {
 
     await Promise.all(uploadPromises)
 
-    // 4. 파일명 배열 반환
+    // 3. S3 경로 배열 반환 (image/product/파일명.확장자)
     return {
       success: true,
-      data: fileNames,
+      data: imagePaths,
       resultCode: 'SUCCESS',
       msg: '',
       code: 'SUCCESS',
@@ -677,9 +680,9 @@ export const auctionApi = {
       | 'GAME'
       | 'ETC'
     status?: 'ALL' | 'SCHEDULED' | 'LIVE' | 'ENDED'
-    // 페이징
     cursor?: string
-    limit?: number // 선택적, 기본값은 백엔드에서 결정
+    size?: number
+    limit?: number // 호환성 유지
   }) => {
     const searchParams = new URLSearchParams()
 
@@ -699,12 +702,13 @@ export const auctionApi = {
       searchParams.append('status', params.status)
     }
 
-    // 페이징 파라미터
+    // 페이징 파라미터 (Swagger: size)
     if (params?.cursor) {
       searchParams.append('cursor', params.cursor)
     }
-    if (params?.limit !== undefined) {
-      searchParams.append('limit', params.limit.toString())
+    const pageSize = params?.size ?? params?.limit
+    if (pageSize !== undefined) {
+      searchParams.append('size', pageSize.toString())
     }
 
     const queryString = searchParams.toString()
@@ -717,27 +721,27 @@ export const auctionApi = {
   },
 
   // 경매 목록 조회 (키워드 검색)
-  // GET /api/v1/auctions?search={keyword}&cursor={cursor}
-  // TODO: 곧 배포 예정 - API가 준비되면 활성화
-  // 검색어 최소 2자 ~ 20자, 공백 기준 검색: and
+  // GET /api/v1/auctions?keyword={keyword}&cursor={cursor}
   searchAuctions: async (params?: {
-    search: string // 검색어 (2~20자)
+    keyword?: string // 검색어
     cursor?: string
-    limit?: number // 선택적, 기본값은 백엔드에서 결정
+    size?: number // Swagger 스펙 이름
+    limit?: number // 호환성 유지
   }) => {
     const searchParams = new URLSearchParams()
 
-    // 검색어는 필수 (클라이언트에서 2~20자 검증 권장)
-    if (params?.search) {
-      searchParams.append('search', params.search)
+    // 검색어 (선택사항)
+    if (params?.keyword) {
+      searchParams.append('keyword', params.keyword)
     }
 
-    // 페이징 파라미터
+    // 페이징 파라미터 (Swagger: size)
     if (params?.cursor) {
       searchParams.append('cursor', params.cursor)
     }
-    if (params?.limit !== undefined) {
-      searchParams.append('limit', params.limit.toString())
+    const pageSize = params?.size ?? params?.limit
+    if (pageSize !== undefined) {
+      searchParams.append('size', pageSize.toString())
     }
 
     const queryString = searchParams.toString()
@@ -746,6 +750,14 @@ export const auctionApi = {
       : `/api/v1/auctions`
 
     const response = await apiClient.get<ApiResponse<any>>(endpoint)
+    return normalizeApiResponse(response.data)
+  },
+
+  // 경매 상세 조회 (GET /api/v1/auctions/{auctionId})
+  getAuctionDetail: async (auctionId: number) => {
+    const response = await apiClient.get<ApiResponse<any>>(
+      `/api/v1/auctions/${auctionId}`,
+    )
     return normalizeApiResponse(response.data)
   },
 
@@ -774,10 +786,9 @@ export const auctionApi = {
   },
 
   // 경매 입찰 내역 조회 (GET /api/v1/auctions/{auctionId}/bids)
-  // TODO: 아직 백엔드 개발 안됨 - API가 준비되면 활성화
   getAuctionBids: async (
     auctionId: number,
-    params?: { page?: number; size?: number },
+    params?: { page?: number; size?: number; sort?: string },
   ) => {
     const searchParams = new URLSearchParams()
     if (params?.page !== undefined) {
@@ -785,6 +796,9 @@ export const auctionApi = {
     }
     if (params?.size !== undefined) {
       searchParams.append('size', params.size.toString())
+    }
+    if (params?.sort) {
+      searchParams.append('sort', params.sort)
     }
 
     const queryString = searchParams.toString()
@@ -796,26 +810,35 @@ export const auctionApi = {
     return normalizeApiResponse(response.data)
   },
 
-  // 실시간 최고가 조회 (GET /api/v1/auctions/{auctionId}/highest-bid)
-  // TODO: 아직 백엔드 개발 안됨 - API가 준비되면 활성화
-  getHighestBid: async (
+  // 입찰 이력 조회 (getAuctionBids의 별칭)
+  getBidHistory: async (
     auctionId: number,
     params?: { page?: number; size?: number },
   ) => {
+    return auctionApi.getAuctionBids(auctionId, params)
+  },
+
+  // 입찰 간단 리스트 조회 (GET /api/v1/auctions/{auctionId}/bid-list)
+  getBidList: async (auctionId: number, params?: { size?: number }) => {
     const searchParams = new URLSearchParams()
-    if (params?.page !== undefined) {
-      searchParams.append('page', params.page.toString())
-    }
     if (params?.size !== undefined) {
       searchParams.append('size', params.size.toString())
     }
 
     const queryString = searchParams.toString()
     const endpoint = queryString
-      ? `/api/v1/auctions/${auctionId}/highest-bid?${queryString}`
-      : `/api/v1/auctions/${auctionId}/highest-bid`
+      ? `/api/v1/auctions/${auctionId}/bid-list?${queryString}`
+      : `/api/v1/auctions/${auctionId}/bid-list`
 
     const response = await apiClient.get<ApiResponse<any>>(endpoint)
+    return normalizeApiResponse(response.data)
+  },
+
+  // 실시간 최고가 조회 (GET /api/v1/auctions/{auctionId}/highest-bid)
+  getHighestBid: async (auctionId: number) => {
+    const response = await apiClient.get<ApiResponse<any>>(
+      `/api/v1/auctions/${auctionId}/highest-bid`,
+    )
     return normalizeApiResponse(response.data)
   },
 
@@ -892,44 +915,6 @@ export const bidApi = {
   payBid: async (bidId: number) => {
     throw new Error(
       '낙찰 결제 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.',
-    )
-  },
-}
-
-// ❌ 리뷰 관련 API - Swagger에 없음 (UI는 유지)
-export const reviewApi = {
-  // ❌ Swagger에 없음
-  createReview: async (data: ReviewWriteRequest) => {
-    throw new Error(
-      '리뷰 작성 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.',
-    )
-  },
-
-  // ❌ Swagger에 없음
-  getReview: async (reviewId: number) => {
-    throw new Error(
-      '리뷰 조회 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.',
-    )
-  },
-
-  // ❌ Swagger에 없음
-  updateReview: async (reviewId: number, data: ReviewUpdateRequest) => {
-    throw new Error(
-      '리뷰 수정 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.',
-    )
-  },
-
-  // ❌ Swagger에 없음
-  deleteReview: async (reviewId: number) => {
-    throw new Error(
-      '리뷰 삭제 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.',
-    )
-  },
-
-  // ❌ Swagger에 없음
-  getReviewsByProduct: async (productId: number) => {
-    throw new Error(
-      '상품별 리뷰 목록 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.',
     )
   },
 }
@@ -1209,7 +1194,6 @@ export const paymentApi = {
   },
 }
 
-// ❌ 게시판 관련 API - Swagger에 없음 (UI는 유지)
 // 관리자 관련 API
 export const adminApi = {
   // 관리자 도움말 조회 (GET /api/v1/admin/help)

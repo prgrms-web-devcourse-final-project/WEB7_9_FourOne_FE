@@ -85,21 +85,43 @@ export function usePagination<T>(
         if (response.success && response.data) {
           let content, pageable
 
-          // API 응답 구조에 따라 데이터 추출
-          if (response.data.content && response.data.pageable) {
+          // API 응답 구조에 따라 데이터 추출 (Swagger 우선)
+          if (response.data.items && response.data.hasNext !== undefined) {
+            // Swagger AuctionCursorResponse: { cursor, items, hasNext }
+            content = response.data.items
+            pageable = {
+              currentPage: page,
+              pageSize: size,
+              totalPages: response.data.hasNext ? page + 1 : page,
+              totalElements: (page - 1) * size + content.length,
+              hasNext: response.data.hasNext || false,
+              hasPrevious: page > 1,
+            }
+          } else if (response.data.content && response.data.pageable) {
             // 표준 페이지네이션 응답 구조 (content + pageable)
             content = response.data.content
             pageable = response.data.pageable
-          } else if (response.data.content && response.data.totalPages) {
+          } else if (
+            response.data.content &&
+            response.data.totalPages !== undefined
+          ) {
             // 알림/입찰 API 구조 (content + 직접 페이지네이션 정보)
             content = response.data.content
             pageable = {
-              currentPage: response.data.currentPage + 1, // 0-based를 1-based로 변환
-              pageSize: response.data.pageSize,
+              currentPage: response.data.currentPage
+                ? response.data.currentPage + 1
+                : page,
+              pageSize: response.data.pageSize || size,
               totalPages: response.data.totalPages,
               totalElements: response.data.totalElements,
-              hasNext: response.data.currentPage + 1 < response.data.totalPages,
-              hasPrevious: response.data.currentPage > 0,
+              hasNext:
+                response.data.currentPage !== undefined
+                  ? response.data.currentPage + 1 < response.data.totalPages
+                  : response.data.hasNext || false,
+              hasPrevious:
+                response.data.currentPage !== undefined
+                  ? response.data.currentPage > 0
+                  : page > 1,
             }
           } else if (Array.isArray(response.data)) {
             // 배열로 직접 반환되는 경우
@@ -114,11 +136,7 @@ export function usePagination<T>(
             }
           } else {
             // 기타 구조
-            content =
-              response.data.items ||
-              response.data.notifications ||
-              response.data.bids ||
-              []
+            content = response.data.notifications || response.data.bids || []
             pageable = {
               currentPage: page,
               pageSize: size,

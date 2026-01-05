@@ -4,13 +4,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import {
-  PageSizeSelector,
-  Pagination,
-  PaginationInfo,
-} from '@/components/ui/pagination'
 import { useAuth } from '@/contexts/AuthContext'
-import { usePagination } from '@/hooks/usePagination'
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll'
 import { useWebSocketHome } from '@/hooks/useWebSocketHome'
 import { auctionApi } from '@/lib/api'
 import {
@@ -21,7 +16,11 @@ import {
 } from '@/lib/constants/categories'
 import { Clock, MapPin, Search, User } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { components } from '@/types/swagger-generated'
+
+type AuctionItemResponse = components['schemas']['AuctionItemResponse']
+type AuctionCursorResponse = components['schemas']['AuctionCursorResponse']
 
 interface HomeStats {
   activeAuctions: number
@@ -77,212 +76,186 @@ export function HomeClient() {
     SubCategoryValue | 'all'
   >('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
   const [error, setError] = useState('')
-  const [nextCursor, setNextCursor] = useState<string | null>(null)
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Cursor 기반 페이지네이션 상태
+  const [products, setProducts] = useState<AuctionItemResponse[]>([])
+  const [currentCursor, setCurrentCursor] = useState<string | undefined>(
+    undefined,
+  )
+  const [hasMore, setHasMore] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
+  const [pageSize, setPageSize] = useState(10)
+
   const [sortBy, setSortBy] = useState<'newest' | 'closing' | 'popular'>(
     'newest',
   )
-  const limit = 20 // 한 번에 가져올 아이템 수
-
-  // WebSocket 실시간 홈 데이터 구독
-  const { homeData, isSubscribed: isHomeDataSubscribed } = useWebSocketHome()
   const [statusFilter, setStatusFilter] = useState<
     'ALL' | 'SCHEDULED' | 'LIVE' | 'ENDED'
   >('ALL')
 
-  // API 호출 함수 (새로운 경매 API 사용 - cursor + limit 방식)
-  const fetchProducts = useCallback(
-    async ({ page, size }: { page: number; size: number }) => {
+  // WebSocket 실시간 홈 데이터 구독
+  const { homeData, isSubscribed: isHomeDataSubscribed } = useWebSocketHome()
+
+  // 데이터 로드 함수 (필터 값들을 의존성에 포함)
+  const loadProducts = useCallback(
+    async (cursor?: string, reset: boolean = false) => {
+      if (isLoading) return
+      setIsLoading(true)
+      setError('')
+
       try {
-        // 키워드 검색이 있는 경우
-        if (searchQuery.trim()) {
-          const response = await auctionApi.searchAuctions({
-            search: searchQuery.trim(),
-            cursor: page > 1 ? nextCursor || undefined : undefined,
-            limit: limit,
+        const categoryParam =
+          selectedCategory === 'all' ? undefined : selectedCategory
+        const subCategoryParam =
+          selectedSubCategory === 'all' ? undefined : selectedSubCategory
+        const statusParam = statusFilter === 'ALL' ? undefined : statusFilter
+
+        let response
+
+        // 키워드 검색이 있는 경우 (2자 이상 20자 이하만 검색)
+        const trimmedQuery = debouncedSearchQuery.trim()
+        if (
+          trimmedQuery &&
+          trimmedQuery.length >= 2 &&
+          trimmedQuery.length <= 20
+        ) {
+          response = await auctionApi.searchAuctions({
+            keyword: trimmedQuery,
+            cursor: cursor,
+            size: pageSize,
           })
-
-          if (response.success && response.data) {
-            // cursor 기반 페이지네이션 응답 처리
-            const auctions = response.data.content || response.data || []
-            const hasNext = response.data.hasNext || false
-            const nextCursorValue = response.data.nextCursor || null
-            setNextCursor(nextCursorValue)
-
-            // 페이지네이션 호환을 위한 변환
-            return {
-              success: true,
-              data: {
-                content: auctions,
-                totalElements: auctions.length,
-                totalPages: hasNext ? page + 1 : page,
-                size: size,
-                number: page - 1,
-                first: page === 1,
-                last: !hasNext,
-                hasNext,
-                nextCursor: nextCursorValue,
-              },
-              resultCode: '200',
-              msg: '',
-            }
-          } else {
-            throw new Error(
-              response.message || response.msg || '경매 검색 실패',
-            )
-          }
         } else {
           // 카테고리/상태 필터 사용
-          const categoryParam =
-            selectedCategory === 'all' ? undefined : selectedCategory
-          const subCategoryParam =
-            selectedSubCategory === 'all' ? undefined : selectedSubCategory
-          const statusParam = statusFilter === 'ALL' ? undefined : statusFilter
-
-          const response = await auctionApi.getAuctions({
+          response = await auctionApi.getAuctions({
             category: categoryParam,
             subCategory: subCategoryParam,
             status: statusParam,
-            cursor: page > 1 ? nextCursor || undefined : undefined,
-            limit: limit,
+            cursor: cursor,
+            size: pageSize,
             sort: sortBy,
           })
+        }
 
-          if (response.success && response.data) {
-            // cursor 기반 페이지네이션 응답 처리
-            const auctions = response.data.content || response.data || []
-            const hasNext = response.data.hasNext || false
-            const nextCursorValue = response.data.nextCursor || null
-            setNextCursor(nextCursorValue)
+        if (response.success && response.data) {
+          const auctionData = response.data as AuctionCursorResponse
+          const newItems = auctionData.items || []
 
-            // 페이지네이션 호환을 위한 변환
-            return {
-              success: true,
-              data: {
-                content: auctions,
-                totalElements: auctions.length,
-                totalPages: hasNext ? page + 1 : page,
-                size: size,
-                number: page - 1,
-                first: page === 1,
-                last: !hasNext,
-                hasNext,
-                nextCursor: nextCursorValue,
-              },
-              resultCode: '200',
-              msg: '',
-            }
+          if (reset) {
+            setProducts(newItems)
+            setCurrentCursor(auctionData.cursor)
           } else {
-            throw new Error(
-              response.message || response.msg || '경매 조회 실패',
-            )
+            setProducts((prev) => [...prev, ...newItems])
+            setCurrentCursor(auctionData.cursor)
           }
+
+          setHasMore(auctionData.hasNext || false)
+        } else {
+          setError(response.message || '데이터 로드 실패')
         }
-        } catch (error) {
-        console.error('경매 조회 에러:', error)
-        return {
-          success: false,
-          data: {
-            content: [],
-            totalElements: 0,
-            totalPages: 0,
-            size: size,
-            number: page - 1,
-            first: true,
-            last: true,
-          },
-          resultCode: '500',
-          msg:
-            error instanceof Error
-              ? error.message
-              : '경매 조회 중 오류가 발생했습니다.',
-        }
+      } catch (err) {
+        console.error('데이터 로드 에러:', err)
+        setError('데이터 로드 중 오류가 발생했습니다')
+      } finally {
+        setIsLoading(false)
       }
     },
     [
       selectedCategory,
       selectedSubCategory,
-      searchQuery,
+      debouncedSearchQuery,
       statusFilter,
-      nextCursor,
+      sortBy,
+      isLoading,
+      pageSize,
     ],
   )
 
-  // 페이지네이션 훅 사용
-  const {
-    data: products,
-    currentPage,
-    pageSize,
-    totalPages,
-    totalElements,
-    hasNext,
-    hasPrevious,
-    isLoading,
-    error: paginationError,
-    goToPage,
-    setPageSize,
-    refresh,
-    reset,
-  } = usePagination(fetchProducts, {
-    initialPageSize: 10,
-    autoLoad: true,
-    onError: setError,
-  })
-
-  // 검색어, 카테고리, 필터 변경 시 페이지 리셋 및 새로고침
+  // 필터 변경 시만 데이터 리셋 후 로드 (pageSize는 제외)
   useEffect(() => {
-    setNextCursor(null) // cursor 초기화
-    if (currentPage > 1) {
-      reset()
-    } else {
-      refresh()
-    }
+    loadProducts(undefined, true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     selectedCategory,
     selectedSubCategory,
-    searchQuery,
+    debouncedSearchQuery,
     statusFilter,
     sortBy,
-    reset,
-    refresh,
-    currentPage,
   ])
 
-  // 상품 데이터 변환 함수
-  const transformProductData = (productsData: any[]): any[] => {
-    return productsData.map((product: any) => ({
-      productId: product.productId,
-      name: product.name,
-      description: product.description || '',
-      category: product.category,
-      initialPrice: product.initialPrice,
-      currentPrice: product.currentPrice,
-      auctionStartTime: product.auctionStartTime,
-      auctionEndTime:
-        product.auctionEndTime ||
-        new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-      status: mapApiStatusToKorean(product.status || 'BIDDING'),
-      images: product.thumbnailUrl
-        ? [product.thumbnailUrl]
-        : product.images || [],
-      thumbnailUrl: product.thumbnailUrl,
-      seller: {
-        id: String(product.seller?.id),
-        nickname: product.seller?.nickname || '판매자',
-        profileImage: product.seller?.profileImage || null,
-        creditScore: product.seller?.creditScore || 0,
-        reviewCount: product.seller?.reviewCount || 0,
+  // 검색어 Debounce (입력이 멈춘 후 500ms 후에 검색 실행)
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current)
+    }
+
+    searchTimeoutRef.current = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery)
+    }, 500)
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current)
+      }
+    }
+  }, [searchQuery])
+
+  // 무한 스크롤 감지 ref
+  const observerTarget = useRef<HTMLDivElement>(null)
+
+  // 무한 스크롤 트리거 - IntersectionObserver로 다음 페이지 로드만 발생
+  useEffect(() => {
+    if (!observerTarget.current) return
+
+    const target = observerTarget.current
+    if (!hasMore || isLoading) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const first = entries[0]
+        if (!first.isIntersecting) return
+        if (isLoading || !hasMore || !currentCursor) return
+
+        observer.unobserve(target) // ⭐ 중복 트리거 방지
+        loadProducts(currentCursor, false)
       },
-      location: product.location,
-      createDate: product.createDate,
-      modifyDate: product.modifyDate,
-      bidderCount: product.bidderCount,
-      deliveryMethod: product.deliveryMethod as 'TRADE' | 'DELIVERY' | 'BOTH',
+      { threshold: 0.1 },
+    )
+
+    observer.observe(target)
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [currentCursor, hasMore, isLoading, loadProducts])
+
+  // 상품 데이터 변환 함수 (Swagger 타입 사용 - API에 있는 필드만 사용)
+  const transformProductData = (productsData: AuctionItemResponse[]) => {
+    return productsData.map((product) => ({
+      productId: product.productId || 0,
+      auctionId: product.auctionId || 0,
+      name: product.name || '',
+      category: product.category || '',
+      subCategory: product.subCategory || '',
+      initialPrice: product.startPrice || 0,
+      currentPrice: product.currentHighestBid || product.startPrice || 0,
+      startPrice: product.startPrice || 0,
+      currentHighestBid: product.currentHighestBid || 0,
+      auctionEndTime: product.endAt || '',
+      status: mapApiStatusToKorean(product.status || 'LIVE'),
+      imageUrl: product.imageUrl || '',
+      bidCount: product.bidCount || 0,
+      bookmarkCount: product.bookmarkCount || 0,
+      remainingTimeSeconds: product.remainingTimeSeconds || 0,
+      isBookmarked: product.isBookmarked || false,
+      endAt: product.endAt || '',
     }))
   }
 
   // 변환된 상품 데이터
-  const transformedProducts = products ? transformProductData(products) : []
+  const transformedProducts = transformProductData(products)
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('ko-KR').format(price) + '원'
@@ -342,20 +315,11 @@ export function HomeClient() {
           <div className="relative">
             <Search className="absolute top-1/2 left-4 z-10 h-5 w-5 -translate-y-1/2 text-neutral-600" />
             <Input
-              placeholder="상품명을 검색하세요"
+              placeholder="상품명을 검색하세요 (2~20자)"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => setSearchQuery(e.target.value.slice(0, 20))}
+              maxLength={20}
               className="h-12 pl-12"
-              onKeyPress={(e) => {
-                if (e.key === 'Enter') {
-                  setNextCursor(null)
-                  if (currentPage > 1) {
-                    reset()
-                  } else {
-                    refresh()
-                  }
-                }
-              }}
             />
           </div>
         </div>
@@ -363,58 +327,58 @@ export function HomeClient() {
         {/* 카테고리 필터 및 정렬 옵션 */}
         <div className="mb-4 flex items-center justify-between gap-4">
           {/* 카테고리 탭 */}
-                  <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2">
             {CATEGORY_FILTER_OPTIONS.map((category) => (
-                      <button
+              <button
                 key={category.value}
-                        onClick={() => {
+                onClick={() => {
                   setSelectedCategory(category.value as CategoryValue | 'all')
                   setSelectedSubCategory('all') // 카테고리 변경 시 서브카테고리 초기화
-                        }}
+                }}
                 className={`rounded-full px-4 py-2 text-sm font-medium transition-all duration-200 ${
                   selectedCategory === category.value
                     ? 'bg-neutral-900 text-white shadow-md'
                     : 'border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-100'
-                        }`}
-                      >
+                }`}
+              >
                 {category.label}
-                      </button>
-                    ))}
-                </div>
+              </button>
+            ))}
+          </div>
 
           {/* 경매 상태 필터 및 정렬 */}
           <div className="flex items-center gap-3">
             {/* 경매 상태 필터 */}
-                  <select
+            <select
               value={statusFilter}
-                    onChange={(e) =>
+              onChange={(e) =>
                 setStatusFilter(
                   e.target.value as 'ALL' | 'SCHEDULED' | 'LIVE' | 'ENDED',
                 )
-                    }
+              }
               className="focus:border-primary-300 focus:ring-primary-200 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm"
-                  >
-                    {statusOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+            >
+              {statusOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
 
             {/* 정렬 옵션 */}
-                  <select
+            <select
               value={sortBy}
-                    onChange={(e) =>
+              onChange={(e) =>
                 setSortBy(e.target.value as 'newest' | 'closing' | 'popular')
-                    }
+              }
               className="focus:border-primary-300 focus:ring-primary-200 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm"
-                  >
+            >
               <option value="newest">최신 등록순</option>
               <option value="closing">마감 임박순</option>
               <option value="popular">인기순</option>
-                  </select>
-                </div>
-              </div>
+            </select>
+          </div>
+        </div>
 
         {/* 서브카테고리 탭 (카테고리 선택 시에만 표시) */}
         {selectedCategory !== 'all' && (
@@ -439,12 +403,12 @@ export function HomeClient() {
                   selectedSubCategory === subCategory.value
                     ? 'bg-neutral-900 text-white shadow-md'
                     : 'border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-100'
-              }`}
-            >
+                }`}
+              >
                 {subCategory.label}
-            </button>
-          ))}
-        </div>
+              </button>
+            ))}
+          </div>
         )}
       </div>
 
@@ -483,7 +447,7 @@ export function HomeClient() {
 
       {/* 상품 목록 */}
       <div className="space-y-4">
-        {isLoading ? (
+        {isLoading && products.length === 0 ? (
           <Card variant="outlined">
             <CardContent className="py-12 text-center">
               <div className="mb-4">
@@ -494,7 +458,7 @@ export function HomeClient() {
               </div>
             </CardContent>
           </Card>
-        ) : error || paginationError ? (
+        ) : error ? (
           <Card variant="outlined">
             <CardContent className="py-12 text-center">
               <div className="mb-4">
@@ -504,8 +468,11 @@ export function HomeClient() {
                 <h3 className="mb-2 text-lg font-semibold text-neutral-900">
                   오류가 발생했습니다
                 </h3>
-                <p className="text-neutral-600">{error || paginationError}</p>
-                <Button onClick={refresh} className="mt-4">
+                <p className="text-neutral-600">{error}</p>
+                <Button
+                  onClick={() => loadProducts(undefined, true)}
+                  className="mt-4"
+                >
                   다시 시도
                 </Button>
               </div>
@@ -534,7 +501,7 @@ export function HomeClient() {
             <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
               {transformedProducts.map((product, index) => (
                 <Card
-                  key={product.productId}
+                  key={`${product.auctionId}-${product.productId}`}
                   variant="elevated"
                   hover
                   className="animate-fade-in"
@@ -545,14 +512,9 @@ export function HomeClient() {
                       {/* 상품 이미지와 카테고리 */}
                       <div className="flex flex-col space-y-4 sm:flex-row sm:items-start sm:justify-between sm:space-y-0">
                         <div className="relative flex h-32 w-full items-center justify-center overflow-hidden rounded-2xl bg-neutral-100 shadow-lg sm:h-36 sm:w-36">
-                          {product.thumbnailUrl || product.images?.[0] ? (
+                          {product.imageUrl ? (
                             <img
-                              src={
-                                product.thumbnailUrl ||
-                                (typeof product.images?.[0] === 'string'
-                                  ? product.images[0]
-                                  : product.images?.[0]?.imageUrl)
-                              }
+                              src={product.imageUrl || ''}
                               alt={product.name || '상품'}
                               className="h-32 w-full rounded-2xl object-cover transition-transform duration-300 hover:scale-105 sm:h-36 sm:w-36"
                             />
@@ -586,14 +548,11 @@ export function HomeClient() {
                         </div>
                       </div>
 
-                      {/* 상품 제목과 설명 */}
+                      {/* 상품 제목 */}
                       <div>
-                        <h3 className="mb-2 line-clamp-1 text-xl font-bold text-neutral-900">
+                        <h3 className="mb-2 line-clamp-2 text-lg font-bold text-neutral-900">
                           {product.name}
                         </h3>
-                        <p className="line-clamp-2 text-sm text-neutral-600">
-                          {product.description}
-                        </p>
                       </div>
 
                       {/* 가격 정보 */}
@@ -618,40 +577,17 @@ export function HomeClient() {
                         </div>
                       </div>
 
-                      {/* 남은 시간, 판매자, 장소 */}
+                      {/* 경매 상태 및 입찰 정보 */}
                       <div className="space-y-3">
                         <div className="flex items-center space-x-2">
                           <Clock className="text-warning-500 h-4 w-4" />
                           <span className="text-sm font-medium text-neutral-700">
-                            {formatTimeLeft(
-                              product.auctionEndTime ||
-                                new Date(
-                                  Date.now() + 24 * 60 * 60 * 1000,
-                                ).toISOString(),
-                            )}
+                            {product.status}
                           </span>
                         </div>
-                        <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-                          <div className="flex items-center space-x-1">
-                            <User className="text-primary-500 h-4 w-4" />
-                            <span className="text-sm font-medium text-neutral-700">
-                              {product.seller?.nickname || '판매자'}
-                            </span>
-                          </div>
-                          <div className="flex items-center space-x-1">
-                            {product.location ? (
-                              <>
-                                <MapPin className="h-4 w-4 text-neutral-400" />
-                                <span className="text-sm text-neutral-600">
-                                  {product.location}
-                                </span>
-                              </>
-                            ) : (
-                              <span className="text-sm text-neutral-600">
-                                배송만 가능
-                              </span>
-                            )}
-                          </div>
+                        <div className="flex items-center space-x-1 text-sm text-neutral-600">
+                          <MapPin className="h-4 w-4 text-neutral-400" />
+                          <span>입찰 {product.bidCount || 0}회</span>
                         </div>
                       </div>
 
@@ -662,7 +598,7 @@ export function HomeClient() {
                           variant="gradient"
                           className="sm:size-lg flex-1"
                           onClick={() =>
-                            router.push(`/products/${product.productId}`)
+                            router.push(`/auctions/${product.auctionId}`)
                           }
                         >
                           상세보기
@@ -674,35 +610,42 @@ export function HomeClient() {
               ))}
             </div>
 
-            {/* 페이지네이션 UI */}
-            {totalPages > 0 && (
-              <div className="mt-8 space-y-4">
-                {/* 페이지 정보 및 페이지 크기 선택 */}
-                <div className="flex flex-col items-center justify-between space-y-4 sm:flex-row sm:space-y-0">
-                  <PaginationInfo
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    totalElements={totalElements}
-                    pageSize={pageSize}
-                  />
-                  <PageSizeSelector
-                    pageSize={pageSize}
-                    onPageSizeChange={setPageSize}
-                    options={[10, 20, 50]}
-                  />
-                </div>
-
-                {/* 페이지네이션 컨트롤 */}
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={goToPage}
-                  hasNext={hasNext}
-                  hasPrevious={hasPrevious}
-                  isLoading={isLoading}
-                />
+            {/* 페이지 크기 선택 */}
+            <div className="mt-8 flex items-center justify-between">
+              <div className="text-sm text-neutral-600">
+                {products.length}개 표시 중
               </div>
-            )}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-neutral-600">페이지당</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    const size = Number(e.target.value)
+                    setPageSize(size)
+                    setCurrentCursor(undefined)
+                    setHasMore(true)
+                    loadProducts(undefined, true)
+                  }}
+                  className="rounded-lg border border-neutral-200 bg-white px-3 py-1.5 text-sm"
+                >
+                  <option value={10}>10개</option>
+                  <option value={20}>20개</option>
+                  <option value={50}>50개</option>
+                </select>
+              </div>
+            </div>
+
+            {/* 무한 스크롤 감지 요소 */}
+            <div ref={observerTarget} className="mt-8 flex justify-center py-4">
+              {isLoading && hasMore && (
+                <div className="flex items-center space-x-2">
+                  <div className="border-primary-200 border-t-primary-600 h-6 w-6 animate-spin rounded-full border-2"></div>
+                  <span className="text-sm text-neutral-600">
+                    더 불러오는 중...
+                  </span>
+                </div>
+              )}
+            </div>
           </>
         )}
       </div>

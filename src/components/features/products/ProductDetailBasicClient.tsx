@@ -12,7 +12,7 @@ import {
   showInfoToast,
   showSuccessToast,
 } from '@/lib/utils/toast'
-import { Heart, HeartIcon, MessageSquare } from 'lucide-react'
+import { HeartIcon, MessageSquare } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
@@ -34,8 +34,6 @@ interface ProductDetailBasicProps {
 export function ProductDetailBasicClient({ product }: ProductDetailBasicProps) {
   const router = useRouter()
   const { isLoggedIn } = useAuth()
-  const [isBookmarked, setIsBookmarked] = useState(false)
-  const [isBookmarkLoading, setIsBookmarkLoading] = useState(false)
   const [qnaList, setQnaList] = useState<any[]>([])
   const [isQnaLoading, setIsQnaLoading] = useState(false)
   const [newQuestion, setNewQuestion] = useState('')
@@ -61,29 +59,8 @@ export function ProductDetailBasicClient({ product }: ProductDetailBasicProps) {
     loadQna()
   }, [product.productId])
 
-  const handleBookmarkToggle = async () => {
-    if (!isLoggedIn) {
-      showInfoToast('로그인이 필요합니다.')
-      router.push('/login')
-      return
-    }
-    setIsBookmarkLoading(true)
-    try {
-      if (isBookmarked) {
-        await productApi.deleteBookmark(product.productId)
-        setIsBookmarked(false)
-        showSuccessToast('찜 목록에서 제거되었습니다.')
-      } else {
-        await productApi.addBookmark(product.productId)
-        setIsBookmarked(true)
-        showSuccessToast('찜 목록에 추가되었습니다.')
-      }
-    } catch (error: any) {
-      const apiError = handleApiError(error)
-      showErrorToast(apiError.message)
-    } finally {
-      setIsBookmarkLoading(false)
-    }
+  const handleRegisterAuction = () => {
+    router.push(`/products/${product.productId}/register-auction`)
   }
 
   const handleAddQna = async () => {
@@ -179,21 +156,12 @@ export function ProductDetailBasicClient({ product }: ProductDetailBasicProps) {
                   </Badge>
                 )}
               </div>
-              <div className="flex items-center space-x-2">
-                {isLoggedIn && (
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    onClick={handleBookmarkToggle}
-                    disabled={isBookmarkLoading}
-                    className="hover:bg-red-50"
-                  >
-                    <Heart
-                      className={`h-5 w-5 ${isBookmarked ? 'fill-red-500 text-red-500' : 'text-neutral-400'}`}
-                    />
-                  </Button>
-                )}
-              </div>
+              <Button
+                onClick={handleRegisterAuction}
+                className="bg-primary-600 hover:bg-primary-700"
+              >
+                경매등록하기
+              </Button>
             </div>
 
             <h1 className="text-3xl leading-tight font-bold text-neutral-900">

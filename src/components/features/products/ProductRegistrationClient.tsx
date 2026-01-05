@@ -167,7 +167,6 @@ export function ProductRegistrationClient() {
       newErrors.images = '상품 이미지를 1개 이상 선택해주세요'
     }
 
-    console.log('🔵 유효성 검사 결과:', newErrors)
     setErrors(newErrors)
 
     // 에러가 있으면 사용자에게 알림
@@ -198,27 +197,27 @@ export function ProductRegistrationClient() {
           )
         }
 
-        // 업로드된 파일명 배열
-        const imageFileNames = uploadResponse.data
+        // 업로드된 S3 경로 배열 (예: image/product/xxx.png)
+        const imagePaths = uploadResponse.data
 
         console.log('🚀 API 전송 데이터:', {
           name: formData.name,
           description: formData.description,
           category: category,
           subCategory: subCategory,
-          imagesFiles: imageFileNames,
+          imagesFiles: imagePaths,
         })
 
         // 2. 상품 등록 API 호출
         // 요청 형식: { name, description, category, subCategory, imagesFiles: string[] }
-        // imagesFiles는 파일명만 전달 (S3에 존재하는 파일명)
+        // imagesFiles는 S3 경로 전달 (예: image/product/43615ab13-e15e-4b24-8b8c-ecb0045c05d1.png)
         const response = await productApi.createProduct(
           {
             name: formData.name,
             description: formData.description,
             category: category,
             subCategory: subCategory,
-            imagesFiles: imageFileNames, // 파일명만 전달
+            imagesFiles: imagePaths, // S3 경로 전달
           },
           [], // File 객체 배열은 더 이상 사용하지 않음
         )

@@ -36,6 +36,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/help/{guideId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["updateGuide"];
+        post?: never;
+        delete: operations["deleteGuide"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/webhooks/toss": {
         parameters: {
             query?: never;
@@ -347,7 +363,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["getAuctions"];
         put?: never;
         post: operations["addProduct_1"];
         delete?: never;
@@ -379,9 +395,25 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["getBidHistory"];
         put?: never;
         post: operations["placeBid"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/help": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getGuide"];
+        put?: never;
+        post: operations["createGuide"];
         delete?: never;
         options?: never;
         head?: never;
@@ -539,7 +571,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["getBidHistory"];
+        get: operations["getAuctionDetail"];
         put?: never;
         post?: never;
         delete?: never;
@@ -548,14 +580,62 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/help": {
+    "/api/v1/auctions/{auctionId}/highest-bid": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["getGuide"];
+        get: operations["getHighestBid"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auctions/{auctionId}/bid-stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getBidStream"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auctions/{auctionId}/bid-list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getBidList"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auctions/home": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getHomeAuctions"];
         put?: never;
         post?: never;
         delete?: never;
@@ -641,6 +721,21 @@ export interface components {
             status?: number;
             message?: string;
             data?: components["schemas"]["NotificationResponse"];
+        };
+        GuideCreateRequest: {
+            content: string;
+        };
+        GuideDto: {
+            /** Format: int64 */
+            id?: number;
+            content?: string;
+        };
+        RsDataGuideDto: {
+            code?: string;
+            /** Format: int32 */
+            status?: number;
+            message?: string;
+            data?: components["schemas"]["GuideDto"];
         };
         Data: {
             paymentKey?: string;
@@ -958,6 +1053,10 @@ export interface components {
             /** Format: date-time */
             updatedAt?: string;
         };
+        SseEmitter: {
+            /** Format: int64 */
+            timeout?: number;
+        };
         CardResponse: {
             /** Format: int64 */
             id?: number;
@@ -1069,10 +1168,6 @@ export interface components {
             message?: string;
             data?: components["schemas"]["NotificationResponse"][];
         };
-        SseEmitter: {
-            /** Format: int64 */
-            timeout?: number;
-        };
         MyProductPageResponse: {
             /** Format: int32 */
             currentPage?: number;
@@ -1154,6 +1249,77 @@ export interface components {
             message?: string;
             data?: components["schemas"]["GetCurrentUserInfoResponse"];
         };
+        AuctionCursorResponse: {
+            cursor?: string;
+            items?: components["schemas"]["AuctionItemResponse"][];
+            hasNext?: boolean;
+        };
+        AuctionItemResponse: {
+            /** Format: int64 */
+            auctionId?: number;
+            /** Format: int64 */
+            productId?: number;
+            name?: string;
+            imageUrl?: string;
+            status?: string;
+            category?: string;
+            subCategory?: string;
+            /** Format: int32 */
+            startPrice?: number;
+            /** Format: int32 */
+            currentHighestBid?: number;
+            /** Format: int32 */
+            bidCount?: number;
+            /** Format: int32 */
+            bookmarkCount?: number;
+            /** Format: date-time */
+            endAt?: string;
+            /** Format: int64 */
+            remainingTimeSeconds?: number;
+            isBookmarked?: boolean;
+        };
+        RsDataAuctionCursorResponse: {
+            code?: string;
+            /** Format: int32 */
+            status?: number;
+            message?: string;
+            data?: components["schemas"]["AuctionCursorResponse"];
+        };
+        AuctionDetailResponse: {
+            /** Format: int64 */
+            auctionId?: number;
+            /** Format: int64 */
+            productId?: number;
+            /** Format: int64 */
+            sellerId?: number;
+            sellerNickname?: string;
+            name?: string;
+            description?: string;
+            category?: string;
+            subCategory?: string;
+            status?: string;
+            /** Format: int32 */
+            startPrice?: number;
+            /** Format: int32 */
+            buyNowPrice?: number;
+            /** Format: int32 */
+            minBidStep?: number;
+            /** Format: date-time */
+            startAt?: string;
+            /** Format: date-time */
+            endAt?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: int32 */
+            currentHighestBid?: number;
+            /** Format: int32 */
+            totalBidCount?: number;
+            /** Format: int64 */
+            remainingTimeSeconds?: number;
+            imageUrls?: string[];
+            isBookmarked?: boolean;
+            bidHistory?: components["schemas"]["BidHistoryResponse"][];
+        };
         BidHistoryResponse: {
             /** Format: int64 */
             bidId?: number;
@@ -1163,12 +1329,30 @@ export interface components {
             /** Format: date-time */
             bidTime?: string;
         };
+        RsDataAuctionDetailResponse: {
+            code?: string;
+            /** Format: int32 */
+            status?: number;
+            message?: string;
+            data?: components["schemas"]["AuctionDetailResponse"];
+        };
+        AuctionBidUpdate: {
+            /** Format: int32 */
+            currentHighestBid?: number;
+            bidderNickname?: string;
+        };
+        RsDataAuctionBidUpdate: {
+            code?: string;
+            /** Format: int32 */
+            status?: number;
+            message?: string;
+            data?: components["schemas"]["AuctionBidUpdate"];
+        };
         PageBidHistoryResponse: {
             /** Format: int64 */
             totalElements?: number;
             /** Format: int32 */
             totalPages?: number;
-            pageable?: components["schemas"]["PageableObject"];
             /** Format: int32 */
             size?: number;
             content?: components["schemas"]["BidHistoryResponse"][];
@@ -1177,19 +1361,20 @@ export interface components {
             sort?: components["schemas"]["SortObject"];
             /** Format: int32 */
             numberOfElements?: number;
+            pageable?: components["schemas"]["PageableObject"];
             first?: boolean;
             last?: boolean;
             empty?: boolean;
         };
         PageableObject: {
+            /** Format: int64 */
+            offset?: number;
+            sort?: components["schemas"]["SortObject"];
             paged?: boolean;
             /** Format: int32 */
             pageNumber?: number;
             /** Format: int32 */
             pageSize?: number;
-            /** Format: int64 */
-            offset?: number;
-            sort?: components["schemas"]["SortObject"];
             unpaged?: boolean;
         };
         RsDataPageBidHistoryResponse: {
@@ -1200,14 +1385,27 @@ export interface components {
             data?: components["schemas"]["PageBidHistoryResponse"];
         };
         SortObject: {
-            sorted?: boolean;
             empty?: boolean;
+            sorted?: boolean;
             unsorted?: boolean;
         };
-        GuideDto: {
-            /** Format: int64 */
-            id?: number;
-            content?: string;
+        RsDataListBidHistoryResponse: {
+            code?: string;
+            /** Format: int32 */
+            status?: number;
+            message?: string;
+            data?: components["schemas"]["BidHistoryResponse"][];
+        };
+        AuctionHomeResponse: {
+            endingSoon?: components["schemas"]["AuctionItemResponse"][];
+            popular?: components["schemas"]["AuctionItemResponse"][];
+        };
+        RsDataAuctionHomeResponse: {
+            code?: string;
+            /** Format: int32 */
+            status?: number;
+            message?: string;
+            data?: components["schemas"]["AuctionHomeResponse"];
         };
         ProductHelpResponse: {
             guides?: components["schemas"]["GuideDto"][];
@@ -1348,6 +1546,54 @@ export interface operations {
             header?: never;
             path: {
                 notificationId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataVoid"];
+                };
+            };
+        };
+    };
+    updateGuide: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guideId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GuideCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataGuideDto"];
+                };
+            };
+        };
+    };
+    deleteGuide: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                guideId: number;
             };
             cookie?: never;
         };
@@ -1884,6 +2130,34 @@ export interface operations {
             };
         };
     };
+    getAuctions: {
+        parameters: {
+            query?: {
+                status?: "SCHEDULED" | "LIVE" | "ENDED" | "CANCELLED";
+                category?: "STARGOODS" | "FIGURE" | "CDLP" | "GAME";
+                subCategory?: "ACC" | "STATIONARY" | "DAILY" | "ETC" | "ELECTRONICS" | "GAME";
+                keyword?: string;
+                sortType?: "NEWEST" | "CLOSING" | "POPULAR";
+                cursor?: string;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataAuctionCursorResponse"];
+                };
+            };
+        };
+    };
     addProduct_1: {
         parameters: {
             query?: never;
@@ -1934,6 +2208,30 @@ export interface operations {
             };
         };
     };
+    getBidHistory: {
+        parameters: {
+            query: {
+                pageable: components["schemas"]["Pageable"];
+            };
+            header?: never;
+            path: {
+                auctionId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataPageBidHistoryResponse"];
+                };
+            };
+        };
+    };
     placeBid: {
         parameters: {
             query?: never;
@@ -1956,6 +2254,50 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["RsDataBidResponseDto"];
+                };
+            };
+        };
+    };
+    getGuide: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataProductHelpResponse"];
+                };
+            };
+        };
+    };
+    createGuide: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GuideCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataGuideDto"];
                 };
             };
         };
@@ -2000,7 +2342,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "text/event-stream": components["schemas"]["SseEmitter"];
+                };
             };
         };
     };
@@ -2155,10 +2499,76 @@ export interface operations {
             };
         };
     };
-    getBidHistory: {
+    getAuctionDetail: {
         parameters: {
-            query: {
-                page: components["schemas"]["Pageable"];
+            query?: never;
+            header?: never;
+            path: {
+                auctionId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataAuctionDetailResponse"];
+                };
+            };
+        };
+    };
+    getHighestBid: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                auctionId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataAuctionBidUpdate"];
+                };
+            };
+        };
+    };
+    getBidStream: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                auctionId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": components["schemas"]["SseEmitter"];
+                };
+            };
+        };
+    };
+    getBidList: {
+        parameters: {
+            query?: {
+                size?: number;
             };
             header?: never;
             path: {
@@ -2174,12 +2584,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RsDataPageBidHistoryResponse"];
+                    "*/*": components["schemas"]["RsDataListBidHistoryResponse"];
                 };
             };
         };
     };
-    getGuide: {
+    getHomeAuctions: {
         parameters: {
             query?: never;
             header?: never;
@@ -2194,7 +2604,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RsDataProductHelpResponse"];
+                    "*/*": components["schemas"]["RsDataAuctionHomeResponse"];
                 };
             };
         };

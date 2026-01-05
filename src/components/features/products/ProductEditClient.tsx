@@ -241,6 +241,31 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
         return
       }
 
+      const normalizeProductKey = (value: string): string => {
+        // URL이면 pathname, 아니면 그대로 사용 후 prefix 정규화
+        let key = value
+        if (value.startsWith('http')) {
+          try {
+            key = new URL(value).pathname
+          } catch (err) {
+            // URL 파싱 실패 시 원본 값 사용
+            key = value
+          }
+        }
+
+        key = key.replace(/^\/+/, '')
+        key = key.split('?')[0]
+
+        const filename = key.split('/').pop() || ''
+        if (!filename) return ''
+
+        if (key.includes('image/product/')) {
+          return key.replace(/^\/+/, '')
+        }
+
+        return `image/product/${filename}`
+      }
+
       let imageFileNames: string[] = []
 
       // 새로 선택한 이미지가 있으면 업로드
@@ -259,21 +284,14 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
           )
         }
 
-        // 업로드된 파일명 배열
-        imageFileNames = uploadResponse.data
+        // 업로드된 파일명 배열 (이미 image/product/{filename.ext}로 반환되지만 안전하게 normalize)
+        imageFileNames = uploadResponse.data.map((key) => normalizeProductKey(key))
         setIsUploadingImages(false)
       }
 
       // 기존 이미지 URL에서 파일명만 추출 (전체 URL이 아닌 파일명만 있는 경우)
       const existingFileNames = existingImageUrls
-        .map((url) => {
-          // 전체 URL인 경우 파일명만 추출
-          if (url.includes('/')) {
-            const parts = url.split('/')
-            return parts[parts.length - 1].split('?')[0] // 쿼리 파라미터 제거
-          }
-          return url // 이미 파일명인 경우
-        })
+        .map((url) => normalizeProductKey(url))
         .filter((name) => name) // 빈 문자열 제거
 
       // 기존 이미지 파일명과 새로 업로드한 파일명 합치기

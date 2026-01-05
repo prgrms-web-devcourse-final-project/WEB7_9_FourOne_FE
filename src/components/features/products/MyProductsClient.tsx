@@ -622,20 +622,6 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
                           경매가 진행 중입니다
                         </div>
                       )}
-                      {(product as any).status === 'ENDED' && (
-                        <Button
-                          size="sm"
-                          onClick={() =>
-                            router.push(
-                              `/register-product?relist=${product.productId}`,
-                            )
-                          }
-                          className="bg-primary-600 hover:bg-primary-700 w-full"
-                        >
-                          <Zap className="mr-2 h-4 w-4" />
-                          재경매 등록
-                        </Button>
-                      )}
                     </div>
                   </div>
                 </CardContent>

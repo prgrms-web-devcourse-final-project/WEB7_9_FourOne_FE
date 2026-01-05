@@ -82,16 +82,23 @@ export function MyInfoEditClient({ initialProfile }: MyInfoEditClientProps) {
       const response = await authApi.uploadProfileImage(file)
       if (response.success && response.data) {
         // 응답에서 파일명 추출 (파일명만 반환됨)
-        const fileName =
+        const rawKey =
           response.data?.profileImageUrl ||
           response.data?.url ||
           response.data?.imageUrl ||
           response.data?.fileName ||
           response.data
 
-        if (fileName) {
-          // 파일명만 저장 (프로필 업데이트 시 파일명만 전달)
-          setFormData((prev) => ({ ...prev, profileImageUrl: fileName }))
+        if (rawKey) {
+          // 백엔드 요구 prefix: image/user/profile/{filename}
+          const normalizedKey = rawKey.includes('image/user/profile/')
+            ? rawKey.replace(/^\//, '')
+            : `image/user/profile/${rawKey}`.replace(
+                /^image\/user\/profile\/\//,
+                'image/user/profile/',
+              )
+
+          setFormData((prev) => ({ ...prev, profileImageUrl: normalizedKey }))
 
           // 미리보기를 위해 선택한 파일의 로컬 URL 사용
           const localImageUrl = URL.createObjectURL(file)

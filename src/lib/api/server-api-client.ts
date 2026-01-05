@@ -57,7 +57,7 @@ class ServerApiClient {
     })
 
     const data = await response.json()
-    
+
     // HTTP 에러도 정상 처리 (백엔드 에러 메시지 포함)
     if (!response.ok) {
       return {
@@ -74,6 +74,11 @@ class ServerApiClient {
   // 상품 상세 조회 (GET /api/v1/products/{productId}) - Swagger 스펙
   async getProduct(productId: number) {
     return this.makeRequest(`/products/${productId}`)
+  }
+
+  // 경매 상세 조회 (GET /api/v1/auctions/{auctionId})
+  async getAuctionDetail(auctionId: number) {
+    return this.makeRequest(`/auctions/${auctionId}`)
   }
 
   // ❌ Swagger에 없음 - API 호출 비활성화 (UI는 유지)
@@ -196,6 +201,10 @@ export const serverApi = {
   getProduct: (productId: number) => serverApiClient.getProduct(productId),
   getProducts: (params?: any) => serverApiClient.getProducts(params),
   getMyProducts: () => serverApiClient.getMyProducts(),
+
+  // 경매 관련
+  getAuctionDetail: (auctionId: number) =>
+    serverApiClient.getAuctionDetail(auctionId),
 
   // 사용자 관련
   getMyInfo: () => serverApiClient.getMyInfo(),
