@@ -1,8 +1,26 @@
 'use client'
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { useAuth } from '@/contexts/AuthContext'
 import { bidApi, productApi, auctionApi } from '@/lib/api'
 import { handleApiError } from '@/lib/api/common'
@@ -68,6 +86,12 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
   const [bidHistoryTotalElements, setBidHistoryTotalElements] = useState(0)
   const [bidHistoryIsLast, setBidHistoryIsLast] = useState(false)
   const [bidHistoryIsFirst, setBidHistoryIsFirst] = useState(true)
+  const [remainingSeconds, setRemainingSeconds] = useState(
+    auctionData.remainingTimeSeconds || 0,
+  )
+  const [isBuyNowLoading, setIsBuyNowLoading] = useState(false)
+  const [showBuyNowDialog, setShowBuyNowDialog] = useState(false)
+  const [auctionEnded, setAuctionEnded] = useState(false)
 
   const bidStreamRef = useRef<EventSource | null>(null)
 
@@ -307,6 +331,10 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
       router.push('/login')
       return
     }
+    if (!isLive) {
+      showInfoToast('경매 시작 후에 입찰할 수 있습니다.')
+      return
+    }
     if (!bidAmount.trim()) {
       showInfoToast('입찰 금액을 입력해주세요.')
       return
@@ -353,15 +381,125 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
     }
   }
 
+  const handleBuyNow = async () => {
+    if (!isLoggedIn) {
+      showInfoToast('로그인이 필요합니다.')
+      router.push('/login')
+      return
+    }
+    if (!isLive) {
+      showInfoToast('경매 시작 후에 이용 가능합니다.')
+      return
+    }
+    if (!auctionData.auctionId || !auctionData.buyNowPrice) {
+      showErrorToast('상품 정보를 찾을 수 없습니다.')
+      return
+    }
+
+    setShowBuyNowDialog(true)
+  }
+
+  const confirmBuyNow = async () => {
+    setShowBuyNowDialog(false)
+    if (!auctionData.auctionId || !auctionData.buyNowPrice) return
+
+    setIsBuyNowLoading(true)
+    try {
+      const response = await auctionApi.buyNow(auctionData.auctionId, {
+        bidAmount: auctionData.buyNowPrice,
+      })
+
+      if (response.success) {
+        showSuccessToast('즉시 구매가 완료되었습니다. 낙찰 확정되었습니다!')
+
+        // SSE 연결 종료
+        if (bidStreamRef.current) {
+          bidStreamRef.current.close()
+          bidStreamRef.current = null
+        }
+
+        // 경매 종료 상태 설정
+        setAuctionEnded(true)
+
+        // 상세 정보 재조회
+        router.refresh()
+      } else {
+        const message = response.message || '즉시 구매에 실패했습니다.'
+        showErrorToast(message)
+        // 실패 시 상세 재조회로 최신 상태 확인
+        if (message.includes('종료') || message.includes('LIVE')) {
+          router.refresh()
+        }
+      }
+    } catch (error: any) {
+      const apiError = handleApiError(error)
+      showErrorToast(apiError.message)
+      // 에러 발생 시에도 상태 동기화
+      if (
+        apiError.message.includes('401') ||
+        apiError.message.includes('403')
+      ) {
+        showInfoToast('다시 로그인해주세요.')
+        router.push('/login')
+      } else {
+        router.refresh()
+      }
+    } finally {
+      setIsBuyNowLoading(false)
+    }
+  }
+
   const formatPrice = (price: number | undefined) => {
     if (price === undefined) return '-'
     return new Intl.NumberFormat('ko-KR').format(price) + '원'
   }
 
-  const formatTime = (dateString: string | undefined) => {
-    if (!dateString) return '-'
-    const date = new Date(dateString)
-    return date.toLocaleString('ko-KR')
+  // KST-normalized date helpers (treat no-offset timestamps as KST)
+  const toKstDate = (dateString: string | undefined) => {
+    if (!dateString) return null
+    const base = dateString.replace(' ', 'T')
+    const hasOffset = /([+-]\d{2}:?\d{2}|Z)$/.test(base)
+    const normalized = hasOffset ? base : `${base}Z`
+    const date = new Date(normalized)
+    return Number.isNaN(date.getTime()) ? null : date
+  }
+
+  const formatDateTime = (dateString: string | undefined) => {
+    const date = toKstDate(dateString)
+    if (!date) return '-'
+    return new Intl.DateTimeFormat('ko-KR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      timeZone: 'Asia/Seoul',
+    }).format(date)
+  }
+
+  const formatDateOnly = (dateString: string | undefined) => {
+    const date = toKstDate(dateString)
+    if (!date) return ''
+    return new Intl.DateTimeFormat('ko-KR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      timeZone: 'Asia/Seoul',
+    }).format(date)
+  }
+
+  const formatBidTime = (dateString: string | undefined) => {
+    const date = toKstDate(dateString)
+    if (!date) return ''
+    return new Intl.DateTimeFormat('ko-KR', {
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      timeZone: 'Asia/Seoul',
+    }).format(date)
   }
 
   const formatRemainingTime = (remainingSeconds: number | undefined) => {
@@ -373,12 +511,43 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
     return `${hours}시간 ${minutes}분 ${seconds}초`
   }
 
+  const status = auctionData.status
+  const isLive = status === 'LIVE' || status === '진행 중'
+  const isScheduled = status === 'SCHEDULED' || status === '예정'
+  const isEnded = status === 'ENDED' || status === '종료'
+
   const requiredMinBidAmount = currentHighestBid + (auctionData.minBidStep ?? 0)
 
   const isHighestBid = (bid: BidHistoryResponse) => {
     if (bid.bidAmount === undefined) return false
     return bid.bidAmount === currentHighestBid
   }
+
+  // live ticking for remaining time
+  useEffect(() => {
+    // remainingTimeSeconds는 서버에서 end 기준; 시작 전이면 start까지 남은 시간으로 대체
+    const now = Date.now()
+    const startMs = toKstDate(auctionData.startAt)?.getTime() || 0
+    const endMs = toKstDate(auctionData.endAt)?.getTime() || 0
+    if (isScheduled && startMs > now) {
+      setRemainingSeconds(Math.max(0, Math.floor((startMs - now) / 1000)))
+    } else {
+      setRemainingSeconds(auctionData.remainingTimeSeconds || 0)
+    }
+  }, [
+    auctionData.remainingTimeSeconds,
+    auctionData.startAt,
+    auctionData.endAt,
+    isScheduled,
+  ])
+
+  useEffect(() => {
+    if (remainingSeconds <= 0) return
+    const timer = setInterval(() => {
+      setRemainingSeconds((prev) => Math.max(0, prev - 1))
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [remainingSeconds])
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
@@ -506,12 +675,7 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
                 )}
                 {lastHighestBidSync && (
                   <p className="text-[11px] text-neutral-400">
-                    {new Date(lastHighestBidSync).toLocaleTimeString('ko-KR', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      second: '2-digit',
-                    })}{' '}
-                    기준
+                    {formatBidTime(lastHighestBidSync)} 기준
                   </p>
                 )}
               </div>
@@ -535,12 +699,22 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
           {/* 경매 상태 */}
           <Card className="bg-neutral-50">
             <CardContent className="space-y-3 p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-neutral-600">남은 시간</span>
-                <span className="text-sm font-semibold text-neutral-700">
-                  {formatRemainingTime(auctionData.remainingTimeSeconds)}
-                </span>
-              </div>
+              {isLive && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-neutral-600">종료까지</span>
+                  <span className="text-sm font-semibold text-neutral-700">
+                    {formatRemainingTime(remainingSeconds)}
+                  </span>
+                </div>
+              )}
+              {isScheduled && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-neutral-600">시작까지</span>
+                  <span className="text-sm font-semibold text-neutral-700">
+                    {formatRemainingTime(remainingSeconds)}
+                  </span>
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 <span className="text-sm text-neutral-600">입찰 건수</span>
                 <span className="text-sm font-semibold text-neutral-700">
@@ -572,7 +746,7 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
                   경매 시작
                 </p>
                 <p className="text-sm text-neutral-700">
-                  {formatTime(auctionData.startAt)}
+                  {formatDateTime(auctionData.startAt)}
                 </p>
               </div>
               <div>
@@ -580,7 +754,7 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
                   경매 종료
                 </p>
                 <p className="text-sm text-neutral-700">
-                  {formatTime(auctionData.endAt)}
+                  {formatDateTime(auctionData.endAt)}
                 </p>
               </div>
             </CardContent>
@@ -596,14 +770,31 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
                 <p className="text-xl font-bold text-orange-600">
                   {formatPrice(auctionData.buyNowPrice)}
                 </p>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="mt-3 w-full border-orange-300 text-orange-600 hover:bg-orange-100"
-                  disabled={auctionData.status !== '진행 중'}
-                >
-                  즉시 구매
-                </Button>
+                {isLive && !auctionEnded && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="mt-3 w-full border-orange-300 text-orange-600 hover:bg-orange-100"
+                    onClick={handleBuyNow}
+                    disabled={isBuyNowLoading || !isLoggedIn}
+                  >
+                    {isBuyNowLoading ? '처리 중...' : '즉시 구매'}
+                  </Button>
+                )}
+                {auctionEnded && (
+                  <div className="mt-3 rounded-md bg-green-100 px-3 py-2 text-center">
+                    <p className="text-sm font-semibold text-green-800">
+                      구매 완료 / 낙찰
+                    </p>
+                  </div>
+                )}
+                {!isLive && !auctionEnded && (
+                  <p className="mt-3 text-xs font-medium text-neutral-500">
+                    {isScheduled
+                      ? '경매 시작 후에 이용 가능합니다.'
+                      : '경매가 종료되었습니다.'}
+                  </p>
+                )}
               </CardContent>
             </Card>
           )}
@@ -616,34 +807,58 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
       <Card className="mt-8">
         <CardContent className="p-6">
           <h2 className="mb-4 text-xl font-bold">입찰하기</h2>
-          <div className="space-y-4">
-            <div>
-              <label className="mb-2 block text-sm font-medium text-neutral-700">
-                입찰 금액
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="number"
-                  value={bidAmount}
-                  onChange={(e) => setBidAmount(e.target.value)}
-                  placeholder={`${requiredMinBidAmount.toLocaleString()}원 이상`}
-                  className="focus:ring-primary-500 flex-1 rounded-lg border border-neutral-300 px-3 py-2 focus:ring-2 focus:outline-none"
-                  disabled={!isLoggedIn || isBidLoading}
-                />
-                <Button
-                  onClick={handlePlaceBid}
-                  disabled={
-                    !isLoggedIn ||
-                    isBidLoading ||
-                    auctionData.status !== '진행 중'
-                  }
-                  size="sm"
-                >
-                  {isBidLoading ? '입찰 중...' : '입찰'}
-                </Button>
+          {isLive ? (
+            <div className="space-y-4">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-neutral-700">
+                  입찰 금액
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    value={bidAmount}
+                    onChange={(e) => setBidAmount(e.target.value)}
+                    placeholder={`${requiredMinBidAmount.toLocaleString()}원 이상`}
+                    className="focus:ring-primary-500 flex-1 rounded-lg border border-neutral-300 px-3 py-2 focus:ring-2 focus:outline-none"
+                    disabled={
+                      !isLoggedIn || isBidLoading || !isLive || auctionEnded
+                    }
+                  />
+                  <Button
+                    onClick={handlePlaceBid}
+                    disabled={
+                      !isLoggedIn || isBidLoading || !isLive || auctionEnded
+                    }
+                    size="sm"
+                  >
+                    {isBidLoading
+                      ? '입찰 중...'
+                      : auctionEnded
+                        ? '종료'
+                        : '입찰'}
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
+          ) : isScheduled ? (
+            <div className="border-primary-200 bg-primary-50 rounded-lg border p-4 text-sm text-neutral-800">
+              <p className="text-primary-700 font-semibold">
+                경매 시작 전입니다.
+              </p>
+              <p className="mt-1">
+                시작 예정: {formatDateTime(auctionData.startAt)}
+              </p>
+              <p className="mt-1 text-neutral-600">
+                시작 이후 입찰이 가능합니다.
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-700">
+              <p className="font-semibold text-neutral-800">
+                경매가 종료되었습니다.
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -745,12 +960,7 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
                           {bid.bidder || '입찰자'}
                         </p>
                         <p className="text-xs text-neutral-500">
-                          {new Date(bid.bidTime || '').toLocaleString('ko-KR', {
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
+                          {formatBidTime(bid.bidTime)}
                         </p>
                       </div>
                     </div>
@@ -867,11 +1077,7 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
                             Q
                           </span>
                           <span className="text-xs text-neutral-500">
-                            {question?.questionedAt
-                              ? new Date(
-                                  question.questionedAt,
-                                ).toLocaleDateString('ko-KR')
-                              : ''}
+                            {formatDateOnly(question?.questionedAt)}
                           </span>
                         </div>
                         <p className="text-sm font-medium text-neutral-900">
@@ -896,11 +1102,7 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
                                 {answer.answer}
                               </p>
                               <p className="mt-1 text-xs text-neutral-500">
-                                {answer.answeredAt
-                                  ? new Date(
-                                      answer.answeredAt,
-                                    ).toLocaleDateString('ko-KR')
-                                  : ''}
+                                {formatDateOnly(answer.answeredAt)}
                               </p>
                             </div>
                           ))}
@@ -920,6 +1122,45 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
           </CardContent>
         </Card>
       )}
+
+      {/* 즉시 구매 확인 다이얼로그 */}
+      <Dialog open={showBuyNowDialog} onOpenChange={setShowBuyNowDialog}>
+        <DialogContent 
+          className="bg-white sm:max-w-md"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
+          <DialogHeader>
+            <DialogTitle className="text-neutral-900">
+              즉시 구매 확인
+            </DialogTitle>
+            <DialogDescription className="space-y-2">
+              <span className="block text-base font-semibold text-orange-600">
+                {formatPrice(auctionData.buyNowPrice)}
+              </span>
+              <span className="mt-2 block text-sm text-neutral-700">
+                즉시 구매 시 경매가 종료되고 낙찰이 확정됩니다.
+                <br />
+                구매하시겠습니까?
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-row justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowBuyNowDialog(false)}
+              className="bg-white hover:bg-neutral-100"
+            >
+              취소
+            </Button>
+            <Button
+              onClick={confirmBuyNow}
+              className="bg-orange-600 text-white hover:bg-orange-700"
+            >
+              구매 확정
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

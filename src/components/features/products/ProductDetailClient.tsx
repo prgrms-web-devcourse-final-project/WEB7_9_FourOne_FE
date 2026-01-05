@@ -3,6 +3,14 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/contexts/AuthContext'
 import { useWebSocketAuctionTimer } from '@/hooks/useWebSocketAuctionTimer'
@@ -70,6 +78,8 @@ export function ProductDetailClient({
   const [newQuestion, setNewQuestion] = useState('')
   const [newAnswers, setNewAnswers] = useState<Record<number, string>>({})
   const [expandedQnaId, setExpandedQnaId] = useState<number | null>(null)
+  const [showBuyNowDialog, setShowBuyNowDialog] = useState(false)
+  const [auctionEnded, setAuctionEnded] = useState(false)
 
   const safeProductId = product.productId
   const safeAuctionId = product.auctionId
@@ -108,20 +118,39 @@ export function ProductDetailClient({
     return new Intl.NumberFormat('ko-KR').format(price) + '원'
   }
 
+  // Normalize API date strings and treat no-offset values as KST explicitly
+  const toKstDate = (dateString: string) => {
+    if (!dateString) return null
+    const base = dateString.replace(' ', 'T')
+    const hasOffset = /([+-]\d{2}:?\d{2}|Z)$/.test(base)
+    const normalized = hasOffset ? base : `${base}Z`
+    const date = new Date(normalized)
+    return Number.isNaN(date.getTime()) ? null : date
+  }
+
   const formatDateTime = (dateString: string) => {
-    if (!dateString) return '시간 미정'
-    try {
-      const date = new Date(dateString)
-      return date.toLocaleString('ko-KR', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-      })
-    } catch {
-      return '시간 미정'
-    }
+    const date = toKstDate(dateString)
+    if (!date) return '시간 미정'
+    return new Intl.DateTimeFormat('ko-KR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      timeZone: 'Asia/Seoul',
+    }).format(date)
+  }
+
+  const formatDateOnly = (dateString: string) => {
+    const date = toKstDate(dateString)
+    if (!date) return ''
+    return new Intl.DateTimeFormat('ko-KR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      timeZone: 'Asia/Seoul',
+    }).format(date)
   }
 
   const formatRemainingTime = (seconds: number) => {
@@ -317,7 +346,7 @@ export function ProductDetailClient({
     if (timerData && timerData.timeLeft) {
       // timeLeft를 파싱하여 초 단위로 변환 (예: "1시간 30분" → 5400초)
       // 간단하게 endAt과 현재 시간 차이로 계산
-      const endTime = new Date(productData.endAt).getTime()
+      const endTime = toKstDate(productData.endAt)?.getTime() || 0
       const now = Date.now()
       const remainingSeconds = Math.max(0, Math.floor((endTime - now) / 1000))
 
@@ -337,6 +366,11 @@ export function ProductDetailClient({
   const handleBid = async () => {
     if (!isLoggedIn) {
       router.push('/login')
+      return
+    }
+
+    if (productData.status !== 'LIVE') {
+      showInfoToast('경매가 아직 시작되지 않았습니다.')
       return
     }
 
@@ -395,39 +429,70 @@ export function ProductDetailClient({
       return
     }
 
-    if (
-      !confirm(
-        `즉시 구매가 ${formatPrice(productData.buyNowPrice)}원으로 구매하시겠습니까?`,
-      )
-    ) {
+    if (productData.status !== 'LIVE') {
+      showInfoToast('경매 시작 후에 이용 가능합니다.')
       return
     }
 
+    setShowBuyNowDialog(true)
+  }
+
+  const confirmBuyNow = async () => {
+    setShowBuyNowDialog(false)
     setIsLoading(true)
     setApiError('')
 
     try {
-      // TODO: 결제 수단 ID는 실제로는 사용자가 선택한 결제 수단을 사용해야 함
       const response: any = await auctionApi.buyNow(safeAuctionId, {
-        amount: productData.buyNowPrice,
-        methodId: 1, // 임시로 1 사용
+        bidAmount: productData.buyNowPrice,
       })
 
       if (response.success) {
-        showSuccessToast('즉시 구매가 완료되었습니다.')
+        showSuccessToast('즉시 구매가 완료되었습니다. 낙찰 확정되었습니다!')
         setProductData((prev) => ({
           ...prev,
           status: 'ENDED' as const,
         }))
+        setAuctionEnded(true)
+        // 상세 재조회
+        setIsRefreshing(true)
+        setTimeout(() => {
+          router.refresh()
+          setIsRefreshing(false)
+        }, 500)
       } else {
-        setApiError(
-          response.message || response.msg || '즉시 구매에 실패했습니다.',
-        )
+        const message =
+          response.message || response.msg || '즉시 구매에 실패했습니다.'
+        setApiError(message)
+        showErrorToast(message)
+        // 실패 시 상태 동기화
+        if (message.includes('종료') || message.includes('LIVE')) {
+          setIsRefreshing(true)
+          setTimeout(() => {
+            router.refresh()
+            setIsRefreshing(false)
+          }, 500)
+        }
       }
     } catch (error: any) {
       console.error('즉시 구매 실패:', error)
       const apiError = handleApiError(error)
       setApiError(apiError.message)
+      showErrorToast(apiError.message)
+      // 에러 발생 시 재인증 또는 재조회
+      if (
+        apiError.message.includes('401') ||
+        apiError.message.includes('403')
+      ) {
+        showInfoToast('다시 로그인해주세요.')
+        router.push('/login')
+      } else {
+        setIsRefreshing(true)
+        setTimeout(() => {
+          router.refresh()
+          setIsRefreshing(false)
+        }, 500)
+      }
     }
 
     setIsLoading(false)
@@ -438,7 +503,7 @@ export function ProductDetailClient({
   // remainingTimeSeconds 계산
   const calculateRemainingSeconds = () => {
     if (timerData && timerData.timeLeft) {
-      const endTime = new Date(productData.endAt).getTime()
+      const endTime = toKstDate(productData.endAt)?.getTime() || 0
       const now = Date.now()
       return Math.max(0, Math.floor((endTime - now) / 1000))
     }
@@ -606,7 +671,7 @@ export function ProductDetailClient({
           {/* 가격 정보 - 강조된 카드 */}
           <Card
             variant="elevated"
-            className="from-primary-50 to-primary-100/50 border-0 bg-gradient-to-br"
+            className="from-primary-50 to-primary-100/50 border-0 bg-linear-to-br"
           >
             <CardContent className="space-y-4 p-6">
               {/* 현재가 */}
@@ -759,7 +824,7 @@ export function ProductDetailClient({
           {productData.status === 'LIVE' && !isOwner && (
             <Card
               variant="elevated"
-              className="from-primary-600 to-primary-700 border-0 bg-gradient-to-br text-white"
+              className="from-primary-600 to-primary-700 border-0 bg-linear-to-br text-white"
             >
               <CardContent className="space-y-4 p-6">
                 <div>
@@ -815,14 +880,59 @@ export function ProductDetailClient({
                   </Button>
                   <Button
                     onClick={handleBuyNow}
-                    disabled={isLoading}
+                    disabled={isLoading || auctionEnded}
                     className="h-auto w-full border border-white/30 bg-white/20 py-3 text-base font-bold text-white hover:bg-white/30"
                   >
                     {isLoading
                       ? '처리 중...'
-                      : `즉시 구매 ${formatPrice(productData.buyNowPrice)}`}
+                      : auctionEnded
+                        ? '구매 완료'
+                        : `즉시 구매 ${formatPrice(productData.buyNowPrice)}`}
                   </Button>
                 </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {(productData.status === 'SCHEDULED' || auctionEnded) && !isOwner && (
+            <Card
+              variant="outlined"
+              className={
+                auctionEnded
+                  ? 'border-green-200 bg-green-50/70'
+                  : 'border-primary-200 bg-primary-50/70'
+              }
+            >
+              <CardContent className="space-y-3 p-6">
+                {auctionEnded ? (
+                  <>
+                    <div className="flex items-center space-x-2 text-green-700">
+                      <span className="text-2xl">✓</span>
+                      <span className="text-sm font-semibold">
+                        구매 완료 / 낙찰
+                      </span>
+                    </div>
+                    <p className="text-base font-semibold text-neutral-800">
+                      즉시 구매가 완료되었습니다.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-primary-700 flex items-center space-x-2">
+                      <Clock className="h-5 w-5" />
+                      <span className="text-sm font-semibold">
+                        경매 시작 전
+                      </span>
+                    </div>
+                    <p className="text-base font-semibold text-neutral-800">
+                      {formatDateTime(productData.startAt)}에 시작 예정입니다.
+                    </p>
+                    <p className="text-sm text-neutral-600">
+                      시작 전에는 입찰 및 즉시 구매를 할 수 없습니다. 시작 시간
+                      이후 다시 시도해주세요.
+                    </p>
+                  </>
+                )}
               </CardContent>
             </Card>
           )}
@@ -972,7 +1082,7 @@ export function ProductDetailClient({
                   >
                     {/* 질문 영역 */}
                     <div
-                      className="from-primary-50 via-primary-50/70 hover:bg-primary-50 cursor-pointer bg-gradient-to-r to-transparent p-4 transition-colors"
+                      className="from-primary-50 via-primary-50/70 hover:bg-primary-50 cursor-pointer bg-linear-to-r to-transparent p-4 transition-colors"
                       onClick={() =>
                         setExpandedQnaId(isExpanded ? null : qnaData.qnaId)
                       }
@@ -987,11 +1097,7 @@ export function ProductDetailClient({
                               {qnaData.question}
                             </p>
                             <p className="mt-1 text-xs text-neutral-500">
-                              {qnaData.questionedAt
-                                ? new Date(
-                                    qnaData.questionedAt,
-                                  ).toLocaleDateString('ko-KR')
-                                : ''}
+                              {formatDateOnly(qnaData.questionedAt)}
                             </p>
                           </div>
                         </div>
@@ -1024,11 +1130,7 @@ export function ProductDetailClient({
                                         {answer.answer}
                                       </p>
                                       <p className="mt-1 text-xs text-neutral-500">
-                                        {answer.answeredAt
-                                          ? new Date(
-                                              answer.answeredAt,
-                                            ).toLocaleDateString('ko-KR')
-                                          : ''}
+                                        {formatDateOnly(answer.answeredAt)}
                                       </p>
                                     </div>
                                   </div>
@@ -1099,6 +1201,45 @@ export function ProductDetailClient({
           )}
         </CardContent>
       </Card>
+
+      {/* 즉시 구매 확인 다이얼로그 */}
+      <Dialog open={showBuyNowDialog} onOpenChange={setShowBuyNowDialog}>
+        <DialogContent
+          className="bg-white sm:max-w-md"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
+          <DialogHeader>
+            <DialogTitle className="text-neutral-900">
+              즉시 구매 확인
+            </DialogTitle>
+            <DialogDescription className="space-y-2">
+              <span className="block text-base font-semibold text-orange-600">
+                {formatPrice(productData.buyNowPrice)}
+              </span>
+              <span className="mt-2 block text-sm text-neutral-700">
+                즉시 구매 시 경매가 종료되고 낙찰이 확정됩니다.
+                <br />
+                구매하시겠습니까?
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-row justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowBuyNowDialog(false)}
+              className="bg-white hover:bg-neutral-100"
+            >
+              취소
+            </Button>
+            <Button
+              onClick={confirmBuyNow}
+              className="bg-orange-600 text-white hover:bg-orange-700"
+            >
+              구매 확정
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

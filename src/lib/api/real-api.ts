@@ -843,15 +843,11 @@ export const auctionApi = {
   },
 
   // 즉시 구매 (POST /api/v1/auctions/{auctionId}/buy-now) - Swagger 스펙
-  buyNow: async (
-    auctionId: number,
-    buyNowData: { amount: number; methodId: number },
-  ) => {
+  buyNow: async (auctionId: number, buyNowData: { bidAmount: number }) => {
     const response = await apiClient.post<ApiResponse<any>>(
       `/api/v1/auctions/${auctionId}/buy-now`,
       {
-        amount: buyNowData.amount,
-        methodId: buyNowData.methodId,
+        bidAmount: buyNowData.bidAmount,
       },
     )
     return normalizeApiResponse(response.data)
