@@ -1226,7 +1226,7 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
                 className="focus:ring-primary-500 w-full rounded-lg border border-neutral-300 px-3 py-2 focus:ring-2 focus:outline-none"
                 disabled={!isLoggedIn || isQnaSubmitting}
               />
-              <div className="flex justify-end gap-2">
+              <div className="flex items-center justify-end gap-2">
                 {!isLoggedIn && (
                   <p className="text-sm text-neutral-500">
                     로그인 후 질문할 수 있습니다.

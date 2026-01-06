@@ -1,3 +1,4 @@
+import { LoginPrompt } from '@/components/auth/LoginPrompt'
 import { ProductDetailBasicClient } from '@/components/features/products/ProductDetailBasicClient'
 import { HomeLayout } from '@/components/layout/HomeLayout'
 import { PageHeader } from '@/components/layout/PageHeader'
@@ -44,14 +45,29 @@ export default async function ProductDetailPage({
     console.error('상품 조회 중 예외 발생:', error)
   }
 
+  // 로그인이 필요한 경우 LoginPrompt 표시
+  if (needsLogin) {
+    return (
+      <HomeLayout>
+        <PageHeader
+          title="상품 상세"
+          description="상품 정보를 확인하고 입찰에 참여하세요"
+          showBackButton
+        />
+        <LoginPrompt
+          title="상품 상세 정보"
+          description="상품 정보를 확인하려면 로그인해주세요."
+        />
+      </HomeLayout>
+    )
+  }
+
   // Swagger ProductSearchResponse 기준 매핑 (데이터 없으면 기본값 적용)
   const mappedProduct = {
     productId: data?.productId || productId,
     sellerId: data?.sellerId || 0,
-    name: data?.name || (needsLogin ? '로그인이 필요합니다' : '상품 정보 없음'),
-    description:
-      data?.description ||
-      (needsLogin ? '상품 정보를 보려면 로그인해주세요.' : ''),
+    name: data?.name || '상품 정보 없음',
+    description: data?.description || '',
     images: data?.images || data?.imageUrls || [],
     category: data?.category || 'STARGOODS',
     subCategory: data?.subCategory || undefined,
