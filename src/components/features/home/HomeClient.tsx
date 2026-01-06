@@ -340,7 +340,7 @@ export function HomeClient() {
           </div>
 
           <h1 className="animate-fade-in mb-6 text-5xl font-extrabold tracking-tight sm:text-6xl lg:text-7xl">
-            DROP: 굿즈의 새로운 시작
+            DROP:
           </h1>
           <p className="animate-fade-in mb-10 text-xl leading-relaxed text-white/90 sm:text-2xl">
             투명하고 신뢰할 수 있는 리미티드 아이템 거래를 경험해보세요
