@@ -1,3 +1,4 @@
+import { LoginPrompt } from '@/components/auth/LoginPrompt'
 import { MyInfoEditClient } from '@/components/features/user/MyInfoEditClient'
 import { HomeLayout } from '@/components/layout/HomeLayout'
 import { PageHeader } from '@/components/layout/PageHeader'
@@ -14,20 +15,16 @@ export default async function MyInfoEditPage() {
 
   if (!accessToken) {
     return (
-      <HomeLayout isLoggedIn={false}>
+      <HomeLayout>
         <PageHeader
           title="내 정보 수정"
           description="프로필 정보를 수정하세요"
           showBackButton
         />
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h1 className="mb-4 text-2xl font-bold text-neutral-900">
-              로그인이 필요합니다
-            </h1>
-            <p className="text-neutral-600">로그인 후 이용해주세요.</p>
-          </div>
-        </div>
+        <LoginPrompt
+          title="내 정보 수정"
+          description="내 정보를 수정하려면 로그인해주세요."
+        />
       </HomeLayout>
     )
   }

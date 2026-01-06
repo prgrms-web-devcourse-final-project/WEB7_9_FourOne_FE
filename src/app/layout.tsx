@@ -1,8 +1,13 @@
 import { AuthProvider } from '@/contexts/AuthContext'
 import { Toaster } from '@/components/ui/sonner'
 import type { Metadata, Viewport } from 'next'
-import { Noto_Sans_KR } from 'next/font/google'
+import { Inter, Noto_Sans_KR } from 'next/font/google'
 import './globals.css'
+
+const inter = Inter({
+  variable: '--font-inter',
+  subsets: ['latin'],
+})
 
 const notoSansKR = Noto_Sans_KR({
   variable: '--font-noto-sans-kr',
@@ -35,7 +40,7 @@ export default function RootLayout({
   return (
     <html
       lang="ko-KR"
-      className={`${notoSansKR.variable} ${notoSansKR.className} antialiased`}
+      className={`${inter.variable} ${notoSansKR.variable} ${notoSansKR.className} antialiased`}
     >
       <head>
         <meta property="og:title" content="DROP" />

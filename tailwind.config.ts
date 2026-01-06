@@ -111,7 +111,12 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ['Noto Sans KR', 'system-ui', 'sans-serif'],
+        sans: [
+          'var(--font-noto-sans-kr)',
+          'var(--font-inter)',
+          'system-ui',
+          'sans-serif',
+        ],
         mono: ['JetBrains Mono', 'monospace'],
       },
       spacing: {

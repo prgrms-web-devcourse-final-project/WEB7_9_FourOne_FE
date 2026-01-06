@@ -1,3 +1,4 @@
+import { LoginPrompt } from '@/components/auth/LoginPrompt'
 import { PaymentMethodsPage } from '@/components/features/payment/PaymentMethodsPage'
 import { HomeLayout } from '@/components/layout/HomeLayout'
 import { PageHeader } from '@/components/layout/PageHeader'
@@ -19,16 +20,10 @@ export default async function PaymentMethodsRoute() {
             description="등록된 결제 수단을 관리하세요"
             showBackButton
           />
-          <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
-            <div className="text-center">
-              <h1 className="mb-4 text-2xl font-bold text-neutral-900">
-                로그인이 필요합니다
-              </h1>
-              <p className="text-neutral-600">
-                결제 수단을 관리하려면 로그인해주세요.
-              </p>
-            </div>
-          </div>
+          <LoginPrompt
+            title="결제 수단 관리"
+            description="결제 수단을 관리하려면 로그인해주세요."
+          />
         </HomeLayout>
       )
     }

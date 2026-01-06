@@ -48,27 +48,31 @@ export function HelpClient() {
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-center py-12">
-          <div className="border-t-primary-500 h-8 w-8 animate-spin rounded-full border-2 border-neutral-300"></div>
-          <span className="ml-3 text-neutral-600">도움말을 불러오는 중...</span>
-        </div>
+      <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
+        <Card>
+          <CardContent className="py-12 text-center">
+            <div className="border-primary-200 border-t-primary-600 mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2"></div>
+            <span className="text-sm text-neutral-600">로드 중...</span>
+          </CardContent>
+        </Card>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
-        <Card variant="outlined">
-          <CardContent className="p-6">
-            <div className="text-center">
-              <HelpCircle className="mx-auto mb-4 h-12 w-12 text-neutral-400" />
-              <h3 className="mb-2 text-lg font-semibold text-neutral-900">
-                도움말을 불러올 수 없습니다
-              </h3>
-              <p className="text-sm text-neutral-600">{error}</p>
+      <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
+        <Card>
+          <CardContent className="py-12 text-center">
+            <div className="mb-4 flex justify-center">
+              <div className="rounded-full bg-neutral-100 p-4">
+                <HelpCircle className="h-8 w-8 text-neutral-400" />
+              </div>
             </div>
+            <h3 className="mb-2 text-base font-semibold text-neutral-900">
+              가이드를 불러올 수 없습니다
+            </h3>
+            <p className="text-sm text-neutral-600">{error}</p>
           </CardContent>
         </Card>
       </div>
@@ -76,29 +80,33 @@ export function HelpClient() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8">
-      <div className="space-y-4">
+    <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="space-y-3">
         {guides.length === 0 ? (
-          <Card variant="outlined">
-            <CardContent className="p-6">
-              <div className="text-center">
-                <HelpCircle className="mx-auto mb-4 h-12 w-12 text-neutral-400" />
-                <p className="text-neutral-600">등록된 도움말이 없습니다.</p>
+          <Card>
+            <CardContent className="py-12 text-center">
+              <div className="mb-4 flex justify-center">
+                <div className="rounded-full bg-neutral-100 p-4">
+                  <HelpCircle className="h-8 w-8 text-neutral-400" />
+                </div>
               </div>
+              <p className="text-sm text-neutral-600">
+                등록된 가이드가 없습니다.
+              </p>
             </CardContent>
           </Card>
         ) : (
-          guides.map((guide) => (
-            <Card key={guide.id} variant="outlined">
+          guides.map((guide, index) => (
+            <Card key={guide.id}>
               <CardContent className="p-6">
-                <div className="flex items-start space-x-4">
-                  <div className="bg-primary-100 flex h-8 w-8 shrink-0 items-center justify-center rounded-full">
+                <div className="flex items-start gap-4">
+                  <div className="bg-primary-50 flex h-7 w-7 shrink-0 items-center justify-center rounded-full">
                     <span className="text-primary-600 text-sm font-semibold">
-                      {guide.id}
+                      {index + 1}
                     </span>
                   </div>
-                  <div className="flex-1">
-                    <p className="text-sm whitespace-pre-wrap text-neutral-700">
+                  <div className="flex-1 pt-0.5">
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap text-neutral-700">
                       {guide.content}
                     </p>
                   </div>

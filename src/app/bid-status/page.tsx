@@ -1,3 +1,4 @@
+import { LoginPrompt } from '@/components/auth/LoginPrompt'
 import { BidStatusClient } from '@/components/features/bids/BidStatusClient'
 import { HomeLayout } from '@/components/layout/HomeLayout'
 import { PageHeader } from '@/components/layout/PageHeader'
@@ -10,6 +11,22 @@ export default async function BidStatusPage() {
   const cookieStore = await cookies()
   const accessToken = cookieStore.get('accessToken')?.value
   const isLoggedIn = !!accessToken
+
+  if (!accessToken) {
+    return (
+      <HomeLayout>
+        <PageHeader
+          title="입찰 현황"
+          description="내가 참여한 경매의 현황을 확인하세요"
+          showBackButton
+        />
+        <LoginPrompt
+          title="입찰 현황"
+          description="입찰 내역을 확인하려면 로그인해주세요."
+        />
+      </HomeLayout>
+    )
+  }
 
   try {
     const response = await serverApi.getMyBids()
