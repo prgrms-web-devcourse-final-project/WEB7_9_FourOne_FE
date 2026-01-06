@@ -7,9 +7,9 @@ import { notFound } from 'next/navigation'
 export default async function AuctionDetailPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
-  const { id } = params
+  const { id } = await params
   const auctionId = parseInt(id)
 
   if (isNaN(auctionId)) {

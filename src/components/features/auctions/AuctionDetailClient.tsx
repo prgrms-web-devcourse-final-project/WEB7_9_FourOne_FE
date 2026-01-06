@@ -75,6 +75,17 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
     null,
   )
 
+  // SSE 연결 상태
+  const [sseConnectionStatus, setSseConnectionStatus] = useState<
+    'disconnected' | 'connecting' | 'connected'
+  >('disconnected')
+  const [sseReconnectAttempts, setSseReconnectAttempts] = useState(0)
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // 다음 최소 입찰가 (자동 계산)
+  const [nextMinBidPrice, setNextMinBidPrice] = useState<number>(0)
+
   // 입찰 이력 상태
   const [bidHistory, setBidHistory] = useState<BidHistoryResponse[]>(
     auctionData.bidHistory || [],
@@ -170,40 +181,196 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
     }
   }
 
-  // SSE 실시간 최고가 스트림 구독
+  // 다음 최소 입찰가 자동 계산
   useEffect(() => {
-    if (!auctionData.auctionId) return
+    const minBidStep = auctionData.minBidStep || 1000
+    const nextMin =
+      currentHighestBid > 0
+        ? currentHighestBid + minBidStep
+        : (auctionData.startPrice || 0) + minBidStep
+    setNextMinBidPrice(nextMin)
+  }, [currentHighestBid, auctionData.minBidStep, auctionData.startPrice])
 
-    const es = new EventSource(
-      `/api/v1/auctions/${auctionData.auctionId}/bid-stream`,
+  // SSE 실시간 최고가 스트림 구독 (백엔드 직접 연결 + 재연결 로직)
+  useEffect(() => {
+    if (!auctionData.auctionId) {
+      console.log('[SSE] auctionId 없음, SSE 연결 안 함')
+      return
+    }
+
+    console.log(
+      '[SSE] 경매 상태:',
+      auctionData.status,
+      '| auctionId:',
+      auctionData.auctionId,
     )
-    bidStreamRef.current = es
 
-    es.onmessage = (event) => {
-      try {
-        const payload = JSON.parse(event.data) as AuctionBidUpdate
-        if (payload.currentHighestBid !== undefined) {
-          setCurrentHighestBid(payload.currentHighestBid)
+    let es: EventSource | null = null
+    const maxReconnectAttempts = 10 // 재연결 횟수 증가
+    const baseReconnectDelay = 3000 // 3초
+
+    const connectSSE = () => {
+      if (es) {
+        es.close()
+      }
+
+      setSseConnectionStatus('connecting')
+      const sseUrl = `/api/sse/${auctionData.auctionId}`
+      console.log('[SSE] 연결 시도:', sseUrl)
+      console.log('[SSE] 인증 없이 연결 (withCredentials: false)')
+
+      // 동일 도메인 프록시를 통해 CORS 403 회피
+      es = new EventSource(sseUrl)
+      console.log('[SSE] EventSource 객체 생성됨:', {
+        url: es.url,
+        readyState: es.readyState,
+        withCredentials: es.withCredentials,
+      })
+      bidStreamRef.current = es
+
+      // 1. 연결 성공 (open 이벤트)
+      es.onopen = () => {
+        console.log('[SSE] ✅ 연결 성공 (onopen) - 스트림 열림')
+        ;(es as any).__connectTime = Date.now()
+        setSseConnectionStatus('connected')
+        setSseReconnectAttempts(0)
+
+        // 폴링 중지
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current)
+          pollingIntervalRef.current = null
         }
-        if (payload.bidderNickname) {
-          setHighestBidder(payload.bidderNickname)
+      }
+
+      // 2. connect 이벤트 수신 (백엔드 초기 메시지)
+      es.addEventListener('connect', (event) => {
+        console.log('[SSE] 🔗 connect 이벤트 수신:', event.data)
+        console.log('[SSE] 연결 유지 중... 입찰 이벤트 대기')
+      })
+
+      // 3. highestPrice 이벤트 수신 (백엔드에서 특정 이벤트 타입으로 전송하는 경우)
+      es.addEventListener('highestPrice', (event) => {
+        try {
+          const price = Number(event.data)
+          console.log('[SSE] 💰 highestPrice 이벤트 수신:', price)
+
+          if (!isNaN(price) && price > 0) {
+            setCurrentHighestBid(price)
+            setLastHighestBidSync(new Date().toISOString())
+          }
+        } catch (err) {
+          console.error('[SSE] highestPrice 파싱 에러:', err)
         }
-        setLastHighestBidSync(new Date().toISOString())
-      } catch {
-        // 기본 connect 이벤트 등 문자열 페이로드는 무시
+      })
+
+      // 4. 기본 message 이벤트 수신 (JSON 형태)
+      es.onmessage = (event) => {
+        try {
+          // JSON 파싱 시도
+          const payload = JSON.parse(event.data) as AuctionBidUpdate
+          console.log('[SSE] 📨 기본 메시지 수신:', payload)
+
+          if (payload.currentHighestBid !== undefined) {
+            setCurrentHighestBid(payload.currentHighestBid)
+          }
+          if (payload.bidderNickname) {
+            setHighestBidder(payload.bidderNickname)
+          }
+          setLastHighestBidSync(new Date().toISOString())
+        } catch {
+          // 숫자만 오는 경우 처리
+          const price = Number(event.data)
+          if (!isNaN(price) && price > 0) {
+            console.log('[SSE] 📨 숫자 형태 수신:', price)
+            setCurrentHighestBid(price)
+            setLastHighestBidSync(new Date().toISOString())
+          } else {
+            console.log('[SSE] 📨 알 수 없는 메시지:', event.data)
+          }
+        }
+      }
+
+      // 5. 에러 및 재연결 로직 (백엔드 60초 타임아웃 대응)
+      es.onerror = (error) => {
+        const now = Date.now()
+        const timeSinceConnect = bidStreamRef.current
+          ? now - (bidStreamRef.current as any).__connectTime || 0
+          : 0
+
+        console.error('[SSE] ❌ 연결 에러 (백엔드가 60초 후 끊을 수 있음)', {
+          readyState: es?.readyState,
+          연결유지시간: `${Math.round(timeSinceConnect / 1000)}초`,
+          error,
+        })
+        setSseConnectionStatus('disconnected')
+
+        if (es) {
+          es.close()
+          bidStreamRef.current = null
+        }
+
+        // 백엔드 타임아웃 대응: 계속 재연결
+        if (sseReconnectAttempts < maxReconnectAttempts) {
+          const delay = Math.min(
+            baseReconnectDelay * Math.pow(1.5, sseReconnectAttempts),
+            30000,
+          ) // 최대 30초
+          console.log(
+            `[SSE] ${delay}ms 후 재연결 시도 (${sseReconnectAttempts + 1}/${maxReconnectAttempts})`,
+          )
+
+          reconnectTimeoutRef.current = setTimeout(() => {
+            setSseReconnectAttempts((prev) => prev + 1)
+            connectSSE()
+          }, delay)
+        } else {
+          console.log('[SSE] 최대 재연결 횟수 초과, 폴링으로 전환')
+          // SSE 실패 시 폴링 fallback
+          startPollingFallback()
+        }
       }
     }
 
-    es.onerror = () => {
-      es.close()
-      bidStreamRef.current = null
+    // 폴링 fallback (SSE 실패 시)
+    const startPollingFallback = () => {
+      console.log('[Polling] SSE 실패로 폴링 시작 (5초 간격)')
+
+      if (pollingIntervalRef.current) return // 이미 폴링 중
+
+      pollingIntervalRef.current = setInterval(async () => {
+        try {
+          await refreshHighestBid(false)
+        } catch (err) {
+          console.error('[Polling] 최고가 조회 실패:', err)
+        }
+      }, 5000) // 5초마다 폴링
     }
 
+    // SSE 연결 시작
+    connectSSE()
+
+    // 클린업
     return () => {
-      es.close()
-      bidStreamRef.current = null
+      console.log('[SSE] 클린업 - 연결 종료')
+
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current)
+        reconnectTimeoutRef.current = null
+      }
+
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current)
+        pollingIntervalRef.current = null
+      }
+
+      if (es) {
+        es.close()
+        bidStreamRef.current = null
+      }
+
+      setSseConnectionStatus('disconnected')
     }
-  }, [auctionData.auctionId])
+  }, [auctionData.auctionId, auctionData.status, sseReconnectAttempts])
 
   const refreshHighestBid = async (showErrorToastOnFail = true) => {
     if (!auctionData.auctionId) return
@@ -652,9 +819,17 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
               <div>
                 <div className="flex items-center justify-between gap-2">
                   <div>
-                    <p className="text-xs font-medium text-neutral-500">
-                      현재 최고 입찰가
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs font-medium text-neutral-500">
+                        현재 최고 입찰가
+                      </p>
+                      {sseConnectionStatus === 'connected' && (
+                        <span className="relative flex h-1.5 w-1.5">
+                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
+                          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-green-500"></span>
+                        </span>
+                      )}
+                    </div>
                     <p className="text-primary-600 text-2xl font-bold">
                       {formatPrice(currentHighestBid)}
                     </p>
@@ -809,6 +984,55 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
           <h2 className="mb-4 text-xl font-bold">입찰하기</h2>
           {isLive ? (
             <div className="space-y-4">
+              {/* 현재가 및 다음 최소 입찰가 안내 */}
+              <div className="bg-primary-50 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-neutral-600">현재 최고가</p>
+                    <p className="text-primary-600 text-2xl font-bold">
+                      {currentHighestBid.toLocaleString()}원
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-neutral-600">다음 입찰가</p>
+                    <p className="text-xl font-semibold text-neutral-900">
+                      {nextMinBidPrice.toLocaleString()}원 이상
+                    </p>
+                  </div>
+                </div>
+                {/* SSE 연결 상태 표시 */}
+                <div className="mt-2 flex items-center gap-2">
+                  {sseConnectionStatus === 'connected' && (
+                    <>
+                      <span className="relative flex h-2 w-2">
+                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
+                        <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500"></span>
+                      </span>
+                      <span className="text-xs font-medium text-green-600">
+                        실시간 업데이트 중
+                      </span>
+                    </>
+                  )}
+                  {sseConnectionStatus === 'connecting' && (
+                    <>
+                      <div className="h-2 w-2 animate-pulse rounded-full bg-yellow-500"></div>
+                      <span className="text-xs text-yellow-600">
+                        연결 중...
+                      </span>
+                    </>
+                  )}
+                  {sseConnectionStatus === 'disconnected' &&
+                    pollingIntervalRef.current && (
+                      <>
+                        <div className="h-2 w-2 rounded-full bg-amber-500"></div>
+                        <span className="text-xs text-amber-600">
+                          수동 업데이트 모드
+                        </span>
+                      </>
+                    )}
+                </div>
+              </div>
+
               <div>
                 <label className="mb-2 block text-sm font-medium text-neutral-700">
                   입찰 금액
@@ -818,7 +1042,7 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
                     type="number"
                     value={bidAmount}
                     onChange={(e) => setBidAmount(e.target.value)}
-                    placeholder={`${requiredMinBidAmount.toLocaleString()}원 이상`}
+                    placeholder={`${nextMinBidPrice.toLocaleString()}원 이상 입력`}
                     className="focus:ring-primary-500 flex-1 rounded-lg border border-neutral-300 px-3 py-2 focus:ring-2 focus:outline-none"
                     disabled={
                       !isLoggedIn || isBidLoading || !isLive || auctionEnded
@@ -838,6 +1062,10 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
                         : '입찰'}
                   </Button>
                 </div>
+                <p className="mt-2 text-xs text-neutral-500">
+                  💡 최소 입찰가: {nextMinBidPrice.toLocaleString()}원 (현재가 +{' '}
+                  {(auctionData.minBidStep || 1000).toLocaleString()}원)
+                </p>
               </div>
             </div>
           ) : isScheduled ? (
@@ -1125,7 +1353,7 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
 
       {/* 즉시 구매 확인 다이얼로그 */}
       <Dialog open={showBuyNowDialog} onOpenChange={setShowBuyNowDialog}>
-        <DialogContent 
+        <DialogContent
           className="bg-white sm:max-w-md"
           onOpenAutoFocus={(e) => e.preventDefault()}
         >
