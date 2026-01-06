@@ -29,11 +29,6 @@ export default async function ProductDetailPage({
 
   try {
     const response = await serverApi.getProduct(productId)
-    console.log('상품 조회 응답:', {
-      success: response.success,
-      resultCode: response.resultCode,
-      msg: response.msg,
-    })
 
     if (response.success && response.data) {
       data = response.data

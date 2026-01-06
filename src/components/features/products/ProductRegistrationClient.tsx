@@ -148,7 +148,6 @@ export function ProductRegistrationClient() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log('🔵 handleSubmit 호출됨')
     setIsLoading(true)
     setApiError('')
 
@@ -169,10 +168,7 @@ export function ProductRegistrationClient() {
 
     setErrors(newErrors)
 
-    // 에러가 있으면 사용자에게 알림
     if (Object.keys(newErrors).length > 0) {
-      console.log('🔴 유효성 검사 실패:', newErrors)
-      // 첫 번째 에러 메시지를 토스트로 표시
       const firstError = Object.values(newErrors)[0]
       if (firstError) {
         showErrorToast(firstError, '입력 오류')
@@ -197,16 +193,7 @@ export function ProductRegistrationClient() {
           )
         }
 
-        // 업로드된 S3 경로 배열 (예: image/product/xxx.png)
         const imagePaths = uploadResponse.data
-
-        console.log('🚀 API 전송 데이터:', {
-          name: formData.name,
-          description: formData.description,
-          category: category,
-          subCategory: subCategory,
-          imagesFiles: imagePaths,
-        })
 
         // 2. 상품 등록 API 호출
         // 요청 형식: { name, description, category, subCategory, imagesFiles: string[] }
@@ -464,13 +451,7 @@ export function ProductRegistrationClient() {
           <Button type="button" variant="outline" onClick={() => router.back()}>
             취소
           </Button>
-          <Button
-            type="submit"
-            disabled={isLoading || isUploadingImages}
-            onClick={(e) => {
-              console.log('🔵 버튼 클릭됨', { isLoading, formData })
-            }}
-          >
+          <Button type="submit" disabled={isLoading || isUploadingImages}>
             {isLoading || isUploadingImages ? (
               <div className="flex items-center">
                 <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>

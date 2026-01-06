@@ -153,14 +153,6 @@ export function PaymentMethodsPage({
       setTossLoading(true)
       setFormError(null)
 
-      console.log('🔑 Toss 콜백 처리:', {
-        authKey,
-        customerKey,
-        cardCompanyParam,
-        cardNumberParam,
-        savedCardName,
-      })
-
       // 임시: 백엔드 API 없이 테스트용 billingKey 생성
       const billingKey = `billing_${Date.now()}_${authKey.substring(0, 10)}`
       const cardCompanyValue: CardCompany = cardCompanyParam || 'SHINHAN'

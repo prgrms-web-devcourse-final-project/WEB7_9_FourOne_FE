@@ -302,14 +302,6 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
         ...imageFileNames,
       ].filter((name, index, self) => self.indexOf(name) === index) // 중복 제거
 
-      console.log('📝 상품 수정 요청 데이터:', {
-        name: formData.name,
-        description: formData.description,
-        category: category,
-        subCategory: subCategory,
-        imagesFiles: allImageFileNames,
-      })
-
       // 2. 상품 수정 API 호출
       const response = await productApi.updateProduct(
         productId,
@@ -323,8 +315,6 @@ export function ProductEditClient({ product }: ProductEditClientProps) {
         [], // 파일 배열은 사용하지 않음
         [], // 삭제할 이미지 ID는 사용하지 않음
       )
-
-      console.log('📝 상품 수정 응답:', response)
 
       if (response.success) {
         showSuccessToast('상품이 성공적으로 수정되었습니다.')

@@ -70,8 +70,6 @@ export default async function MyProductsPage() {
       }
     }
 
-    console.log('[MyProducts] 처리된 상품 목록:', products)
-
     return (
       <HomeLayout isLoggedIn={!!accessToken}>
         <PageHeader

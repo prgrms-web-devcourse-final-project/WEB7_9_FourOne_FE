@@ -45,7 +45,6 @@ export function useTossPayments() {
           script.src = 'https://js.tosspayments.com/v1'
           script.async = true
           script.onload = () => {
-            console.log('토스 SDK 강제 로드 완료')
             setIsLoaded(true)
             setError(null)
           }

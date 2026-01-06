@@ -84,7 +84,6 @@ export function LoginClient() {
       setIsSendingCode(true)
       setApiError('')
       const response = await authApi.sendVerificationCode(formData.email)
-      console.log('🔍 인증 코드 전송 응답:', response)
 
       if (response.success) {
         showSuccessToast('인증 코드가 전송되었습니다. 이메일을 확인해주세요.')
@@ -125,7 +124,6 @@ export function LoginClient() {
         formData.email,
         verificationCode,
       )
-      console.log('🔍 인증 코드 확인 응답:', response)
 
       if (response.success) {
         setIsEmailVerified(true)
@@ -348,7 +346,6 @@ export function LoginClient() {
             // 홈페이지로 리다이렉트
             router.push('/')
           } else {
-            console.log('❌ 로그인 실패:', response)
             // 백엔드에서 보내는 정확한 에러 메시지 사용 (새로운 구조 우선)
             const errorMessage =
               response.message ||
@@ -363,11 +360,6 @@ export function LoginClient() {
             password: formData.password,
             nickname: formData.name,
           })
-
-          console.log('🔍 회원가입 API 응답 전체:', response)
-          console.log('🔍 response.success:', response.success)
-          console.log('🔍 response.data:', response.data)
-          console.log('🔍 response.resultCode:', response.resultCode)
 
           // 성공 조건 확인 (새로운 백엔드 구조와 기존 구조 모두 지원)
           const isSuccess =
@@ -390,7 +382,6 @@ export function LoginClient() {
               confirmPassword: '',
             })
           } else {
-            console.log('❌ 회원가입 실패:', response)
             // 백엔드 에러 메시지 우선 사용
             const errorMessage =
               response.message ||

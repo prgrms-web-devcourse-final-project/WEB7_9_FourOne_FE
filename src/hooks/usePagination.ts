@@ -147,7 +147,6 @@ export function usePagination<T>(
             }
           }
 
-          console.log('📄 페이지네이션 데이터 처리:', { content, pageable })
           setData(content)
           dispatch({ type: 'SET_DATA', payload: { data: content, pageable } })
         } else {

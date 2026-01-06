@@ -17,7 +17,7 @@ import { usePaymentFlow } from '@/hooks/usePaymentFlow'
 import { usePaymentMethods } from '@/hooks/usePaymentMethods'
 import { CardResponse } from '@/lib/api/payment'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
   Dialog,
@@ -101,23 +101,34 @@ export function PaymentCheckout({
   // 결제 수단 없음
   if (methods.length === 0) {
     return (
-      <Card className="p-8">
-        <div className="text-center">
-          <AlertCircle className="mx-auto mb-4 h-12 w-12 text-gray-400" />
-          <h3 className="mb-2 text-lg font-semibold">결제 수단이 없습니다</h3>
-          <p className="mb-6 text-gray-600">
-            결제하기 전에 카드를 먼저 등록하세요
-          </p>
-          <Button onClick={() => router.push('/payment-methods')}>
-            카드 등록하러 가기
-          </Button>
-        </div>
-      </Card>
+      <div className="mx-auto max-w-2xl">
+        <Card>
+          <CardContent className="py-16 text-center">
+            <div className="mb-4 flex justify-center">
+              <div className="rounded-full bg-neutral-100 p-4">
+                <AlertCircle className="h-8 w-8 text-neutral-400" />
+              </div>
+            </div>
+            <h2 className="mb-2 text-lg font-semibold text-neutral-900">
+              등록된 결제 수단이 없습니다
+            </h2>
+            <p className="mb-8 text-sm text-neutral-600">
+              결제를 진행하려면 카드를 먼저 등록해주세요.
+            </p>
+            <Button
+              onClick={() => router.push('/payment-methods')}
+              className="bg-primary-600 hover:bg-primary-700"
+            >
+              결제 수단 등록
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
     )
   }
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-2xl space-y-6">
       {/* 에러 표시 */}
       {error && (
         <Alert variant="destructive">
@@ -127,151 +138,168 @@ export function PaymentCheckout({
       )}
 
       {/* 상품 정보 */}
-      <Card className="p-6">
-        <h3 className="mb-4 font-semibold">주문 정보</h3>
-        <div className="space-y-2 text-sm">
-          <div className="flex justify-between">
-            <span className="text-gray-600">상품명:</span>
-            <span className="font-medium">{orderName}</span>
+      <Card>
+        <CardContent className="pt-6">
+          <h3 className="mb-6 text-base font-semibold text-neutral-900">
+            주문 정보
+          </h3>
+          <div className="space-y-3 text-sm">
+            <div className="flex justify-between border-b border-neutral-100 pb-3">
+              <span className="text-neutral-600">상품명</span>
+              <span className="font-medium text-neutral-900">{orderName}</span>
+            </div>
+            <div className="flex justify-between border-b border-neutral-100 pb-3">
+              <span className="text-neutral-600">주문번호</span>
+              <span className="text-xs text-neutral-500 font-mono">{orderId}</span>
+            </div>
+            <div className="flex justify-between pt-2">
+              <span className="text-neutral-600">결제 금액</span>
+              <span className="text-lg font-semibold text-primary-600">
+                {amount.toLocaleString('ko-KR')}원
+              </span>
+            </div>
           </div>
-          <div className="flex justify-between">
-            <span className="text-gray-600">금액:</span>
-            <span className="text-lg font-bold">
-              {amount.toLocaleString('ko-KR')}원
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-600">주문번호:</span>
-            <span className="text-xs text-gray-500">{orderId}</span>
-          </div>
-        </div>
+        </CardContent>
       </Card>
 
       {/* Step 1: 결제 수단 선택 */}
       {step === 'method-selection' && (
-        <Card className="p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="font-semibold">결제 수단 선택</h3>
-            <span className="rounded bg-blue-50 px-2 py-1 text-xs text-blue-700">
-              1단계
-            </span>
-          </div>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="mb-6 flex items-center justify-between">
+              <h3 className="text-base font-semibold text-neutral-900">
+                결제 수단 선택
+              </h3>
+              <span className="inline-flex items-center rounded-full bg-primary-50 px-3 py-1 text-xs font-medium text-primary-700">
+                단계 1
+              </span>
+            </div>
 
-          <div className="mb-6 space-y-2">
-            {methods.map((method: CardResponse) => (
-              <div
-                key={method.id}
-                className={`cursor-pointer rounded-lg border-2 p-4 transition ${
-                  selectedMethod?.id === method.id
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-                onClick={() => handleSelectMethod(method)}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <p className="font-medium">
-                      {method.cardCompany || '카드'}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      {method.cardNumberMasked || '카드 번호 없음'}
-                    </p>
+            <div className="space-y-3 mb-6">
+              {methods.map((method: CardResponse) => (
+                <div
+                  key={method.id}
+                  className={`cursor-pointer rounded-lg border-2 p-4 transition ${
+                    selectedMethod?.id === method.id
+                      ? 'border-primary-300 bg-primary-50'
+                      : 'border-neutral-200 hover:border-neutral-300'
+                  }`}
+                  onClick={() => handleSelectMethod(method)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <p className="font-medium text-neutral-900">
+                        {method.cardCompany || '카드'}
+                      </p>
+                      <p className="text-sm text-neutral-600 font-mono">
+                        {method.cardNumberMasked || '카드 번호 없음'}
+                      </p>
+                    </div>
+                    {selectedMethod?.id === method.id && (
+                      <Check className="h-5 w-5 text-primary-600" />
+                    )}
                   </div>
-                  {selectedMethod?.id === method.id && (
-                    <Check className="h-5 w-5 text-blue-500" />
-                  )}
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
 
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => router.push('/payment-methods')}
-          >
-            다른 카드 추가 또는 관리
-          </Button>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => router.push('/payment-methods')}
+            >
+              다른 결제 수단 추가
+            </Button>
+          </CardContent>
         </Card>
       )}
 
       {/* Step 2: 결제 확인 */}
       {step === 'confirm' && selectedMethod && (
-        <Card className="p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="font-semibold">결제 확인</h3>
-            <span className="rounded bg-blue-50 px-2 py-1 text-xs text-blue-700">
-              2단계
-            </span>
-          </div>
-
-          <div className="mb-6 space-y-2 rounded-lg bg-gray-50 p-4 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-600">결제 수단:</span>
-              <span className="font-medium">
-                {selectedMethod.cardCompany || '카드'}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="mb-6 flex items-center justify-between">
+              <h3 className="text-base font-semibold text-neutral-900">
+                결제 확인
+              </h3>
+              <span className="inline-flex items-center rounded-full bg-primary-50 px-3 py-1 text-xs font-medium text-primary-700">
+                단계 2
               </span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">카드 번호:</span>
-              <span>{selectedMethod.cardNumberMasked || '카드 번호 없음'}</span>
-            </div>
-            <div className="mt-2 border-t border-gray-200 pt-2">
-              <div className="flex justify-between text-base font-bold">
-                <span>총 결제 금액:</span>
-                <span className="text-blue-600">
-                  {amount.toLocaleString('ko-KR')}원
+
+            <div className="mb-6 space-y-3 rounded-lg bg-neutral-50 p-4 text-sm">
+              <div className="flex justify-between">
+                <span className="text-neutral-600">결제 수단</span>
+                <span className="font-medium text-neutral-900">
+                  {selectedMethod.cardCompany || '카드'}
                 </span>
               </div>
+              <div className="flex justify-between">
+                <span className="text-neutral-600">카드 번호</span>
+                <span className="text-neutral-900 font-mono">{selectedMethod.cardNumberMasked || '카드 번호 없음'}</span>
+              </div>
+              <div className="border-t border-neutral-200 pt-3 mt-3">
+                <div className="flex justify-between">
+                  <span className="text-neutral-600">결제 금액</span>
+                  <span className="text-base font-semibold text-primary-600">
+                    {amount.toLocaleString('ko-KR')}원
+                  </span>
+                </div>
+              </div>
             </div>
-          </div>
 
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={handleBackToMethodSelection}
-              disabled={loading}
-              className="flex-1"
-            >
-              이전
-            </Button>
-            <Button
-              onClick={() => handlePreparePayment(1)}
-              disabled={loading}
-              className="flex-1"
-            >
-              {loading ? (
-                <>
-                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-white"></div>
-                  처리 중...
-                </>
-              ) : (
-                <>
-                  결제하기 <ChevronRight className="ml-2 h-4 w-4" />
-                </>
-              )}
-            </Button>
-          </div>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={handleBackToMethodSelection}
+                disabled={loading}
+                className="flex-1"
+              >
+                이전
+              </Button>
+              <Button
+                onClick={() => handlePreparePayment(1)}
+                disabled={loading}
+                className="flex-1 bg-primary-600 hover:bg-primary-700"
+              >
+                {loading ? (
+                  <>
+                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-primary-200 border-t-white"></div>
+                    처리 중
+                  </>
+                ) : (
+                  <>
+                    결제 진행 <ChevronRight className="ml-2 h-4 w-4" />
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardContent>
         </Card>
       )}
 
       {/* Step 3: 처리 중 */}
       {step === 'processing' && paymentId && (
-        <Card className="p-8">
-          <div className="space-y-4 text-center">
-            <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-blue-600"></div>
-            <div>
-              <h3 className="mb-2 text-lg font-semibold">결제 처리 중</h3>
-              <p className="text-sm text-gray-600">잠시만 기다려주세요.</p>
+        <Card>
+          <CardContent className="py-16 text-center">
+            <div className="flex justify-center mb-4">
+              <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary-200 border-t-primary-600"></div>
             </div>
-          </div>
+            <h3 className="mb-2 text-base font-semibold text-neutral-900">
+              결제 진행 중
+            </h3>
+            <p className="text-sm text-neutral-600">
+              결제를 처리하고 있습니다. 잠시만 기다려주세요.
+            </p>
+          </CardContent>
         </Card>
       )}
 
-      {/* 하단 안내 */}
-      <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-        ⚠️ <span className="font-medium">중요:</span> 결제는 암호화되어 안전하게
-        처리됩니다. 절대 새로고침하지 마세요.
+      {/* 하단 보안 안내 */}
+      <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 text-sm">
+        <p className="text-neutral-700">
+          <span className="font-semibold">보안 안내:</span> 결제 진행 중에는 페이지를 새로고침하거나 뒤로 가기를 하지 마세요. 결제 정보는 암호화되어 안전하게 처리됩니다.
+        </p>
       </div>
     </div>
   )

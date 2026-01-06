@@ -25,8 +25,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // 페이지 로드 시 서버에서 로그인 상태 확인
     const checkAuthStatus = async () => {
-      console.log('🔄 새로고침/페이지 로드 - 로그인 상태 확인 시작')
-
       // 쿠키와 localStorage에서 토큰 확인
       const cookies = document.cookie.split(';')
       const accessTokenCookie = cookies.find((cookie) =>
@@ -38,12 +36,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const accessToken = cookieToken || localStorageToken
 
       if (!accessToken) {
-        console.log('❌ 토큰이 없습니다. 로그인하지 않은 상태로 처리')
         setLoading(false)
         return
       }
-
-      console.log('🔑 토큰 발견, /me API 호출하여 최신 사용자 정보 가져오기')
 
       // /me API를 호출하여 최신 사용자 정보(프로필 이미지 포함) 가져오기
       try {
@@ -59,7 +54,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
           setUser(userData)
           localStorage.setItem('user', JSON.stringify(userData))
-          console.log('✅ /me API에서 사용자 정보 로드 완료:', userData)
         } else {
           // /me API 실패 시 로컬스토리지에서 읽기
           const savedUser = localStorage.getItem('user')
@@ -67,10 +61,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             try {
               const userInfo = JSON.parse(savedUser)
               setUser(userInfo)
-              console.log(
-                '✅ 로컬스토리지에서 사용자 정보 로드 완료:',
-                userInfo,
-              )
             } catch (parseError) {
               console.error('❌ 사용자 정보 파싱 실패:', parseError)
               localStorage.removeItem('user')
@@ -100,10 +90,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             try {
               const userInfo = JSON.parse(savedUser)
               setUser(userInfo)
-              console.log(
-                '✅ 로컬스토리지에서 사용자 정보 로드 완료:',
-                userInfo,
-              )
             } catch (parseError) {
               console.error('❌ 사용자 정보 파싱 실패:', parseError)
             }
@@ -112,7 +98,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       setLoading(false)
-      console.log('✅ 로그인 상태 확인 완료')
     }
 
     checkAuthStatus()
@@ -128,7 +113,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // 토스 결제용 사용자 정보 저장
     localStorage.setItem('userEmail', user.email)
     localStorage.setItem('userName', user.nickname)
-    console.log('✅ 로그인 완료, 사용자 정보 저장:', user)
   }
 
   const updateUser = (updatedUser: User) => {
@@ -137,14 +121,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // 토스 결제용 사용자 정보 저장
     localStorage.setItem('userEmail', updatedUser.email)
     localStorage.setItem('userName', updatedUser.nickname)
-    console.log('✅ 사용자 정보 업데이트:', updatedUser)
   }
 
   const logout = async () => {
     try {
       // 로그아웃 API 호출 (성공/실패 여부와 관계없이 로컬 정리 수행)
       await authApi.logout()
-      console.log('✅ 로그아웃 API 호출 성공')
     } catch (error) {
       // API 호출 실패해도 로컬 정리는 수행
       console.error('❌ 로그아웃 API 호출 실패:', error)

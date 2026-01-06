@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { paymentApi } from '@/lib/api'
 import { showErrorToast, showSuccessToast } from '@/lib/utils/toast'
-import { CreditCard, Plus, Trash2 } from 'lucide-react'
+import { CreditCard, Plus, Trash2, AlertCircle } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 interface Card {
@@ -101,101 +101,118 @@ export function PaymentMethodClient({
   return (
     <div
       className={
-        isEmbedded ? '' : 'mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8'
+        isEmbedded ? '' : 'mx-auto max-w-2xl px-4 py-8 sm:px-6 lg:px-8'
       }
     >
       {!isEmbedded && (
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-neutral-900">등록된 카드</h1>
-          <Button onClick={handleAddCard}>
+        <div className="mb-8 flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-neutral-900">결제 수단</h1>
+          <Button
+            onClick={handleAddCard}
+            className="bg-primary-600 hover:bg-primary-700"
+          >
             <Plus className="mr-2 h-4 w-4" />
-            카드 추가 안내
+            추가 안내
           </Button>
         </div>
       )}
 
       {isLoading ? (
-        <Card variant="outlined">
-          <CardContent className="py-16 text-center">
-            <div className="border-primary-200 border-t-primary-600 mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4"></div>
-            <h3 className="text-lg font-semibold text-neutral-900">
-              카드 목록을 불러오는 중...
+        <Card>
+          <CardContent className="py-12 text-center">
+            <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-primary-200 border-t-primary-600"></div>
+            <h3 className="text-sm font-semibold text-neutral-900">
+              로드 중...
             </h3>
           </CardContent>
         </Card>
       ) : error ? (
-        <Card variant="outlined">
-          <CardContent className="py-16 text-center">
-            <p className="text-red-600">{error}</p>
-            <Button onClick={loadCards} variant="outline" className="mt-4">
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="mb-4 text-sm text-neutral-600">{error}</p>
+            <Button
+              onClick={loadCards}
+              className="bg-primary-600 hover:bg-primary-700"
+            >
               다시 시도
             </Button>
           </CardContent>
         </Card>
       ) : cards.length === 0 ? (
-        <Card variant="outlined">
-          <CardContent className="py-16 text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-neutral-100">
-              <CreditCard className="h-8 w-8 text-neutral-400" />
+        <Card>
+          <CardContent className="py-12 text-center">
+            <div className="mb-4 flex justify-center">
+              <div className="rounded-full bg-neutral-100 p-4">
+                <CreditCard className="h-8 w-8 text-neutral-400" />
+              </div>
             </div>
-            <h3 className="mb-2 text-lg font-semibold text-neutral-900">
-              등록된 카드가 없습니다
+            <h3 className="mb-2 text-base font-semibold text-neutral-900">
+              등록된 결제 수단이 없습니다
             </h3>
-            <p className="mb-4 text-neutral-600">
-              경매 낙찰 후 결제 시 토스 결제창을 통해 카드를 등록할 수 있습니다.
+            <p className="text-sm text-neutral-600">
+              낙찰 후 결제 진행 시 새 카드를 등록할 수 있습니다.
             </p>
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {cards.map((card) => (
-            <Card key={card.id} variant="outlined">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <div className="flex items-center space-x-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-50">
-                    <CreditCard className="h-6 w-6 text-blue-600" />
+            <Card key={card.id}>
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-4 flex-1">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-50 shrink-0">
+                      <CreditCard className="h-5 w-5 text-primary-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-sm font-semibold text-neutral-900 truncate">
+                        {card.cardName}
+                      </h4>
+                      <p className="text-xs text-neutral-600 mt-1">
+                        {getCardCompanyName(card.cardCompany)} · {card.cardNumberMasked}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-neutral-900">
-                      {card.cardName}
-                    </h3>
-                    <p className="text-sm text-neutral-600">
-                      {getCardCompanyName(card.cardCompany)}
-                    </p>
-                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDelete(card.id)}
+                    className="ml-2 shrink-0"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleDelete(card.id)}
-                >
-                  <Trash2 className="mr-1 h-4 w-4" />
-                  삭제
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-neutral-600">
-                  카드번호: {card.cardNumberMasked}
-                </p>
               </CardContent>
             </Card>
           ))}
         </div>
       )}
 
-      {/* 안내 메시지 */}
-      <Card variant="outlined" className="mt-6 border-blue-200 bg-blue-50">
-        <CardContent className="p-4">
-          <h4 className="mb-2 text-sm font-semibold text-blue-900">
-            💡 카드 등록 안내
-          </h4>
-          <ul className="space-y-1 text-sm text-blue-800">
-            <li>• 카드는 토스 결제창을 통해서만 안전하게 등록됩니다.</li>
-            <li>• 경매 낙찰 후 결제 시 자동으로 카드 등록이 가능합니다.</li>
-            <li>• 등록된 카드는 다음 결제 시 자동결제에 사용됩니다.</li>
-          </ul>
-        </CardContent>
-      </Card>
+      {/* 안내 섹션 */}
+      <div className="mt-8 rounded-lg border border-neutral-200 bg-neutral-50 p-4">
+        <div className="flex gap-3">
+          <AlertCircle className="h-5 w-5 text-neutral-600 shrink-0 mt-0.5" />
+          <div>
+            <h4 className="text-sm font-semibold text-neutral-900 mb-2">
+              결제 수단 등록 안내
+            </h4>
+            <ul className="space-y-1 text-xs text-neutral-700">
+              <li className="flex gap-2">
+                <span className="shrink-0">•</span>
+                <span>결제 수단은 Toss 결제 시스템을 통해 안전하게 등록됩니다</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="shrink-0">•</span>
+                <span>낙찰 후 결제 진행 시 새로운 카드를 등록할 수 있습니다</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="shrink-0">•</span>
+                <span>모든 카드 정보는 암호화되어 안전하게 보관됩니다</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
