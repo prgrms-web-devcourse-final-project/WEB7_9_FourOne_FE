@@ -230,7 +230,7 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
 
       // 1. 연결 성공 (open 이벤트)
       es.onopen = () => {
-        console.log('[SSE] ✅ 연결 성공 (onopen) - 스트림 열림')
+        console.log('[SSE] 연결 성공 (onopen) - 스트림 열림')
         ;(es as any).__connectTime = Date.now()
         setSseConnectionStatus('connected')
         setSseReconnectAttempts(0)

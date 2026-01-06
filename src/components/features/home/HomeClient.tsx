@@ -258,7 +258,7 @@ export function HomeClient() {
         if (!first.isIntersecting) return
         if (isLoading || !hasMore || !currentCursor) return
 
-        observer.unobserve(target) // ⭐ 중복 트리거 방지
+        observer.unobserve(target) // 중복 트리거 방지
         loadProducts(currentCursor, false)
       },
       { threshold: 0.1 },

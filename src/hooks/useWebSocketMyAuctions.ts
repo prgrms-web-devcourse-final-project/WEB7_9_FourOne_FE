@@ -61,7 +61,7 @@ export function useWebSocketMyAuctions(
 
     // 이미 구독 중이면 중복 구독 방지
     if (isSubscribed) {
-      console.log('🎯 이미 내 경매 구독 중')
+      console.log('[WebSocket] 이미 내 경매 구독 중')
       return
     }
 
@@ -75,7 +75,7 @@ export function useWebSocketMyAuctions(
       const subscriptionId = subscribe(
         destination,
         (message: WebSocketMessage) => {
-          console.log('🎯 내 경매 업데이트 수신:', message)
+          console.log('[WebSocket] 내 경매 업데이트 수신:', message)
 
           switch (message.type) {
             case 'BID':
@@ -145,7 +145,7 @@ export function useWebSocketMyAuctions(
               break
 
             default:
-              console.log('🎯 알 수 없는 메시지 타입:', message.type)
+              console.log('[WebSocket] 알 수 없는 메시지 타입:', message.type)
           }
         },
       )
@@ -153,7 +153,11 @@ export function useWebSocketMyAuctions(
       subscriptionIdRef.current = subscriptionId
       setIsSubscribed(true)
       setError(null)
-      console.log('🎯 내 경매 구독 성공:', targetUserId, subscriptionId)
+      console.log(
+        '[WebSocket] 내 경매 구독 성공:',
+        targetUserId,
+        subscriptionId,
+      )
     } catch (error) {
       console.error('🎯 내 경매 구독 실패:', error)
       setError('구독에 실패했습니다')
@@ -168,7 +172,7 @@ export function useWebSocketMyAuctions(
       subscriptionIdRef.current = null
       setIsSubscribed(false)
       setMyAuctionUpdates([])
-      console.log('🎯 내 경매 구독 해제')
+      console.log('[WebSocket] 내 경매 구독 해제')
     }
   }
 

@@ -24,7 +24,7 @@ export function MyBidNotifications() {
 
   // 디버깅을 위한 로그
   useEffect(() => {
-    console.log('🎯 MyBidNotifications 상태:', {
+    console.log('[MyBidNotifications] 상태:', {
       userId: user?.id,
       isSubscribed,
       myBidUpdatesCount: myBidUpdates.length,
@@ -35,14 +35,17 @@ export function MyBidNotifications() {
   // userId가 변경될 때 구독 상태 확인
   useEffect(() => {
     if (user?.id) {
-      console.log('🎯 사용자 ID 변경됨, 구독 상태 확인:', user.id)
+      console.log(
+        '[MyBidNotifications] 사용자 ID 변경됨, 구독 상태 확인:',
+        user.id,
+      )
     }
   }, [user?.id])
 
   // 페이지 이동 시 구독 상태 확인
   useEffect(() => {
     const handlePageShow = () => {
-      console.log('🎯 페이지 표시됨, 구독 상태 확인:', {
+      console.log('[MyBidNotifications] 페이지 표시됨, 구독 상태 확인:', {
         userId: user?.id,
         isSubscribed,
         myBidUpdatesCount: myBidUpdates.length,

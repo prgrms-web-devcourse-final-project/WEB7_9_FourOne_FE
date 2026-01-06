@@ -152,21 +152,21 @@ export function BidStatusClient({
           label: '낙찰 성공',
           color: 'text-green-600',
           bgColor: 'bg-green-50',
-          icon: '🎉',
+          icon: '✓',
         }
       case 'LOSE':
         return {
           label: '낙찰 실패',
           color: 'text-gray-600',
           bgColor: 'bg-gray-50',
-          icon: '😢',
+          icon: '✕',
         }
       case 'ONGOING':
         return {
           label: '진행중',
           color: 'text-blue-600',
           bgColor: 'bg-blue-50',
-          icon: '⏳',
+          icon: '∙',
         }
       default:
         return {
@@ -197,15 +197,15 @@ export function BidStatusClient({
 
       // 1단계: 결제 준비 (paymentId 및 결제 정보 획득)
       // 먼저 prepare를 호출하여 결제 가능 여부 확인
-      console.log('1️⃣ 결제 준비...')
+      console.log('[결제] 결제 준비...')
       const prepareResult = await preparePayment({ winnerId })
-      console.log('✅ 결제 준비 완료:', prepareResult)
+      console.log('[결제] 결제 준비 완료:', prepareResult)
 
       const { paymentId, autoPaid, status, toss } = prepareResult
 
       // 2-1. 자동결제 성공한 경우
       if (autoPaid && status === 'PAID') {
-        console.log('✅ 자동결제 완료')
+        console.log('[결제] 자동결제 완료')
         showSuccessToast('결제가 완료되었습니다!')
         refresh()
         return
@@ -213,7 +213,7 @@ export function BidStatusClient({
 
       // 2-2. 수동 결제 필요한 경우 (Toss 결제창 호출)
       if (!autoPaid && toss) {
-        console.log('2️⃣ Toss 결제창 호출...')
+        console.log('[결제] Toss 결제창 호출...')
         const { orderId, amount } = toss
 
         // Toss SDK 로드 확인
@@ -253,7 +253,7 @@ export function BidStatusClient({
         }
       }
     } catch (error: any) {
-      console.error('❌ 결제 오류:', error)
+      console.error('[결제] 결제 오류:', error)
       const errorMessage =
         error?.response?.data?.message ||
         error?.message ||
@@ -280,7 +280,7 @@ export function BidStatusClient({
           <Card variant="outlined" className="w-full">
             <CardContent className="py-16 text-center">
               <div className="mb-6">
-                <div className="border-primary-200 border-t-primary-600 mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4"></div>
+                <div className="border-t-primary-600 mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-neutral-200"></div>
                 <h3 className="text-lg font-semibold text-neutral-900">
                   입찰 내역을 불러오는 중...
                 </h3>
@@ -292,7 +292,19 @@ export function BidStatusClient({
             <CardContent className="py-16 text-center">
               <div className="mb-6">
                 <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-neutral-100">
-                  <span className="text-3xl">🎯</span>
+                  <svg
+                    className="h-10 w-10 text-neutral-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                    />
+                  </svg>
                 </div>
                 <h3 className="mb-2 text-xl font-semibold text-neutral-900">
                   입찰 내역이 없습니다
@@ -337,8 +349,22 @@ export function BidStatusClient({
                               className="h-24 w-24 rounded-lg object-cover"
                             />
                           ) : (
-                            <div className="flex h-24 w-24 items-center justify-center rounded-lg bg-neutral-200">
-                              <span className="text-neutral-400">📦</span>
+                            <div className="flex h-24 w-24 items-center justify-center rounded-lg bg-neutral-100">
+                              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-200">
+                                <svg
+                                  className="h-6 w-6 text-neutral-400"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                                  />
+                                </svg>
+                              </div>
                             </div>
                           )}
                         </div>
@@ -394,22 +420,22 @@ export function BidStatusClient({
                         </div>
 
                         {bid.status === 'ONGOING' && (
-                          <div className="bg-primary-50 mb-4 rounded-lg p-3">
-                            <div className="text-primary-900 mb-2 text-sm font-medium">
-                              ⏳ 경매 진행 중
+                          <div className="mb-4 rounded-lg border border-neutral-200 bg-white p-3">
+                            <div className="mb-2 text-sm font-medium text-neutral-900">
+                              경매 진행 중
                             </div>
-                            <p className="text-primary-700 text-sm">
+                            <p className="text-sm text-neutral-700">
                               경매가 진행 중입니다. 결과를 기다려주세요.
                             </p>
                           </div>
                         )}
 
                         {bid.status === 'WIN' && !bid.paidAt && (
-                          <div className="mb-4 rounded-lg border-2 border-yellow-200 bg-yellow-50 p-4">
-                            <div className="mb-2 text-sm font-bold text-yellow-900">
-                              🎉 낙찰 성공! 결제를 진행해주세요
+                          <div className="mb-4 rounded-lg border border-purple-200 bg-purple-50 p-4">
+                            <div className="mb-2 text-sm font-bold text-purple-900">
+                              낙찰 성공! 결제를 진행해주세요
                             </div>
-                            <p className="text-sm text-yellow-800">
+                            <p className="text-sm text-purple-800">
                               {formatPrice(bid.myBid)}을 결제하여 거래를
                               완료하세요.
                             </p>
@@ -417,11 +443,11 @@ export function BidStatusClient({
                         )}
 
                         {bid.status === 'WIN' && bid.paidAt && (
-                          <div className="mb-4 rounded-lg border-2 border-blue-200 bg-blue-50 p-4">
-                            <div className="mb-2 text-sm font-bold text-blue-900">
-                              ✅ 결제 완료!
+                          <div className="mb-4 rounded-lg border border-green-200 bg-green-50 p-4">
+                            <div className="mb-2 text-sm font-bold text-green-900">
+                              결제 완료!
                             </div>
-                            <p className="text-sm text-blue-800">
+                            <p className="text-sm text-green-800">
                               결제가 완료되었습니다. 판매자와 연락하여 상품을
                               받아보세요.
                             </p>
@@ -477,11 +503,11 @@ export function BidStatusClient({
                                     )
                                   }}
                                   disabled={payingBidId === bid.auctionId}
-                                  className="bg-green-600 font-bold text-white shadow-lg hover:bg-green-700"
+                                  className="bg-emerald-600 font-semibold text-white hover:bg-emerald-700"
                                 >
                                   {payingBidId === bid.auctionId
                                     ? '결제 중...'
-                                    : '💳 결제하기'}
+                                    : '결제하기'}
                                 </Button>
                               ) : bid.paidAt ? (
                                 <>
@@ -491,7 +517,7 @@ export function BidStatusClient({
                                     disabled
                                     className="font-bold"
                                   >
-                                    ✅ 결제 완료
+                                    결제 완료
                                   </Button>
                                   <Button
                                     size="md"

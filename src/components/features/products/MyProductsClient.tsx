@@ -123,7 +123,7 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
             statusToUse,
             latestAuction,
           )
-          console.log(`📦 상품 처리 #${product.productId}:`, {
+          console.log(`[MyProducts] 상품 처리 #${product.productId}:`, {
             name: product.name,
             productStatus: product.status,
             auctionStatus: latestAuction?.status,
@@ -447,7 +447,19 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
               <CardContent className="py-12 text-center">
                 <div className="mb-4">
                   <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-neutral-100">
-                    <span className="text-2xl">📦</span>
+                    <svg
+                      className="h-8 w-8 text-neutral-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                      />
+                    </svg>
                   </div>
                   <h3 className="mb-2 text-lg font-semibold text-neutral-900">
                     등록한 상품이 없습니다
@@ -480,7 +492,7 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
               >
                 <CardContent className="flex flex-1 flex-col p-0">
                   {/* 상품 이미지 */}
-                  <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-neutral-100 to-neutral-200">
+                  <div className="relative aspect-square overflow-hidden bg-neutral-100">
                     {imageUrl ? (
                       <img
                         src={imageUrl}
@@ -489,7 +501,21 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
                       />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center">
-                        <span className="text-5xl text-neutral-400">📦</span>
+                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-neutral-200">
+                          <svg
+                            className="h-6 w-6 text-neutral-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                            />
+                          </svg>
+                        </div>
                       </div>
                     )}
                     {/* 상태 배지 (이미지 위) */}
@@ -511,7 +537,7 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
 
                     {/* 가격 및 통계 */}
                     <div className="mb-4 grid grid-cols-2 gap-3">
-                      <div className="from-primary-50 to-primary-100/50 rounded-xl bg-gradient-to-br p-3">
+                      <div className="rounded-xl border border-neutral-200 bg-white p-3">
                         <div className="mb-1 flex items-center space-x-1 text-xs text-neutral-600">
                           {(product as any).status === 'PENDING' ||
                           (product as any).status === 'SCHEDULED' ? (
@@ -635,7 +661,7 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
         <DialogContent className="max-h-[90vh] max-w-4xl overflow-hidden bg-white p-0">
           <div className="flex h-full flex-col">
             {/* 헤더 - 개선된 스타일 */}
-            <div className="from-primary-50 to-primary-100/50 shrink-0 border-b border-neutral-200 bg-gradient-to-r px-6 py-5">
+            <div className="shrink-0 border-b border-neutral-200 bg-white px-6 py-5">
               <DialogHeader className="space-y-2">
                 <DialogTitle className="flex items-center space-x-3 text-2xl font-bold text-neutral-900">
                   <div className="bg-primary-600 flex h-10 w-10 items-center justify-center rounded-lg shadow-lg">
@@ -672,7 +698,7 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
               ) : qnaList.length === 0 ? (
                 <div className="flex min-h-[400px] items-center justify-center">
                   <div className="space-y-4 text-center">
-                    <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-neutral-100 to-neutral-200">
+                    <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-neutral-100">
                       <MessageSquare className="h-10 w-10 text-neutral-400" />
                     </div>
                     <div>
@@ -703,7 +729,7 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
                         style={{ animationDelay: `${index * 50}ms` }}
                       >
                         {/* 질문 영역 */}
-                        <div className="from-primary-50 via-primary-50/70 border-b border-neutral-100 bg-gradient-to-r to-transparent p-5">
+                        <div className="border-b border-neutral-100 bg-white p-5">
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex flex-1 items-start gap-3">
                               <div className="bg-primary-600 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white shadow-md">

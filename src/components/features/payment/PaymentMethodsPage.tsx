@@ -186,7 +186,7 @@ export function PaymentMethodsPage({
         cardName: cardNameValue,
       })
 
-      console.log('✅ 카드 등록 성공')
+      console.log('[결제] 카드 등록 성공')
 
       setIsAddingCard(false)
       setCardName('')
