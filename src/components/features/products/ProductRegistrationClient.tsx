@@ -250,16 +250,15 @@ export function ProductRegistrationClient() {
   }, [imagePreviews])
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-6 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6 lg:px-8">
       {/* 개발 모드: 기본값 자동 입력 버튼 */}
       {isDev && (
         <div className="mb-6">
           <Button
             type="button"
             variant="outline"
-            size="lg"
             onClick={fillDevDefaults}
-            className="w-full border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100"
+            className="w-full border-amber-200 bg-linear-to-r from-amber-50 to-orange-50 text-amber-700 hover:border-amber-300 hover:bg-linear-to-r hover:from-amber-100 hover:to-orange-100"
           >
             🚀 개발 모드: 기본값 자동 입력
           </Button>
@@ -267,13 +266,14 @@ export function ProductRegistrationClient() {
       )}
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* 상품 이미지 */}
-        <Card variant="outlined">
-          <CardContent className="p-6">
-            <h2 className="mb-4 text-lg font-semibold text-neutral-900">
-              상품 이미지 *
+        <Card variant="outlined" className="border-neutral-200 shadow-sm">
+          <CardContent className="p-8">
+            <h2 className="mb-6 text-xl font-bold text-neutral-900">
+              상품 이미지
+              <span className="ml-1 text-red-500">*</span>
             </h2>
 
-            <div className="space-y-4">
+            <div className="space-y-5">
               {/* 이미지 선택 버튼 */}
               <div>
                 <input
@@ -289,50 +289,59 @@ export function ProductRegistrationClient() {
                   variant="outline"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isUploadingImages || selectedImages.length >= 10}
+                  className="group hover:border-primary-400 hover:bg-primary-50 relative h-12 w-full border-2 border-dashed border-neutral-300 bg-white transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isUploadingImages ? (
                     <>
-                      <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-neutral-600 border-t-transparent"></div>
-                      업로드 중...
+                      <div className="border-primary-600 mr-2 h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"></div>
+                      <span className="text-sm font-medium">업로드 중...</span>
                     </>
                   ) : (
                     <>
-                      <Upload className="mr-2 h-4 w-4" />
-                      이미지 선택
+                      <Upload className="group-hover:text-primary-600 mr-2 h-5 w-5 text-neutral-600 transition-colors" />
+                      <span className="group-hover:text-primary-700 text-sm font-medium text-neutral-700">
+                        이미지 선택
+                      </span>
                     </>
                   )}
                 </Button>
-                <p className="mt-2 text-sm text-neutral-500">
-                  이미지를 선택하세요 (최대 10개, 각 10MB 이하)
+                <p className="mt-3 text-center text-xs text-neutral-500">
+                  최대 10개, 각 10MB 이하의 이미지를 선택할 수 있습니다
                 </p>
               </div>
 
               {/* 선택된 이미지 미리보기 */}
               {selectedImages.length > 0 && (
-                <div className="mt-4">
-                  <p className="mb-2 text-sm text-neutral-600">
-                    선택된 이미지 ({selectedImages.length}/10)
-                  </p>
+                <div className="mt-6 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-neutral-700">
+                      선택된 이미지
+                      <span className="bg-primary-100 text-primary-700 ml-2 inline-flex items-center justify-center rounded-full px-2.5 py-0.5 text-xs font-semibold">
+                        {selectedImages.length}/10
+                      </span>
+                    </p>
+                  </div>
                   <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
                     {selectedImages.map((file, index) => (
                       <div
                         key={index}
-                        className="group relative aspect-square overflow-hidden rounded-lg border-2 border-neutral-200"
+                        className="group relative aspect-square overflow-hidden rounded-lg border border-neutral-200 shadow-sm transition-shadow hover:shadow-md"
                       >
                         <img
                           src={imagePreviews[index]}
                           alt={`미리보기 ${index + 1}`}
                           className="h-full w-full object-cover"
                         />
+                        <div className="absolute inset-0 bg-black opacity-0 transition-opacity group-hover:opacity-10" />
                         <button
                           type="button"
                           onClick={() => handleImageDelete(index)}
-                          className="absolute top-2 right-2 rounded-full bg-red-500 p-1.5 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-600"
+                          className="absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-white opacity-0 shadow-md transition-all group-hover:opacity-100 hover:scale-110 hover:bg-red-600"
                           title="이미지 삭제"
                         >
                           <X className="h-4 w-4" />
                         </button>
-                        <div className="absolute right-0 bottom-0 left-0 bg-black/50 p-1 text-xs text-white">
+                        <div className="absolute right-0 bottom-0 left-0 truncate bg-linear-to-t from-black/70 to-transparent p-2 text-xs text-white">
                           {file.name}
                         </div>
                       </div>
@@ -341,40 +350,56 @@ export function ProductRegistrationClient() {
                 </div>
               )}
               {errors.images && (
-                <p className="text-error-500 mt-2 text-sm">{errors.images}</p>
+                <p className="mt-3 text-sm font-medium text-red-500">
+                  ⚠️ {errors.images}
+                </p>
               )}
             </div>
           </CardContent>
         </Card>
 
         {/* 상품 정보 */}
-        <Card variant="outlined">
-          <CardContent className="p-6">
-            <h2 className="mb-4 text-lg font-semibold text-neutral-900">
+        <Card variant="outlined" className="border-neutral-200 shadow-sm">
+          <CardContent className="p-8">
+            <h2 className="mb-6 text-xl font-bold text-neutral-900">
               상품 정보
             </h2>
 
-            <div className="space-y-4">
-              <Input
-                label="상품명 *"
-                name="name"
-                value={formData.name}
-                onChange={handleInputChange}
-                placeholder="상품명을 입력하세요"
-                error={errors.name}
-              />
+            <div className="space-y-5">
+              <div>
+                <label className="mb-2.5 block text-sm font-semibold text-neutral-700">
+                  상품명
+                  <span className="ml-1 text-red-500">*</span>
+                </label>
+                <Input
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  placeholder="상품의 이름을 입력하세요"
+                  className={`transition-colors ${
+                    errors.name
+                      ? 'border-red-300 bg-red-50 focus:border-red-500'
+                      : 'border-neutral-300'
+                  }`}
+                />
+                {errors.name && (
+                  <p className="mt-2 text-sm font-medium text-red-500">
+                    ⚠️ {errors.name}
+                  </p>
+                )}
+              </div>
 
               {/* 카테고리 선택 */}
               <div>
-                <label className="mb-2 block text-sm font-medium text-neutral-700">
-                  카테고리 *
+                <label className="mb-2.5 block text-sm font-semibold text-neutral-700">
+                  카테고리
+                  <span className="ml-1 text-red-500">*</span>
                 </label>
                 <select
                   value={category}
                   onChange={(e) => {
                     const newCategory = e.target.value as CategoryValue
                     setCategory(newCategory)
-                    // 카테고리 변경 시 첫 번째 서브카테고리로 초기화
                     const selectedCategory = CATEGORIES.find(
                       (cat) => cat.value === newCategory,
                     )
@@ -385,7 +410,7 @@ export function ProductRegistrationClient() {
                       setSubCategory(selectedCategory.subCategories[0].value)
                     }
                   }}
-                  className="focus:ring-primary-500 focus:border-primary-500 block w-full rounded-lg border border-neutral-300 px-3 py-2 focus:ring-2 focus:outline-none"
+                  className="focus:border-primary-500 focus:ring-primary-200 block w-full rounded-lg border border-neutral-300 bg-white px-4 py-2.5 text-sm font-medium text-neutral-900 transition-colors hover:border-neutral-400 focus:ring-2 focus:outline-none"
                 >
                   {CATEGORIES.map((cat) => (
                     <option key={cat.value} value={cat.value}>
@@ -397,15 +422,16 @@ export function ProductRegistrationClient() {
 
               {/* 서브카테고리 선택 */}
               <div>
-                <label className="mb-2 block text-sm font-medium text-neutral-700">
-                  서브카테고리 *
+                <label className="mb-2.5 block text-sm font-semibold text-neutral-700">
+                  서브카테고리
+                  <span className="ml-1 text-red-500">*</span>
                 </label>
                 <select
                   value={subCategory}
                   onChange={(e) => {
                     setSubCategory(e.target.value as SubCategoryValue)
                   }}
-                  className="focus:ring-primary-500 focus:border-primary-500 block w-full rounded-lg border border-neutral-300 px-3 py-2 focus:ring-2 focus:outline-none"
+                  className="focus:border-primary-500 focus:ring-primary-200 block w-full rounded-lg border border-neutral-300 bg-white px-4 py-2.5 text-sm font-medium text-neutral-900 transition-colors hover:border-neutral-400 focus:ring-2 focus:outline-none"
                 >
                   {CATEGORIES.find(
                     (cat) => cat.value === category,
@@ -418,8 +444,9 @@ export function ProductRegistrationClient() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-medium text-neutral-700">
-                  상품 설명 *
+                <label className="mb-2.5 block text-sm font-semibold text-neutral-700">
+                  상품 설명
+                  <span className="ml-1 text-red-500">*</span>
                 </label>
                 <textarea
                   name="description"
@@ -427,18 +454,25 @@ export function ProductRegistrationClient() {
                   onChange={handleInputChange}
                   placeholder="상품에 대해 자세히 설명해주세요"
                   rows={6}
-                  className="focus:ring-primary-500 focus:border-primary-500 block w-full rounded-lg border border-neutral-300 px-3 py-2 focus:ring-2 focus:outline-none"
+                  className={`block w-full rounded-lg border px-4 py-3 text-sm font-medium transition-colors placeholder:text-neutral-400 focus:ring-2 focus:outline-none ${
+                    errors.description
+                      ? 'border-red-300 bg-red-50 focus:border-red-500 focus:ring-red-200'
+                      : 'focus:border-primary-500 focus:ring-primary-200 border-neutral-300'
+                  }`}
                 />
-                <div className="mt-2 text-sm text-neutral-500">
-                  <ul className="list-inside list-disc space-y-1">
-                    <li>구매 시기, 사용 기간</li>
-                    <li>상품 상태</li>
-                    <li>하자나 수리 이력 등</li>
+                <div className="mt-3 rounded-lg bg-neutral-50 p-4">
+                  <p className="text-xs font-semibold text-neutral-600">
+                    다음 내용을 포함하면 좋습니다:
+                  </p>
+                  <ul className="mt-2 list-inside space-y-1 text-xs text-neutral-600">
+                    <li>• 구매 시기, 사용 기간</li>
+                    <li>• 상품의 현재 상태</li>
+                    <li>• 하자나 수리 이력</li>
                   </ul>
                 </div>
                 {errors.description && (
-                  <p className="text-error-500 mt-1 text-sm">
-                    {errors.description}
+                  <p className="mt-2 text-sm font-medium text-red-500">
+                    ⚠️ {errors.description}
                   </p>
                 )}
               </div>
@@ -447,15 +481,26 @@ export function ProductRegistrationClient() {
         </Card>
 
         {/* 제출 버튼 */}
-        <div className="flex justify-end space-x-4">
-          <Button type="button" variant="outline" onClick={() => router.back()}>
+        <div className="flex items-center justify-between gap-3 pt-4">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => router.back()}
+            className="h-12 flex-1 border-neutral-300 font-semibold text-neutral-700 transition-all hover:border-neutral-400 hover:bg-neutral-50"
+          >
             취소
           </Button>
-          <Button type="submit" disabled={isLoading || isUploadingImages}>
+          <Button
+            type="submit"
+            disabled={isLoading || isUploadingImages}
+            className="bg-primary-600 hover:bg-primary-700 h-12 flex-1 font-semibold text-white shadow-md transition-all hover:shadow-lg disabled:cursor-not-allowed disabled:bg-neutral-400"
+          >
             {isLoading || isUploadingImages ? (
-              <div className="flex items-center">
+              <div className="flex items-center justify-center">
                 <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
-                {isUploadingImages ? '이미지 업로드 중...' : '등록 중...'}
+                <span>
+                  {isUploadingImages ? '이미지 업로드 중...' : '등록 중...'}
+                </span>
               </div>
             ) : (
               '상품 등록'

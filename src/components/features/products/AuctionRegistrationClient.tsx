@@ -165,33 +165,38 @@ export function AuctionRegistrationClient({
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-6 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6 lg:px-8">
       {/* 개발 모드: 기본값 자동 입력 버튼 */}
       {isDev && (
         <div className="mb-6">
           <Button
             type="button"
             variant="outline"
-            size="lg"
             onClick={fillDevDefaults}
-            className="w-full border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100"
+            className="w-full border-amber-200 bg-linear-to-r from-amber-50 to-orange-50 text-amber-700 hover:border-amber-300 hover:bg-linear-to-r hover:from-amber-100 hover:to-orange-100"
           >
             🚀 개발 모드: 경매 기본값 자동 입력
           </Button>
         </div>
       )}
-      <Card variant="outlined">
-        <CardContent className="p-6">
-          <h2 className="mb-2 text-xl font-bold text-neutral-900">경매 등록</h2>
+      <Card variant="outlined" className="border-neutral-200 shadow-sm">
+        <CardContent className="p-8">
+          <h2 className="mb-2 text-2xl font-bold text-neutral-900">
+            경매 등록
+          </h2>
           <p className="mb-6 text-sm text-neutral-600">
-            상품: <span className="font-medium">{productName}</span>
+            상품:{' '}
+            <span className="font-semibold text-neutral-900">
+              {productName}
+            </span>
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* 시작가 */}
             <div>
-              <label className="mb-2 block text-sm font-medium text-neutral-700">
-                시작가 *
+              <label className="mb-2.5 block text-sm font-semibold text-neutral-700">
+                시작가
+                <span className="ml-1 text-red-500">*</span>
               </label>
               <Input
                 type="text"
@@ -199,17 +204,27 @@ export function AuctionRegistrationClient({
                 value={formData.startPrice}
                 onChange={handleInputChange}
                 placeholder="예: 50000"
-                error={errors.startPrice}
+                className={`transition-colors ${
+                  errors.startPrice
+                    ? 'border-red-300 bg-red-50 focus:border-red-500'
+                    : 'border-neutral-300'
+                }`}
               />
-              <div className="mt-1 text-sm text-neutral-500">
+              {errors.startPrice && (
+                <p className="mt-2 text-sm font-medium text-red-500">
+                  ⚠️ {errors.startPrice}
+                </p>
+              )}
+              <div className="mt-2 text-xs text-neutral-500">
                 경매 시작가를 입력해주세요 (최소 1,000원)
               </div>
             </div>
 
             {/* 즉시 구매가 */}
             <div>
-              <label className="mb-2 block text-sm font-medium text-neutral-700">
-                즉시 구매가 *
+              <label className="mb-2.5 block text-sm font-semibold text-neutral-700">
+                즉시 구매가
+                <span className="ml-1 text-red-500">*</span>
               </label>
               <Input
                 type="text"
@@ -217,17 +232,27 @@ export function AuctionRegistrationClient({
                 value={formData.buyNowPrice}
                 onChange={handleInputChange}
                 placeholder="예: 100000"
-                error={errors.buyNowPrice}
+                className={`transition-colors ${
+                  errors.buyNowPrice
+                    ? 'border-red-300 bg-red-50 focus:border-red-500'
+                    : 'border-neutral-300'
+                }`}
               />
-              <div className="mt-1 text-sm text-neutral-500">
+              {errors.buyNowPrice && (
+                <p className="mt-2 text-sm font-medium text-red-500">
+                  ⚠️ {errors.buyNowPrice}
+                </p>
+              )}
+              <div className="mt-2 text-xs text-neutral-500">
                 즉시 구매 가능한 가격을 입력해주세요 (시작가보다 높아야 함)
               </div>
             </div>
 
             {/* 최소 입찰 단위 */}
             <div>
-              <label className="mb-2 block text-sm font-medium text-neutral-700">
-                최소 입찰 단위 *
+              <label className="mb-2.5 block text-sm font-semibold text-neutral-700">
+                최소 입찰 단위
+                <span className="ml-1 text-red-500">*</span>
               </label>
               <Input
                 type="text"
@@ -235,57 +260,86 @@ export function AuctionRegistrationClient({
                 value={formData.minBidStep}
                 onChange={handleInputChange}
                 placeholder="예: 1000"
-                error={errors.minBidStep}
+                className={`transition-colors ${
+                  errors.minBidStep
+                    ? 'border-red-300 bg-red-50 focus:border-red-500'
+                    : 'border-neutral-300'
+                }`}
               />
-              <div className="mt-1 text-sm text-neutral-500">
+              {errors.minBidStep && (
+                <p className="mt-2 text-sm font-medium text-red-500">
+                  ⚠️ {errors.minBidStep}
+                </p>
+              )}
+              <div className="mt-2 text-xs text-neutral-500">
                 입찰 시 최소 증가 금액을 입력해주세요 (최소 100원)
               </div>
             </div>
 
             {/* 경매 시작 시간 */}
             <div>
-              <label className="mb-2 block text-sm font-medium text-neutral-700">
-                경매 시작 시간 *
+              <label className="mb-2.5 block text-sm font-semibold text-neutral-700">
+                경매 시작 시간
+                <span className="ml-1 text-red-500">*</span>
               </label>
               <Input
                 type="datetime-local"
                 name="startAt"
                 value={formData.startAt}
                 onChange={handleInputChange}
-                error={errors.startAt}
+                className={`transition-colors ${
+                  errors.startAt
+                    ? 'border-red-300 bg-red-50 focus:border-red-500'
+                    : 'border-neutral-300'
+                }`}
               />
-              <div className="mt-1 text-sm text-neutral-500">
+              {errors.startAt && (
+                <p className="mt-2 text-sm font-medium text-red-500">
+                  ⚠️ {errors.startAt}
+                </p>
+              )}
+              <div className="mt-2 text-xs text-neutral-500">
                 경매가 시작되는 시간을 선택해주세요
               </div>
             </div>
 
             {/* 경매 종료 시간 */}
             <div>
-              <label className="mb-2 block text-sm font-medium text-neutral-700">
-                경매 종료 시간 *
+              <label className="mb-2.5 block text-sm font-semibold text-neutral-700">
+                경매 종료 시간
+                <span className="ml-1 text-red-500">*</span>
               </label>
               <Input
                 type="datetime-local"
                 name="endAt"
                 value={formData.endAt}
                 onChange={handleInputChange}
-                error={errors.endAt}
+                className={`transition-colors ${
+                  errors.endAt
+                    ? 'border-red-300 bg-red-50 focus:border-red-500'
+                    : 'border-neutral-300'
+                }`}
               />
-              <div className="mt-1 text-sm text-neutral-500">
+              {errors.endAt && (
+                <p className="mt-2 text-sm font-medium text-red-500">
+                  ⚠️ {errors.endAt}
+                </p>
+              )}
+              <div className="mt-2 text-xs text-neutral-500">
                 경매가 종료되는 시간을 선택해주세요
               </div>
             </div>
 
             {/* 안내 메시지 */}
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
-              <p className="text-sm text-amber-800">
+            <div className="rounded-lg border border-amber-200 bg-linear-to-r from-amber-50 to-orange-50 p-4">
+              <p className="text-sm font-medium text-amber-900">
                 ⚠️ 경매 등록 후에는 수정하거나 삭제할 수 없습니다. 신중하게
                 입력해주세요.
               </p>
             </div>
 
             {/* 버튼 */}
-            <div className="flex justify-end space-x-4">
+            <div className="flex items-center justify-between gap-3 pt-4">
               <Button
                 type="button"
                 variant="outline"
@@ -297,14 +351,19 @@ export function AuctionRegistrationClient({
                   }
                 }}
                 disabled={isLoading}
+                className="h-12 flex-1 border-neutral-300 font-semibold text-neutral-700 transition-all hover:border-neutral-400 hover:bg-neutral-50"
               >
                 취소
               </Button>
-              <Button type="submit" disabled={isLoading}>
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="bg-primary-600 hover:bg-primary-700 h-12 flex-1 font-semibold text-white shadow-md transition-all hover:shadow-lg disabled:cursor-not-allowed disabled:bg-neutral-400"
+              >
                 {isLoading ? (
-                  <div className="flex items-center">
+                  <div className="flex items-center justify-center">
                     <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
-                    등록 중...
+                    <span>등록 중...</span>
                   </div>
                 ) : (
                   '경매 등록'
