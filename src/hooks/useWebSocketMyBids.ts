@@ -94,7 +94,6 @@ export function useWebSocketMyBids(
         (message: WebSocketMessage) => {
           // 브로드캐스트 메시지 처리 (실시간 입찰 현황)
           if (message.type === 'BID' && message.data) {
-
             const bidData: MyBidUpdate = {
               productId: productId,
               productTitle:
@@ -131,23 +130,11 @@ export function useWebSocketMyBids(
       )
 
       productSubscriptionsRef.current.set(productId, subscriptionId)
-      console.log(
-        `🎯 상품 ${productId} 브로드캐스트 구독 성공:`,
-        subscriptionId,
-      )
-    } catch (error) {
-      console.error(`🎯 상품 ${productId} 브로드캐스트 구독 실패:`, error)
-    }
+    } catch (error) {}
   }
 
   // 구독 함수
   const subscribeToMyBids = async (targetUserId: number) => {
-    console.log('[WebSocket] subscribeToMyBids 호출됨:', {
-      targetUserId,
-      isConnected,
-      isSubscribed,
-    })
-
     if (!targetUserId) {
       setError('사용자 ID가 필요합니다')
       return
@@ -160,7 +147,6 @@ export function useWebSocketMyBids(
 
     // 이미 구독 중이면 중복 구독 방지
     if (isSubscribed) {
-      console.log('[WebSocket] 이미 내 입찰 구독 중')
       return
     }
 
@@ -178,8 +164,6 @@ export function useWebSocketMyBids(
       const subscriptionId = subscribe(
         destination,
         (message: WebSocketMessage) => {
-          console.log('[WebSocket] 개인 알림 수신:', message)
-
           // 개인 알림 처리 (입찰 성공/실패, 낙찰/유찰 등)
           if (message.type === 'NOTIFICATION' && message.data?.type) {
             const notificationType = message.data.type
@@ -193,16 +177,6 @@ export function useWebSocketMyBids(
                 'AUCTION_END',
               ].includes(notificationType)
             ) {
-              // 디버깅: 개인 알림 상품명 확인
-              console.log('[WebSocket] 개인 알림 상품명 디버깅:', {
-                productId: message.data.productId,
-                messageData: message.data,
-                productNameFromMessage: message.data?.productName,
-                productTitleFromMessage: message.data?.productTitle,
-                productNameFromMap: productNames.get(message.data.productId),
-                productNamesMap: Object.fromEntries(productNames),
-              })
-
               // 개인 알림을 MyBidUpdate 형태로 변환
               const bidUpdate: MyBidUpdate = {
                 productId: message.data.productId || 0,
@@ -259,21 +233,12 @@ export function useWebSocketMyBids(
 
       subscriptionIdRef.current = subscriptionId
       setError(null)
-      console.log(
-        '[WebSocket] 내 입찰 구독 성공:',
-        targetUserId,
-        subscriptionId,
-      )
-      console.log('[WebSocket] 브로드캐스트 구독 수:', productIds.length)
-      console.log('[WebSocket] 개인 알림 구독:', destination)
 
       // 상태 업데이트를 다음 틱에서 실행하여 확실히 반영되도록 함
       setTimeout(() => {
         setIsSubscribed(true)
-        console.log('[WebSocket] isSubscribed 상태 업데이트됨: true')
       }, 0)
     } catch (error) {
-      console.error('🎯 내 입찰 구독 실패:', error)
       setError('구독에 실패했습니다')
       setIsSubscribed(false)
     }
@@ -290,10 +255,6 @@ export function useWebSocketMyBids(
     // 브로드캐스트 구독들 해제
     productSubscriptionsRef.current.forEach((subscriptionId, productId) => {
       unsubscribe(subscriptionId)
-      console.log(
-        `🎯 상품 ${productId} 브로드캐스트 구독 해제:`,
-        subscriptionId,
-      )
     })
     productSubscriptionsRef.current.clear()
 
@@ -301,7 +262,6 @@ export function useWebSocketMyBids(
     setMyBidUpdates([])
     setMyBidProducts([])
     setProductNames(new Map())
-    console.log('[WebSocket] 내 입찰 구독 해제 완료 (브로드캐스트 + 개인 알림)')
   }
 
   // 입찰가 상승 알림 표시
@@ -338,15 +298,7 @@ export function useWebSocketMyBids(
 
   // 자동 구독
   useEffect(() => {
-    console.log('[WebSocket] useWebSocketMyBids useEffect 실행:', {
-      autoSubscribe,
-      userId,
-      isConnected,
-      isSubscribed,
-    })
-
     if (autoSubscribe && userId && isConnected && !isSubscribed) {
-      console.log('[WebSocket] 구독 조건 만족, 구독 시작')
       subscribeToMyBids(userId)
     }
 
@@ -354,10 +306,6 @@ export function useWebSocketMyBids(
       // 페이지 이동 시에는 구독을 유지하므로 여기서는 해제하지 않음
       // userId가 null이 되거나 autoSubscribe가 false가 될 때만 해제
       if (!userId || !autoSubscribe) {
-        console.log('[WebSocket] 조건 변경으로 인한 구독 해제:', {
-          userId,
-          autoSubscribe,
-        })
         unsubscribeFromMyBids()
       }
     }
@@ -366,10 +314,6 @@ export function useWebSocketMyBids(
   // 로그인 상태 변경 시 구독 해제
   useEffect(() => {
     if (!autoSubscribe || !userId) {
-      console.log('[WebSocket] 로그인 상태 변경으로 구독 해제:', {
-        autoSubscribe,
-        userId,
-      })
       unsubscribeFromMyBids()
     }
   }, [autoSubscribe, userId])
@@ -377,7 +321,6 @@ export function useWebSocketMyBids(
   // 컴포넌트 언마운트 시에만 구독 해제
   useEffect(() => {
     return () => {
-      console.log('[WebSocket] useWebSocketMyBids 컴포넌트 언마운트')
       // 페이지 이동 시에는 구독을 유지하므로 여기서는 해제하지 않음
     }
   }, [])

@@ -227,8 +227,7 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
       }
 
       // 2. connect 이벤트 수신 (백엔드 초기 메시지)
-      es.addEventListener('connect', (event) => {
-      })
+      es.addEventListener('connect', (event) => {})
 
       // 3. highestPrice 이벤트 수신 (백엔드에서 특정 이벤트 타입으로 전송하는 경우)
       es.addEventListener('highestPrice', (event) => {

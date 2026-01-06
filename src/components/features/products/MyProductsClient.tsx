@@ -94,13 +94,6 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
             statusToUse,
             latestAuction,
           )
-          console.log(`[MyProducts] 상품 처리 #${product.productId}:`, {
-            name: product.name,
-            productStatus: product.status,
-            auctionStatus: latestAuction?.status,
-            usedStatus: statusToUse,
-            displayStatus,
-          })
           return {
             ...product,
             status: displayStatus,
@@ -115,7 +108,6 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
           }
         })
 
-        console.log('📋 처리된 상품 데이터:', processedProducts)
         setProducts(processedProducts)
       } else {
         console.error('❌ API 응답 실패:', response)
@@ -438,7 +430,6 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
           </div>
         ) : (
           filteredProducts.map((product, index) => {
-            console.log(product)
             const statusBadge = getStatusBadge(product.status)
             const imageUrl = getFullImageUrl(
               (product as any).thumbnailUrl || (product as any).imageUrl,

@@ -59,7 +59,6 @@ export function useWebSocketAuctionTimer(
 
     // 이미 구독 중이면 중복 구독 방지
     if (isSubscribed) {
-      console.log('⏰ 이미 경매 타이머 구독 중')
       return
     }
 
@@ -78,8 +77,6 @@ export function useWebSocketAuctionTimer(
       const subscriptionId = subscribe(
         destination,
         (message: WebSocketMessage) => {
-          console.log('⏰ 경매 타이머 업데이트 수신:', message)
-
           switch (message.type) {
             case 'AUCTION_TIMER':
               // 경매 타이머 업데이트
@@ -117,7 +114,7 @@ export function useWebSocketAuctionTimer(
               break
 
             default:
-              console.log('⏰ 알 수 없는 메시지 타입:', message.type)
+              break
           }
         },
       )

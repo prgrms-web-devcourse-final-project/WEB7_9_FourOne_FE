@@ -63,24 +63,6 @@ class ApiClient {
 
           if (accessToken) {
             config.headers.Authorization = `Bearer ${accessToken}`
-            // 디버깅용 로그 (auth/me 호출 시에만)
-            if (config.url?.includes('auth/me')) {
-              console.log('🔑 Authorization 헤더 설정:', {
-                url: config.url,
-                hasToken: !!accessToken,
-                tokenLength: accessToken.length,
-                tokenPrefix: accessToken.substring(0, 20) + '...',
-              })
-            }
-          } else {
-            // 토큰이 없을 때 경고 (auth/me 호출 시에만)
-            if (config.url?.includes('auth/me')) {
-              console.warn('⚠️ auth/me 호출 시 토큰이 없습니다:', {
-                url: config.url,
-                cookieToken: cookieToken ? '존재' : '없음',
-                localStorageToken: localStorageToken ? '존재' : '없음',
-              })
-            }
           }
         }
 
@@ -103,7 +85,6 @@ class ApiClient {
 
         // 400 에러 시 잘못된 요청 처리 (자동 알림 비활성화 - 각 컴포넌트에서 처리)
         if (error.response?.status === 400) {
-          console.log('400 에러 응답:', error.response.data)
           // 자동 알림을 제거하고 각 컴포넌트에서 에러를 처리하도록 함
         }
 
