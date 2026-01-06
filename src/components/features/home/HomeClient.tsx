@@ -308,26 +308,42 @@ export function HomeClient() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
       {/* 메인 히어로 섹션 */}
-      <div className="bg-primary-500 relative mb-12 overflow-hidden rounded-3xl p-8 text-white shadow-2xl">
-        <div className="absolute -top-10 -right-10 h-40 w-40 rounded-full bg-white/5 blur-3xl"></div>
-        <div className="absolute -bottom-10 -left-10 h-40 w-40 rounded-full bg-white/5 blur-3xl"></div>
+      <div className="from-primary-500 via-primary-600 to-primary-700 relative mb-16 overflow-hidden rounded-3xl bg-linear-to-br p-12 text-white shadow-2xl">
+        {/* Animated Background Elements */}
+        <div className="absolute -top-20 -right-20 h-64 w-64 animate-pulse rounded-full bg-white/10 blur-3xl"></div>
+        <div
+          className="absolute -bottom-20 -left-20 h-64 w-64 animate-pulse rounded-full bg-white/10 blur-3xl"
+          style={{ animationDelay: '1s' }}
+        ></div>
+        <div className="absolute top-1/2 left-1/2 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/5 blur-3xl"></div>
+
         <div className="relative mx-auto max-w-4xl text-center">
-          <h1 className="animate-fade-in mb-6 text-4xl font-bold sm:text-5xl lg:text-6xl">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/20 px-4 py-2 text-sm font-medium backdrop-blur-sm">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75"></span>
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-white"></span>
+            </span>
+            실시간 경매 진행 중
+          </div>
+
+          <h1 className="animate-fade-in mb-6 text-5xl font-extrabold tracking-tight sm:text-6xl lg:text-7xl">
             희소 굿즈 경매 플랫폼
           </h1>
-          <p className="animate-fade-in mb-8 text-lg opacity-90 sm:text-xl">
+          <p className="animate-fade-in mb-10 text-xl leading-relaxed text-white/90 sm:text-2xl">
             투명하고 신뢰할 수 있는 리미티드 아이템 거래를 경험해보세요
           </p>
+
           <div className="animate-scale-in flex flex-col gap-4 sm:flex-row sm:justify-center">
             <button
               onClick={() => router.push('/register-product')}
-              className="text-primary-500 rounded-xl bg-white px-8 py-4 font-semibold shadow-lg transition-all duration-200 hover:scale-105 hover:bg-neutral-100 hover:shadow-xl"
+              className="group text-primary-600 relative overflow-hidden rounded-xl bg-white px-8 py-4 text-lg font-bold shadow-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl"
             >
-              상품 등록하기
+              <span className="relative z-10">상품 등록하기</span>
+              <div className="from-primary-50 to-primary-100 absolute inset-0 z-0 bg-linear-to-r opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
             </button>
             <button
               onClick={() => router.push('/bid-status')}
-              className="rounded-xl border-2 border-white/50 bg-white/10 px-8 py-4 font-semibold text-white backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:border-white hover:bg-white/20"
+              className="group rounded-xl border-2 border-white/30 bg-white/10 px-8 py-4 text-lg font-bold text-white backdrop-blur-md transition-all duration-300 hover:scale-105 hover:border-white hover:bg-white/20"
             >
               내 입찰 현황
             </button>
@@ -335,81 +351,143 @@ export function HomeClient() {
         </div>
       </div>
 
+      {/* 로딩 스켈레톤 */}
+      {isLoadingHome && (
+        <div className="mb-16 space-y-12">
+          {[1, 2].map((section) => (
+            <div key={section}>
+              <div className="mb-6 flex items-center justify-between">
+                <div className="h-8 w-48 animate-pulse rounded-lg bg-neutral-200"></div>
+                <div className="h-9 w-24 animate-pulse rounded-lg bg-neutral-200"></div>
+              </div>
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {[1, 2, 3, 4].map((card) => (
+                  <div
+                    key={card}
+                    className="animate-pulse rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm"
+                  >
+                    <div className="mb-3 aspect-square rounded-xl bg-neutral-200"></div>
+                    <div className="mb-2 h-6 w-full rounded bg-neutral-200"></div>
+                    <div className="mb-2 h-6 w-3/4 rounded bg-neutral-200"></div>
+                    <div className="mb-3 h-5 w-1/2 rounded bg-neutral-200"></div>
+                    <div className="h-10 w-full rounded-lg bg-neutral-200"></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* 마감 임박 & 인기 경매 섹션 (홈 API 데이터) */}
       {!isLoadingHome && homeData && (
         <div className="mb-12 space-y-10">
           {/* 마감 임박 경매 */}
           {homeData.endingSoon && homeData.endingSoon.length > 0 && (
-            <div>
-              <div className="mb-6 flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-neutral-900">
-                  ⏰ 마감 임박 경매
-                </h2>
+            <div className="animate-fade-in">
+              <div className="mb-8 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-linear-to-br from-red-500 to-orange-500 shadow-lg">
+                    <Clock className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-3xl font-extrabold tracking-tight text-neutral-900">
+                      마감 임박 경매
+                    </h2>
+                    <p className="text-sm text-neutral-600">
+                      놓치면 후회할 기회
+                    </p>
+                  </div>
+                </div>
                 <Button
                   variant="ghost"
                   size="sm"
+                  className="group font-semibold"
                   onClick={() => {
                     setSortBy('closing')
                     setStatusFilter('LIVE')
                   }}
                 >
-                  전체보기 →
+                  전체보기
+                  <span className="ml-1 transition-transform group-hover:translate-x-1">
+                    →
+                  </span>
                 </Button>
               </div>
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {homeData.endingSoon.slice(0, 4).map((auction) => (
-                  <Card
+                {homeData.endingSoon.slice(0, 4).map((auction, idx) => (
+                  <div
                     key={auction.auctionId}
-                    variant="elevated"
-                    hover
-                    className="animate-fade-in"
+                    className="group animate-fade-in cursor-pointer"
+                    style={{ animationDelay: `${idx * 100}ms` }}
+                    onClick={() =>
+                      router.push(`/auctions/${auction.auctionId}`)
+                    }
                   >
-                    <CardContent className="p-4">
-                      <div className="mb-3 aspect-square overflow-hidden rounded-lg bg-neutral-100">
+                    <div className="relative overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl">
+                      {/* Urgency Badge */}
+                      <div className="absolute top-3 right-3 z-10 rounded-full bg-linear-to-r from-red-500 to-orange-500 px-3 py-1 text-xs font-bold text-white shadow-lg">
+                        🔥 마감임박
+                      </div>
+
+                      {/* Image */}
+                      <div className="relative aspect-square overflow-hidden bg-neutral-100">
                         {auction.imageUrl ? (
                           <img
                             src={auction.imageUrl}
                             alt={auction.name || ''}
-                            className="h-full w-full object-cover transition-transform hover:scale-105"
+                            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                           />
                         ) : (
                           <div className="flex h-full items-center justify-center">
-                            <span className="text-4xl">📦</span>
+                            <span className="text-6xl opacity-50">📦</span>
                           </div>
                         )}
+                        <div className="absolute inset-0 bg-linear-to-t from-black/50 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
                       </div>
-                      <h3 className="mb-2 line-clamp-2 font-bold text-neutral-900">
-                        {auction.name}
-                      </h3>
-                      <div className="mb-2 flex items-center justify-between">
-                        <span className="text-sm text-neutral-600">현재가</span>
-                        <span className="text-primary-600 text-lg font-bold">
-                          {formatPrice(
-                            auction.currentHighestBid ||
-                              auction.startPrice ||
-                              0,
-                          )}
-                        </span>
+
+                      {/* Content */}
+                      <div className="p-5">
+                        <h3 className="group-hover:text-primary-600 mb-3 line-clamp-2 text-lg leading-tight font-bold text-neutral-900 transition-colors">
+                          {auction.name}
+                        </h3>
+
+                        <div className="bg-primary-50 mb-4 flex items-baseline justify-between rounded-lg p-3">
+                          <span className="text-sm font-medium text-neutral-700">
+                            현재가
+                          </span>
+                          <span className="text-primary-600 text-xl font-extrabold">
+                            {formatPrice(
+                              auction.currentHighestBid ||
+                                auction.startPrice ||
+                                0,
+                            )}
+                          </span>
+                        </div>
+
+                        <div className="mb-4 flex items-center gap-2 rounded-lg bg-red-50 p-3 text-red-600">
+                          <Clock className="h-4 w-4 animate-pulse" />
+                          <span className="text-sm font-bold">
+                            {auction.remainingTimeSeconds !== undefined &&
+                            auction.remainingTimeSeconds > 0
+                              ? `${Math.floor(auction.remainingTimeSeconds / 3600)}시간 ${Math.floor((auction.remainingTimeSeconds % 3600) / 60)}분 남음`
+                              : '곧 종료'}
+                          </span>
+                        </div>
+
+                        <Button
+                          size="lg"
+                          className="from-primary-500 to-primary-600 w-full bg-linear-to-r font-bold shadow-md transition-all duration-300 hover:shadow-xl"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            router.push(`/auctions/${auction.auctionId}`)
+                          }}
+                        >
+                          입찰하기
+                        </Button>
                       </div>
-                      <div className="mb-3 flex items-center text-sm text-red-600">
-                        <Clock className="mr-1 h-4 w-4" />
-                        {auction.remainingTimeSeconds !== undefined &&
-                        auction.remainingTimeSeconds > 0
-                          ? `${Math.floor(auction.remainingTimeSeconds / 3600)}시간 ${Math.floor((auction.remainingTimeSeconds % 3600) / 60)}분 남음`
-                          : '곧 종료'}
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="gradient"
-                        className="w-full"
-                        onClick={() =>
-                          router.push(`/auctions/${auction.auctionId}`)
-                        }
-                      >
-                        입찰하기
-                      </Button>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
@@ -417,73 +495,123 @@ export function HomeClient() {
 
           {/* 인기 경매 */}
           {homeData.popular && homeData.popular.length > 0 && (
-            <div>
-              <div className="mb-6 flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-neutral-900">
-                  🔥 인기 경매
-                </h2>
+            <div
+              className="animate-fade-in"
+              style={{ animationDelay: '200ms' }}
+            >
+              <div className="mb-8 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-linear-to-br from-orange-500 to-pink-500 shadow-lg">
+                    <span className="text-2xl">🔥</span>
+                  </div>
+                  <div>
+                    <h2 className="text-3xl font-extrabold tracking-tight text-neutral-900">
+                      인기 경매
+                    </h2>
+                    <p className="text-sm text-neutral-600">
+                      많은 사람들이 주목하는
+                    </p>
+                  </div>
+                </div>
                 <Button
                   variant="ghost"
                   size="sm"
+                  className="group font-semibold"
                   onClick={() => {
                     setSortBy('popular')
                     setStatusFilter('LIVE')
                   }}
                 >
-                  전체보기 →
+                  전체보기
+                  <span className="ml-1 transition-transform group-hover:translate-x-1">
+                    →
+                  </span>
                 </Button>
               </div>
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {homeData.popular.slice(0, 4).map((auction) => (
-                  <Card
+                {homeData.popular.slice(0, 4).map((auction, idx) => (
+                  <div
                     key={auction.auctionId}
-                    variant="elevated"
-                    hover
-                    className="animate-fade-in"
+                    className="group animate-fade-in cursor-pointer"
+                    style={{ animationDelay: `${(idx + 4) * 100}ms` }}
+                    onClick={() =>
+                      router.push(`/auctions/${auction.auctionId}`)
+                    }
                   >
-                    <CardContent className="p-4">
-                      <div className="mb-3 aspect-square overflow-hidden rounded-lg bg-neutral-100">
+                    <div className="relative overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl">
+                      {/* Popular Badge */}
+                      <div className="absolute top-3 right-3 z-10 flex items-center gap-1 rounded-full bg-linear-to-r from-orange-500 to-pink-500 px-3 py-1 text-xs font-bold text-white shadow-lg">
+                        <span className="animate-pulse">⭐</span>
+                        인기
+                      </div>
+
+                      {/* Image */}
+                      <div className="relative aspect-square overflow-hidden bg-neutral-100">
                         {auction.imageUrl ? (
                           <img
                             src={auction.imageUrl}
                             alt={auction.name || ''}
-                            className="h-full w-full object-cover transition-transform hover:scale-105"
+                            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
                           />
                         ) : (
                           <div className="flex h-full items-center justify-center">
-                            <span className="text-4xl">📦</span>
+                            <span className="text-6xl opacity-50">📦</span>
                           </div>
                         )}
+                        <div className="absolute inset-0 bg-linear-to-t from-black/50 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
                       </div>
-                      <h3 className="mb-2 line-clamp-2 font-bold text-neutral-900">
-                        {auction.name}
-                      </h3>
-                      <div className="mb-2 flex items-center justify-between">
-                        <span className="text-sm text-neutral-600">현재가</span>
-                        <span className="text-primary-600 text-lg font-bold">
-                          {formatPrice(
-                            auction.currentHighestBid ||
-                              auction.startPrice ||
-                              0,
-                          )}
-                        </span>
+
+                      {/* Content */}
+                      <div className="p-5">
+                        <h3 className="group-hover:text-primary-600 mb-3 line-clamp-2 text-lg leading-tight font-bold text-neutral-900 transition-colors">
+                          {auction.name}
+                        </h3>
+
+                        <div className="bg-primary-50 mb-4 flex items-baseline justify-between rounded-lg p-3">
+                          <span className="text-sm font-medium text-neutral-700">
+                            현재가
+                          </span>
+                          <span className="text-primary-600 text-xl font-extrabold">
+                            {formatPrice(
+                              auction.currentHighestBid ||
+                                auction.startPrice ||
+                                0,
+                            )}
+                          </span>
+                        </div>
+
+                        <div className="mb-4 flex items-center justify-between rounded-lg bg-neutral-50 px-3 py-2">
+                          <div className="flex items-center gap-1 text-neutral-700">
+                            <User className="h-4 w-4" />
+                            <span className="text-sm font-semibold">
+                              {auction.bidCount || 0}
+                            </span>
+                            <span className="text-xs text-neutral-500">
+                              입찰
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1 text-pink-500">
+                            <span className="text-base">❤️</span>
+                            <span className="text-sm font-semibold">
+                              {auction.bookmarkCount || 0}
+                            </span>
+                          </div>
+                        </div>
+
+                        <Button
+                          size="lg"
+                          variant="outline"
+                          className="hover:border-primary-500 hover:bg-primary-50 w-full border-2 font-bold transition-all duration-300"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            router.push(`/auctions/${auction.auctionId}`)
+                          }}
+                        >
+                          상세보기
+                        </Button>
                       </div>
-                      <div className="mb-3 flex items-center justify-between text-sm text-neutral-600">
-                        <span>입찰 {auction.bidCount || 0}회</span>
-                        <span>❤️ {auction.bookmarkCount || 0}</span>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="gradient"
-                        className="w-full"
-                        onClick={() =>
-                          router.push(`/auctions/${auction.auctionId}`)
-                        }
-                      >
-                        상세보기
-                      </Button>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
