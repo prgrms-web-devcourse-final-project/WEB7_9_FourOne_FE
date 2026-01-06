@@ -448,7 +448,7 @@ export function ProductDetailClient({
       })
 
       if (response.success) {
-        showSuccessToast('즉시 구매가 완료되었습니다. 낙찰 확정되었습니다!')
+        showSuccessToast('확정되었습니다! 입찰 현황에서 결제를 진행해주세요.')
         setProductData((prev) => ({
           ...prev,
           status: 'ENDED' as const,
@@ -909,7 +909,7 @@ export function ProductDetailClient({
                     <div className="flex items-center space-x-2 text-green-700">
                       <span className="text-2xl">✓</span>
                       <span className="text-sm font-semibold">
-                        구매 완료 / 낙찰
+                        입찰 현황에서 결제를 진행해주세요.
                       </span>
                     </div>
                     <p className="text-base font-semibold text-neutral-800">

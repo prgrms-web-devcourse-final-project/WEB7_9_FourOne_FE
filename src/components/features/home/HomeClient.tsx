@@ -14,7 +14,20 @@ import {
   type CategoryValue,
   type SubCategoryValue,
 } from '@/lib/constants/categories'
-import { Clock, MapPin, Search, User } from 'lucide-react'
+import {
+  Clock,
+  MapPin,
+  Search,
+  User,
+  Zap,
+  Star,
+  Package,
+  AlertCircle,
+  Flame,
+  Heart,
+  BookHeartIcon,
+  HeartIcon,
+} from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { components } from '@/types/swagger-generated'
@@ -308,7 +321,7 @@ export function HomeClient() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
       {/* 메인 히어로 섹션 */}
-      <div className="from-primary-500 via-primary-600 to-primary-700 relative mb-16 overflow-hidden rounded-3xl bg-linear-to-br p-12 text-white shadow-2xl">
+      <div className="bg-primary-600 relative mb-16 overflow-hidden rounded-3xl p-12 text-white shadow-2xl">
         {/* Animated Background Elements */}
         <div className="absolute -top-20 -right-20 h-64 w-64 animate-pulse rounded-full bg-white/10 blur-3xl"></div>
         <div
@@ -327,7 +340,7 @@ export function HomeClient() {
           </div>
 
           <h1 className="animate-fade-in mb-6 text-5xl font-extrabold tracking-tight sm:text-6xl lg:text-7xl">
-            DROP:
+            DROP: 굿즈의 새로운 시작
           </h1>
           <p className="animate-fade-in mb-10 text-xl leading-relaxed text-white/90 sm:text-2xl">
             투명하고 신뢰할 수 있는 리미티드 아이템 거래를 경험해보세요
@@ -345,7 +358,7 @@ export function HomeClient() {
               onClick={() => router.push('/bid-status')}
               className="group rounded-xl border-2 border-white/30 bg-white/10 px-8 py-4 text-lg font-bold text-white backdrop-blur-md transition-all duration-300 hover:scale-105 hover:border-white hover:bg-white/20"
             >
-              내 입찰 현황
+              입찰 현황
             </button>
           </div>
         </div>
@@ -387,12 +400,12 @@ export function HomeClient() {
             <div className="animate-fade-in">
               <div className="mb-8 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-linear-to-br from-red-500 to-orange-500 shadow-lg">
-                    <Clock className="h-6 w-6 text-white" />
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-500 shadow-lg">
+                    <Flame className="h-6 w-6 text-white" />
                   </div>
                   <div>
                     <h2 className="text-3xl font-extrabold tracking-tight text-neutral-900">
-                      마감 임박 경매
+                      곧 종료되는 경매
                     </h2>
                     <p className="text-sm text-neutral-600">
                       놓치면 후회할 기회
@@ -426,8 +439,9 @@ export function HomeClient() {
                   >
                     <div className="relative overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl">
                       {/* Urgency Badge */}
-                      <div className="absolute top-3 right-3 z-10 rounded-full bg-linear-to-r from-red-500 to-orange-500 px-3 py-1 text-xs font-bold text-white shadow-lg">
-                        🔥 마감임박
+                      <div className="absolute top-3 right-3 z-10 flex items-center gap-1 rounded-full bg-red-500 px-3 py-1 text-xs font-bold text-white shadow-lg">
+                        <Flame className="h-3 w-3" />
+                        마감임박
                       </div>
 
                       {/* Image */}
@@ -440,7 +454,7 @@ export function HomeClient() {
                           />
                         ) : (
                           <div className="flex h-full items-center justify-center">
-                            <span className="text-6xl opacity-50">📦</span>
+                            <Package className="h-12 w-12 text-neutral-300" />
                           </div>
                         )}
                         <div className="absolute inset-0 bg-linear-to-t from-black/50 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
@@ -501,15 +515,15 @@ export function HomeClient() {
             >
               <div className="mb-8 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-linear-to-br from-orange-500 to-pink-500 shadow-lg">
-                    <span className="text-2xl">🔥</span>
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-purple-500 shadow-lg">
+                    <Star className="h-6 w-6 text-white" />
                   </div>
                   <div>
                     <h2 className="text-3xl font-extrabold tracking-tight text-neutral-900">
-                      인기 경매
+                      인기 상승 경매
                     </h2>
                     <p className="text-sm text-neutral-600">
-                      많은 사람들이 주목하는
+                      많은 사람들이 관심있는
                     </p>
                   </div>
                 </div>
@@ -540,8 +554,8 @@ export function HomeClient() {
                   >
                     <div className="relative overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl">
                       {/* Popular Badge */}
-                      <div className="absolute top-3 right-3 z-10 flex items-center gap-1 rounded-full bg-linear-to-r from-orange-500 to-pink-500 px-3 py-1 text-xs font-bold text-white shadow-lg">
-                        <span className="animate-pulse">⭐</span>
+                      <div className="absolute top-3 right-3 z-10 flex items-center gap-1 rounded-full bg-purple-500 px-3 py-1 text-xs font-bold text-white shadow-lg">
+                        <Star className="h-3 w-3 animate-pulse" />
                         인기
                       </div>
 
@@ -555,7 +569,7 @@ export function HomeClient() {
                           />
                         ) : (
                           <div className="flex h-full items-center justify-center">
-                            <span className="text-6xl opacity-50">📦</span>
+                            <Package className="h-12 w-12 text-neutral-300" />
                           </div>
                         )}
                         <div className="absolute inset-0 bg-linear-to-t from-black/50 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
@@ -591,9 +605,9 @@ export function HomeClient() {
                             </span>
                           </div>
                           <div className="flex items-center gap-1 text-pink-500">
-                            <span className="text-base">❤️</span>
+                            <HeartIcon className="h-4 w-4" />
                             <span className="text-sm font-semibold">
-                              {auction.bookmarkCount || 0}
+                              {auction.bookmarkCount || ''}
                             </span>
                           </div>
                         </div>
@@ -774,7 +788,7 @@ export function HomeClient() {
             <CardContent className="py-12 text-center">
               <div className="mb-4">
                 <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
-                  <span className="text-2xl">⚠️</span>
+                  <AlertCircle className="h-8 w-8 text-red-600" />
                 </div>
                 <h3 className="mb-2 text-lg font-semibold text-neutral-900">
                   오류가 발생했습니다
@@ -794,7 +808,7 @@ export function HomeClient() {
             <CardContent className="py-12 text-center">
               <div className="mb-4">
                 <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-neutral-100">
-                  <span className="text-2xl">📦</span>
+                  <Package className="h-8 w-8 text-neutral-400" />
                 </div>
                 <h3 className="mb-2 text-lg font-semibold text-neutral-900">
                   상품이 없습니다

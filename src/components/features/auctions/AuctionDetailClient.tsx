@@ -577,7 +577,7 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
       })
 
       if (response.success) {
-        showSuccessToast('즉시 구매가 완료되었습니다. 낙찰 확정되었습니다!')
+        showSuccessToast('확정되었습니다! 입찰 현황에서 결제를 진행해주세요.')
 
         // SSE 연결 종료
         if (bidStreamRef.current) {
@@ -959,7 +959,7 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
                 {auctionEnded && (
                   <div className="mt-3 rounded-md bg-green-100 px-3 py-2 text-center">
                     <p className="text-sm font-semibold text-green-800">
-                      구매 완료 / 낙찰
+                      입찰 현황에서 결제를 진행해주세요.
                     </p>
                   </div>
                 )}
