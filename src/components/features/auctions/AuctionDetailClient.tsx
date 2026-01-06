@@ -728,7 +728,7 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
                   <img
                     src={auctionData.imageUrls[0]}
                     alt={auctionData.name}
-                    className="h-96 w-full object-cover"
+                    className="h-auto w-full object-cover"
                   />
                 ) : (
                   <div className="flex h-96 w-full items-center justify-center">
@@ -814,7 +814,7 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
           )}
 
           {/* 가격 정보 */}
-          <Card className="bg-primary-50">
+          <Card className="border border-neutral-200 bg-white">
             <CardContent className="space-y-3 p-4">
               <div>
                 <div className="flex items-center justify-between gap-2">
@@ -835,10 +835,11 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
                     </p>
                   </div>
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     onClick={() => refreshHighestBid(true)}
                     disabled={isHighestBidLoading}
+                    className="h-auto px-2 py-1 text-xs text-neutral-600 hover:text-neutral-900"
                   >
                     {isHighestBidLoading ? '갱신 중...' : '새로고침'}
                   </Button>
@@ -872,7 +873,7 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
           </Card>
 
           {/* 경매 상태 */}
-          <Card className="bg-neutral-50">
+          <Card className="border border-neutral-200 bg-white">
             <CardContent className="space-y-3 p-4">
               {isLive && (
                 <div className="flex items-center justify-between">
@@ -900,7 +901,7 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
           </Card>
 
           {/* 판매자 정보 */}
-          <Card>
+          <Card className="border border-neutral-200 bg-white">
             <CardContent className="space-y-3 p-4">
               <div>
                 <p className="mb-1 text-xs font-medium text-neutral-500">
@@ -914,7 +915,7 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
           </Card>
 
           {/* 경매 기간 */}
-          <Card className="bg-blue-50">
+          <Card className="border border-neutral-200 bg-white">
             <CardContent className="space-y-3 p-4">
               <div>
                 <p className="mb-1 text-xs font-medium text-neutral-500">
@@ -937,19 +938,19 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
 
           {/* 즉시 구매가 */}
           {auctionData.buyNowPrice && (
-            <Card className="border-orange-200 bg-orange-50">
+            <Card className="border-purple-200 bg-purple-50">
               <CardContent className="p-4">
                 <p className="mb-1 text-xs font-medium text-neutral-500">
                   즉시 구매가
                 </p>
-                <p className="text-xl font-bold text-orange-600">
+                <p className="text-xl font-bold text-purple-600">
                   {formatPrice(auctionData.buyNowPrice)}
                 </p>
                 {isLive && !auctionEnded && (
                   <Button
                     size="sm"
                     variant="outline"
-                    className="mt-3 w-full border-orange-300 text-orange-600 hover:bg-orange-100"
+                    className="mt-3 w-full border-purple-300 text-purple-600 hover:bg-purple-100"
                     onClick={handleBuyNow}
                     disabled={isBuyNowLoading || !isLoggedIn}
                   >
@@ -985,7 +986,7 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
           {isLive ? (
             <div className="space-y-4">
               {/* 현재가 및 다음 최소 입찰가 안내 */}
-              <div className="bg-primary-50 rounded-lg p-4">
+              <div className="rounded-lg border border-neutral-200 bg-white p-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs text-neutral-600">현재 최고가</p>
@@ -1063,13 +1064,13 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
                   </Button>
                 </div>
                 <p className="mt-2 text-xs text-neutral-500">
-                  💡 최소 입찰가: {nextMinBidPrice.toLocaleString()}원 (현재가 +{' '}
+                  최소 입찰가: {nextMinBidPrice.toLocaleString()}원 (현재가 +{' '}
                   {(auctionData.minBidStep || 1000).toLocaleString()}원)
                 </p>
               </div>
             </div>
           ) : isScheduled ? (
-            <div className="border-primary-200 bg-primary-50 rounded-lg border p-4 text-sm text-neutral-800">
+            <div className="rounded-lg border border-neutral-200 bg-white p-4 text-sm text-neutral-800">
               <p className="text-primary-700 font-semibold">
                 경매 시작 전입니다.
               </p>
@@ -1250,7 +1251,7 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
             <h2 className="mb-4 text-xl font-bold">질문과 답변</h2>
 
             {/* 질문 작성 폼 */}
-            <div className="mb-6 space-y-3 rounded-lg bg-neutral-50 p-4">
+            <div className="mb-6 space-y-3 rounded-lg border border-neutral-200 bg-white p-4">
               <label className="block text-sm font-medium text-neutral-700">
                 상품에 대해 궁금한 점이 있으신가요?
               </label>
@@ -1287,7 +1288,7 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
                   로딩 중...
                 </p>
               ) : qnaList.length === 0 ? (
-                <p className="rounded-lg bg-neutral-50 p-4 text-center text-sm text-neutral-500">
+                <p className="rounded-lg border border-neutral-200 bg-white p-4 text-center text-sm text-neutral-500">
                   아직 등록된 질문이 없습니다.
                 </p>
               ) : (
@@ -1319,7 +1320,7 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
                           {qna.answers.map((answer) => (
                             <div
                               key={answer.answerId}
-                              className="border-primary-300 bg-primary-50 border-l-2 py-2 pl-3"
+                              className="border-primary-300 border-l-2 bg-white py-2 pl-3"
                             >
                               <div className="mb-1 flex items-center">
                                 <span className="text-primary-600 text-xs font-semibold">
@@ -1336,7 +1337,7 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
                           ))}
                         </div>
                       ) : (
-                        <div className="border-l-2 border-neutral-200 bg-neutral-50 py-2 pl-3">
+                        <div className="border-l-2 border-neutral-200 bg-white py-2 pl-3">
                           <p className="text-sm text-neutral-500 italic">
                             아직 답변이 없습니다.
                           </p>
@@ -1382,7 +1383,7 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
             </Button>
             <Button
               onClick={confirmBuyNow}
-              className="bg-orange-600 text-white hover:bg-orange-700"
+              className="bg-purple-600 text-white hover:bg-purple-700"
             >
               구매 확정
             </Button>
