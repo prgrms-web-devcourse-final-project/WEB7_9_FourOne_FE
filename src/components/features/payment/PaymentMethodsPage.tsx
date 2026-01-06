@@ -13,7 +13,7 @@ import { useState, useEffect } from 'react'
 import { usePaymentMethods } from '@/hooks/usePaymentMethods'
 import { CardResponse, CardCompany, issueBillingKey } from '@/lib/api/payment'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
   Dialog,
@@ -268,38 +268,47 @@ export function PaymentMethodsPage({
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
-          <div className="border-primary mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2"></div>
-          <p className="text-gray-600">카드 목록을 불러오는 중...</p>
+          <div className="border-primary-200 border-t-primary-600 mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2"></div>
+          <p className="text-sm text-neutral-600">카드 목록 로드 중...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 p-6">
+    <div className="mx-auto max-w-2xl space-y-6 p-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">결제 수단 관리</h1>
+        <h1 className="text-2xl font-bold text-neutral-900">결제 수단 관리</h1>
         <Dialog open={isAddingCard} onOpenChange={setIsAddingCard}>
           <DialogTrigger asChild>
-            <Button onClick={handleOpenAddCard}>
+            <Button
+              onClick={handleOpenAddCard}
+              className="bg-primary-600 hover:bg-primary-700"
+            >
               <CreditCard className="mr-2 h-4 w-4" />
               카드 추가
             </Button>
           </DialogTrigger>
           <DialogContent className="pointer-events-auto bg-white sm:max-w-md">
             <DialogHeader className="space-y-3">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
-                <CreditCard className="h-6 w-6 text-blue-600" />
+              <div className="bg-primary-50 mx-auto flex h-12 w-12 items-center justify-center rounded-full">
+                <CreditCard className="text-primary-600 h-6 w-6" />
               </div>
-              <DialogTitle className="text-center text-xl">
+              <DialogTitle className="text-center text-xl text-neutral-900">
                 새 카드 등록
               </DialogTitle>
+              <DialogDescription className="text-center text-sm text-neutral-600">
+                Toss 결제 시스템을 통해 안전하게 등록됩니다
+              </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-6 pt-4">
               <div className="space-y-2">
-                <Label htmlFor="cardName" className="text-sm font-medium">
-                  카드 별명 <span className="text-red-500">*</span>
+                <Label
+                  htmlFor="cardName"
+                  className="text-sm font-medium text-neutral-900"
+                >
+                  카드 이름 <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="cardName"
@@ -309,20 +318,15 @@ export function PaymentMethodsPage({
                   className="h-11"
                   autoFocus={false}
                 />
-                <p className="text-xs text-gray-500">
-                  등록 후 카드를 쉽게 구분할 수 있는 이름입니다
+                <p className="text-xs text-neutral-600">
+                  카드를 쉽게 구분할 수 있는 이름을 입력해주세요
                 </p>
               </div>
 
               {formError && (
-                <Alert
-                  variant="destructive"
-                  className="border-red-200 bg-red-50"
-                >
-                  <AlertCircle className="h-4 w-4 text-red-600" />
-                  <AlertDescription className="text-red-800">
-                    {formError}
-                  </AlertDescription>
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{formError}</AlertDescription>
                 </Alert>
               )}
 
@@ -340,20 +344,20 @@ export function PaymentMethodsPage({
                   disabled={
                     loading || tossLoading || !cardName.trim() || !sdkReady
                   }
-                  className="h-11 flex-1 bg-blue-600 hover:bg-blue-700"
+                  className="bg-primary-600 hover:bg-primary-700 h-11 flex-1"
                 >
                   {!sdkReady ? (
                     <>
-                      <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                      SDK 로딩 중...
+                      <div className="border-primary-200 mr-2 h-4 w-4 animate-spin rounded-full border-2 border-t-white" />
+                      초기화 중
                     </>
                   ) : tossLoading ? (
                     <>
-                      <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                      처리 중...
+                      <div className="border-primary-200 mr-2 h-4 w-4 animate-spin rounded-full border-2 border-t-white" />
+                      처리 중
                     </>
                   ) : (
-                    '카드 등록'
+                    '등록 시작'
                   )}
                 </Button>
               </div>
@@ -370,52 +374,71 @@ export function PaymentMethodsPage({
       )}
 
       {methods.length === 0 ? (
-        <Card className="p-12 text-center">
-          <CreditCard className="mx-auto mb-4 h-12 w-12 text-gray-400" />
-          <p className="mb-4 text-gray-600">등록된 카드가 없습니다</p>
-          <Button onClick={handleOpenAddCard}>첫 카드 추가하기</Button>
+        <Card>
+          <CardContent className="py-12 text-center">
+            <div className="mb-4 flex justify-center">
+              <div className="rounded-full bg-neutral-100 p-4">
+                <CreditCard className="h-8 w-8 text-neutral-400" />
+              </div>
+            </div>
+            <p className="mb-6 text-sm text-neutral-600">
+              등록된 카드가 없습니다
+            </p>
+            <Button
+              onClick={handleOpenAddCard}
+              className="bg-primary-600 hover:bg-primary-700"
+            >
+              첫 카드 추가
+            </Button>
+          </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4">
+        <div className="grid gap-3">
           {methods.map((method) => (
-            <Card key={method.id} className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <CreditCard className="h-8 w-8 text-blue-600" />
-                  <div>
-                    <h3 className="font-semibold">
-                      {method.cardCompany
-                        ? CARD_COMPANY_NAMES[method.cardCompany]
-                        : '카드'}
-                    </h3>
-                    <p className="text-sm text-gray-600">
-                      {method.cardNumberMasked}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {method.createdAt
-                        ? new Date(method.createdAt).toLocaleDateString('ko-KR')
-                        : '등록일 미상'}
-                    </p>
+            <Card key={method.id}>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-1 items-center gap-4">
+                    <div className="bg-primary-50 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg">
+                      <CreditCard className="text-primary-600 h-5 w-5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-semibold text-neutral-900">
+                        {method.cardCompany
+                          ? CARD_COMPANY_NAMES[method.cardCompany]
+                          : '카드'}
+                      </h3>
+                      <p className="font-mono text-sm text-neutral-600">
+                        {method.cardNumberMasked}
+                      </p>
+                      <p className="text-xs text-neutral-500">
+                        {method.createdAt
+                          ? new Date(method.createdAt).toLocaleDateString(
+                              'ko-KR',
+                            )
+                          : '등록일 미상'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {onSelectMethod && (
+                      <Button
+                        variant="outline"
+                        onClick={() => onSelectMethod(method)}
+                      >
+                        선택
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setDeleteConfirm(method.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-red-600" />
+                    </Button>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  {onSelectMethod && (
-                    <Button
-                      variant="outline"
-                      onClick={() => onSelectMethod(method)}
-                    >
-                      선택
-                    </Button>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setDeleteConfirm(method.id)}
-                  >
-                    <Trash2 className="h-4 w-4 text-red-600" />
-                  </Button>
-                </div>
-              </div>
+              </CardContent>
             </Card>
           ))}
         </div>
@@ -430,8 +453,8 @@ export function PaymentMethodsPage({
           <AlertDialogHeader>
             <AlertDialogTitle>카드를 삭제하시겠습니까?</AlertDialogTitle>
             <AlertDialogDescription>
-              이 작업은 되돌릴 수 없습니다. 카드를 삭제하면 다시 등록해야
-              합니다.
+              이 작업은 되돌릴 수 없습니다. 삭제한 카드는 다시 등록해야 사용할
+              수 있습니다.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -1064,18 +1064,21 @@ export const paymentMethodApi = {
     }
   },
 
-  // ❌ Swagger에 없음
+  // 결제 수단 삭제 (DELETE /api/v1/user/me/paymentMethods/{paymentMethodId})
   deletePaymentMethod: async (paymentMethodId: number) => {
-    // TODO: 결제 수단 삭제 API는 Swagger에 없습니다. API가 준비되면 다시 활성화하세요.
-    return {
-      success: false,
-      data: null,
-      resultCode: 'NOT_IMPLEMENTED',
-      msg: '결제 수단 삭제 API는 아직 구현되지 않았습니다.',
-      code: 'NOT_IMPLEMENTED',
-      status: 501,
-      httpStatus: 501,
-      message: '결제 수단 삭제 API는 아직 구현되지 않았습니다.',
+    try {
+      const response = await apiClient.delete<ApiResponse<any>>(
+        `/api/v1/user/me/paymentMethods/${paymentMethodId}`,
+      )
+      return normalizeApiResponse(response.data)
+    } catch (error: any) {
+      console.error('Payment method delete error:', error)
+      return {
+        success: false,
+        data: null,
+        resultCode: 'ERROR',
+        msg: error.message || '결제 수단 삭제에 실패했습니다.',
+      }
     }
   },
 }

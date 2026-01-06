@@ -7,10 +7,19 @@ import {
   Pagination,
   PaginationInfo,
 } from '@/components/ui/pagination'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { usePagination } from '@/hooks/usePagination'
 import { notificationApi } from '@/lib/api'
-import { showErrorToast } from '@/lib/utils/toast'
-import { Bell } from 'lucide-react'
+import { showErrorToast, showSuccessToast } from '@/lib/utils/toast'
+import { Bell, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 
 // Swagger 스펙에 맞는 Notification 타입
@@ -33,6 +42,10 @@ export function NotificationsClient({
 }: NotificationsClientProps) {
   const [error, setError] = useState('')
   const [unreadCount, setUnreadCount] = useState(0)
+  const [deleteNotificationId, setDeleteNotificationId] = useState<
+    number | null
+  >(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // API 호출 함수
   const fetchNotifications = useCallback(
@@ -122,6 +135,25 @@ export function NotificationsClient({
     })
   }
 
+  const handleDeleteNotification = async (notificationId: number) => {
+    setIsDeleting(true)
+    try {
+      const response = await notificationApi.deleteNotification(notificationId)
+      if (response.success) {
+        showSuccessToast('알림이 삭제되었습니다.')
+        refresh()
+      } else {
+        showErrorToast(response.msg || '알림 삭제에 실패했습니다.')
+      }
+    } catch (err: any) {
+      console.error('알림 삭제 에러:', err)
+      showErrorToast(err.message || '알림 삭제 중 오류가 발생했습니다.')
+    } finally {
+      setIsDeleting(false)
+      setDeleteNotificationId(null)
+    }
+  }
+
   const stats = {
     total: totalElements || transformedNotifications.length,
     unread: unreadCount,
@@ -199,6 +231,15 @@ export function NotificationsClient({
                           <span className="text-sm text-neutral-500">
                             {formatDate(notification.sendAt)}
                           </span>
+                          <button
+                            onClick={() =>
+                              setDeleteNotificationId(notification.id)
+                            }
+                            className="text-neutral-400 transition-colors hover:text-red-500"
+                            title="알림 삭제"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -239,6 +280,37 @@ export function NotificationsClient({
           </>
         )}
       </div>
+
+      {/* 알림 삭제 확인 모달 */}
+      <AlertDialog open={deleteNotificationId !== null}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>알림 삭제</AlertDialogTitle>
+            <AlertDialogDescription>
+              이 알림을 삭제하시겠습니까?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex justify-end gap-3">
+            <AlertDialogCancel
+              onClick={() => setDeleteNotificationId(null)}
+              disabled={isDeleting}
+            >
+              취소
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deleteNotificationId) {
+                  handleDeleteNotification(deleteNotificationId)
+                }
+              }}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? '삭제 중...' : '삭제'}
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
