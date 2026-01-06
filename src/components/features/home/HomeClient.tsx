@@ -21,6 +21,7 @@ import type { components } from '@/types/swagger-generated'
 
 type AuctionItemResponse = components['schemas']['AuctionItemResponse']
 type AuctionCursorResponse = components['schemas']['AuctionCursorResponse']
+type AuctionHomeResponse = components['schemas']['AuctionHomeResponse']
 
 interface HomeStats {
   activeAuctions: number
@@ -69,6 +70,11 @@ const mapApiStatusToKorean = (apiStatus: string): string => {
 export function HomeClient() {
   const router = useRouter()
   const { isLoggedIn } = useAuth()
+
+  // 홈 데이터 (마감 임박 & 인기 경매)
+  const [homeData, setHomeData] = useState<AuctionHomeResponse | null>(null)
+  const [isLoadingHome, setIsLoadingHome] = useState(true)
+
   const [selectedCategory, setSelectedCategory] = useState<
     CategoryValue | 'all'
   >('all')
@@ -97,7 +103,28 @@ export function HomeClient() {
   >('ALL')
 
   // WebSocket 실시간 홈 데이터 구독
-  const { homeData, isSubscribed: isHomeDataSubscribed } = useWebSocketHome()
+  const { homeData: wsHomeData, isSubscribed: isHomeDataSubscribed } =
+    useWebSocketHome()
+
+  // 홈 데이터 로드 (마감 임박 & 인기 경매)
+  const loadHomeData = useCallback(async () => {
+    setIsLoadingHome(true)
+    try {
+      const response = await auctionApi.getHomeAuctions()
+      if (response.success && response.data) {
+        setHomeData(response.data as AuctionHomeResponse)
+      }
+    } catch (err) {
+      console.error('홈 데이터 로드 실패:', err)
+    } finally {
+      setIsLoadingHome(false)
+    }
+  }, [])
+
+  // 초기 홈 데이터 로드
+  useEffect(() => {
+    loadHomeData()
+  }, [loadHomeData])
 
   // 데이터 로드 함수 (필터 값들을 의존성에 포함)
   const loadProducts = useCallback(
@@ -307,6 +334,162 @@ export function HomeClient() {
           </div>
         </div>
       </div>
+
+      {/* 마감 임박 & 인기 경매 섹션 (홈 API 데이터) */}
+      {!isLoadingHome && homeData && (
+        <div className="mb-12 space-y-10">
+          {/* 마감 임박 경매 */}
+          {homeData.endingSoon && homeData.endingSoon.length > 0 && (
+            <div>
+              <div className="mb-6 flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-neutral-900">
+                  ⏰ 마감 임박 경매
+                </h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSortBy('closing')
+                    setStatusFilter('LIVE')
+                  }}
+                >
+                  전체보기 →
+                </Button>
+              </div>
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {homeData.endingSoon.slice(0, 4).map((auction) => (
+                  <Card
+                    key={auction.auctionId}
+                    variant="elevated"
+                    hover
+                    className="animate-fade-in"
+                  >
+                    <CardContent className="p-4">
+                      <div className="mb-3 aspect-square overflow-hidden rounded-lg bg-neutral-100">
+                        {auction.imageUrl ? (
+                          <img
+                            src={auction.imageUrl}
+                            alt={auction.name || ''}
+                            className="h-full w-full object-cover transition-transform hover:scale-105"
+                          />
+                        ) : (
+                          <div className="flex h-full items-center justify-center">
+                            <span className="text-4xl">📦</span>
+                          </div>
+                        )}
+                      </div>
+                      <h3 className="mb-2 line-clamp-2 font-bold text-neutral-900">
+                        {auction.name}
+                      </h3>
+                      <div className="mb-2 flex items-center justify-between">
+                        <span className="text-sm text-neutral-600">현재가</span>
+                        <span className="text-primary-600 text-lg font-bold">
+                          {formatPrice(
+                            auction.currentHighestBid ||
+                              auction.startPrice ||
+                              0,
+                          )}
+                        </span>
+                      </div>
+                      <div className="mb-3 flex items-center text-sm text-red-600">
+                        <Clock className="mr-1 h-4 w-4" />
+                        {auction.remainingTimeSeconds !== undefined &&
+                        auction.remainingTimeSeconds > 0
+                          ? `${Math.floor(auction.remainingTimeSeconds / 3600)}시간 ${Math.floor((auction.remainingTimeSeconds % 3600) / 60)}분 남음`
+                          : '곧 종료'}
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="gradient"
+                        className="w-full"
+                        onClick={() =>
+                          router.push(`/auctions/${auction.auctionId}`)
+                        }
+                      >
+                        입찰하기
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 인기 경매 */}
+          {homeData.popular && homeData.popular.length > 0 && (
+            <div>
+              <div className="mb-6 flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-neutral-900">
+                  🔥 인기 경매
+                </h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSortBy('popular')
+                    setStatusFilter('LIVE')
+                  }}
+                >
+                  전체보기 →
+                </Button>
+              </div>
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {homeData.popular.slice(0, 4).map((auction) => (
+                  <Card
+                    key={auction.auctionId}
+                    variant="elevated"
+                    hover
+                    className="animate-fade-in"
+                  >
+                    <CardContent className="p-4">
+                      <div className="mb-3 aspect-square overflow-hidden rounded-lg bg-neutral-100">
+                        {auction.imageUrl ? (
+                          <img
+                            src={auction.imageUrl}
+                            alt={auction.name || ''}
+                            className="h-full w-full object-cover transition-transform hover:scale-105"
+                          />
+                        ) : (
+                          <div className="flex h-full items-center justify-center">
+                            <span className="text-4xl">📦</span>
+                          </div>
+                        )}
+                      </div>
+                      <h3 className="mb-2 line-clamp-2 font-bold text-neutral-900">
+                        {auction.name}
+                      </h3>
+                      <div className="mb-2 flex items-center justify-between">
+                        <span className="text-sm text-neutral-600">현재가</span>
+                        <span className="text-primary-600 text-lg font-bold">
+                          {formatPrice(
+                            auction.currentHighestBid ||
+                              auction.startPrice ||
+                              0,
+                          )}
+                        </span>
+                      </div>
+                      <div className="mb-3 flex items-center justify-between text-sm text-neutral-600">
+                        <span>입찰 {auction.bidCount || 0}회</span>
+                        <span>❤️ {auction.bookmarkCount || 0}</span>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="gradient"
+                        className="w-full"
+                        onClick={() =>
+                          router.push(`/auctions/${auction.auctionId}`)
+                        }
+                      >
+                        상세보기
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 검색 및 필터 */}
       <div className="mb-8">

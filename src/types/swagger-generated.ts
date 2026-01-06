@@ -132,22 +132,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/payments/cards": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["list"];
-        put?: never;
-        post: operations["register"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/user/me/profile/img": {
         parameters: {
             query?: never;
@@ -158,6 +142,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["getProfileImageUrl"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/user/me/paymentMethods": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["cardList"];
+        put?: never;
+        post: operations["register"];
         delete?: never;
         options?: never;
         head?: never;
@@ -644,7 +644,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/payments/cards/{cardId}": {
+    "/api/v1/user/me/paymentMethods/{paymentMethodId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -770,7 +770,7 @@ export interface components {
             /** Format: int64 */
             paymentId?: number;
             /** @enum {string} */
-            status?: "REQUESTED" | "PAID" | "FAILED" | "EXPIRED" | "CANCELED";
+            status?: "REQUESTED" | "PROCESSING" | "PAID" | "FAILED" | "EXPIRED" | "CANCELED";
             autoPaid?: boolean;
             toss?: components["schemas"]["TossInfo"];
         };
@@ -786,13 +786,6 @@ export interface components {
             /** Format: int64 */
             amount?: number;
         };
-        RegisterCardRequest: {
-            billingKey?: string;
-            /** @enum {string} */
-            cardCompany?: "KB" | "SHINHAN" | "HYUNDAI" | "SAMSUNG" | "LOTTE" | "NH" | "HANA" | "BC" | "WOORI";
-            cardNumberMasked?: string;
-            cardName?: string;
-        };
         PreSignedUrlListRequest: {
             requests: components["schemas"]["PreSignedUrlRequest"][];
         };
@@ -807,6 +800,30 @@ export interface components {
             status?: number;
             message?: string;
             data?: string[];
+        };
+        RegisterCardRequest: {
+            billingKey: string;
+            /** @enum {string} */
+            cardCompany: "KB" | "SHINHAN" | "HYUNDAI" | "SAMSUNG" | "LOTTE" | "NH" | "HANA" | "BC" | "WOORI";
+            cardNumberMasked: string;
+            cardName: string;
+        };
+        CardResponse: {
+            /** Format: int64 */
+            id?: number;
+            billingKey?: string;
+            /** @enum {string} */
+            cardCompany?: "KB" | "SHINHAN" | "HYUNDAI" | "SAMSUNG" | "LOTTE" | "NH" | "HANA" | "BC" | "WOORI";
+            cardNumberMasked?: string;
+            /** Format: date-time */
+            createdAt?: string;
+        };
+        RsDataCardResponse: {
+            code?: string;
+            /** Format: int32 */
+            status?: number;
+            message?: string;
+            data?: components["schemas"]["CardResponse"];
         };
         ProductQnACreateRequest: {
             question: string;
@@ -1057,21 +1074,6 @@ export interface components {
             /** Format: int64 */
             timeout?: number;
         };
-        CardResponse: {
-            /** Format: int64 */
-            id?: number;
-            /** @enum {string} */
-            cardCompany?: "KB" | "SHINHAN" | "HYUNDAI" | "SAMSUNG" | "LOTTE" | "NH" | "HANA" | "BC" | "WOORI";
-            cardNumberMasked?: string;
-            cardName?: string;
-        };
-        RsDataListCardResponse: {
-            code?: string;
-            /** Format: int32 */
-            status?: number;
-            message?: string;
-            data?: components["schemas"]["CardResponse"][];
-        };
         MyPageResponse: {
             /** Format: int64 */
             userId?: number;
@@ -1087,6 +1089,16 @@ export interface components {
             status?: number;
             message?: string;
             data?: components["schemas"]["MyPageResponse"];
+        };
+        CardResponseList: {
+            registerCardResponses?: components["schemas"]["CardResponse"][];
+        };
+        RsDataCardResponseList: {
+            code?: string;
+            /** Format: int32 */
+            status?: number;
+            message?: string;
+            data?: components["schemas"]["CardResponseList"];
         };
         MyBookmarkPageResponse: {
             /** Format: int32 */
@@ -1228,6 +1240,8 @@ export interface components {
             status?: string;
             /** Format: date-time */
             endAt?: string;
+            /** Format: int64 */
+            winnerId?: number;
         };
         RsDataMyBidPageResponse: {
             code?: string;
@@ -1731,7 +1745,31 @@ export interface operations {
             };
         };
     };
-    list: {
+    getProfileImageUrl: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreSignedUrlListRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RsDataListString"];
+                };
+            };
+        };
+    };
+    cardList: {
         parameters: {
             query?: never;
             header?: never;
@@ -1746,7 +1784,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RsDataListCardResponse"];
+                    "*/*": components["schemas"]["RsDataCardResponseList"];
                 };
             };
         };
@@ -1770,31 +1808,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["RsDataVoid"];
-                };
-            };
-        };
-    };
-    getProfileImageUrl: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PreSignedUrlListRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["RsDataListString"];
+                    "*/*": components["schemas"]["RsDataCardResponse"];
                 };
             };
         };
@@ -2210,8 +2224,13 @@ export interface operations {
     };
     getBidHistory: {
         parameters: {
-            query: {
-                pageable: components["schemas"]["Pageable"];
+            query?: {
+                /** @description Zero-based page index (0..N) */
+                page?: number;
+                /** @description The size of the page to be returned */
+                size?: number;
+                /** @description Sorting criteria in the format: property,(asc|desc). Default sort order is ascending. Multiple sort criteria are supported. */
+                sort?: string[];
             };
             header?: never;
             path: {
@@ -2392,8 +2411,13 @@ export interface operations {
     };
     getNotification: {
         parameters: {
-            query: {
-                pageable: components["schemas"]["Pageable"];
+            query?: {
+                /** @description Zero-based page index (0..N) */
+                page?: number;
+                /** @description The size of the page to be returned */
+                size?: number;
+                /** @description Sorting criteria in the format: property,(asc|desc). Default sort order is ascending. Multiple sort criteria are supported. */
+                sort?: string[];
             };
             header?: never;
             path?: never;
@@ -2414,9 +2438,7 @@ export interface operations {
     };
     subscribe: {
         parameters: {
-            query: {
-                userId: number;
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;
@@ -2614,7 +2636,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                cardId: number;
+                paymentMethodId: number;
             };
             cookie?: never;
         };

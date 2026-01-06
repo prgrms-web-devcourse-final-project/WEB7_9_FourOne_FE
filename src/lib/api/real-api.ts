@@ -720,6 +720,16 @@ export const auctionApi = {
     return normalizeApiResponse(response.data)
   },
 
+  // 홈 화면용 경매 목록 조회 (GET /api/v1/auctions/home)
+  // endingSoon: 마감 임박 경매 목록
+  // popular: 인기 경매 목록
+  getHomeAuctions: async () => {
+    const response = await apiClient.get<ApiResponse<any>>(
+      '/api/v1/auctions/home',
+    )
+    return normalizeApiResponse(response.data)
+  },
+
   // 경매 목록 조회 (키워드 검색)
   // GET /api/v1/auctions?keyword={keyword}&cursor={cursor}
   searchAuctions: async (params?: {
