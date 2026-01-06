@@ -327,7 +327,7 @@ export function HomeClient() {
           </div>
 
           <h1 className="animate-fade-in mb-6 text-5xl font-extrabold tracking-tight sm:text-6xl lg:text-7xl">
-            희소 굿즈 경매 플랫폼
+            DROP:
           </h1>
           <p className="animate-fade-in mb-10 text-xl leading-relaxed text-white/90 sm:text-2xl">
             투명하고 신뢰할 수 있는 리미티드 아이템 거래를 경험해보세요
@@ -926,24 +926,6 @@ export function HomeClient() {
               <div className="text-sm text-neutral-600">
                 {products.length}개 표시 중
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-neutral-600">페이지당</span>
-                <select
-                  value={pageSize}
-                  onChange={(e) => {
-                    const size = Number(e.target.value)
-                    setPageSize(size)
-                    setCurrentCursor(undefined)
-                    setHasMore(true)
-                    loadProducts(undefined, true)
-                  }}
-                  className="rounded-lg border border-neutral-200 bg-white px-3 py-1.5 text-sm"
-                >
-                  <option value={10}>10개</option>
-                  <option value={20}>20개</option>
-                  <option value={50}>50개</option>
-                </select>
-              </div>
             </div>
 
             {/* 무한 스크롤 감지 요소 */}
@@ -951,9 +933,7 @@ export function HomeClient() {
               {isLoading && hasMore && (
                 <div className="flex items-center space-x-2">
                   <div className="border-primary-200 border-t-primary-600 h-6 w-6 animate-spin rounded-full border-2"></div>
-                  <span className="text-sm text-neutral-600">
-                    더 불러오는 중...
-                  </span>
+                  <span className="text-sm text-neutral-600">로딩중...</span>
                 </div>
               )}
             </div>

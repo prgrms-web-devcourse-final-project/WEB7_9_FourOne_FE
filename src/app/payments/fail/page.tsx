@@ -1,10 +1,10 @@
-import { PaymentFailClient } from '@/components/features/payment/PaymentFailClient'
+import { PaymentFailPage } from '@/components/features/payment/PaymentFailPage'
 import { HomeLayout } from '@/components/layout/HomeLayout'
 import { PageHeader } from '@/components/layout/PageHeader'
 
 export const dynamic = 'force-dynamic'
 
-export default function PaymentFailPage() {
+export default function PaymentFailRoute() {
   return (
     <HomeLayout>
       <PageHeader
@@ -12,7 +12,7 @@ export default function PaymentFailPage() {
         description="결제가 실패했습니다"
         showBackButton
       />
-      <PaymentFailClient />
+      <PaymentFailPage />
     </HomeLayout>
   )
 }

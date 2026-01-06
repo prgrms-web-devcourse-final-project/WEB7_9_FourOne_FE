@@ -171,8 +171,7 @@ export function BookmarksClient({ initialBookmarks }: BookmarksClientProps) {
               <Card
                 key={bookmark.productId}
                 variant="outlined"
-                className="cursor-pointer transition-shadow hover:shadow-md"
-                onClick={() => router.push(`/products/${bookmark.productId}`)}
+                className="transition-shadow hover:shadow-md"
               >
                 <CardContent className="p-6">
                   <div className="flex items-start space-x-4">
@@ -204,7 +203,7 @@ export function BookmarksClient({ initialBookmarks }: BookmarksClientProps) {
                     <div className="min-w-0 flex-1">
                       <div className="mb-3 flex items-start justify-between">
                         <div className="min-w-0 flex-1 pr-4">
-                          <h3 className="hover:text-primary-600 mb-2 line-clamp-2 text-lg font-semibold text-neutral-900">
+                          <h3 className="mb-2 line-clamp-2 text-lg font-semibold text-neutral-900">
                             {bookmark.name}
                           </h3>
                           {(bookmark as any).bookmarkedAt && (
@@ -223,7 +222,7 @@ export function BookmarksClient({ initialBookmarks }: BookmarksClientProps) {
                             handleRemoveBookmark(bookmark.productId)
                           }}
                           disabled={isLoading}
-                          className="group flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-neutral-200 bg-white text-neutral-400 transition-all hover:border-red-300 hover:bg-red-50 hover:text-red-500 disabled:opacity-50"
+                          className="group flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-red-300 bg-red-50 text-red-500 transition-all hover:border-red-400 hover:bg-red-100 disabled:opacity-50"
                           title="찜 해제"
                         >
                           <Heart className="h-4 w-4 fill-current transition-transform group-hover:scale-110" />
@@ -240,4 +239,3 @@ export function BookmarksClient({ initialBookmarks }: BookmarksClientProps) {
     </div>
   )
 }
-

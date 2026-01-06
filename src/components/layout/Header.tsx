@@ -157,10 +157,10 @@ export function Header({
                   입찰 현황
                 </Link>
                 <Link
-                  href="/wallet"
+                  href="/payment-methods"
                   className="hover:text-primary-600 hover:bg-primary-50 relative rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 transition-all duration-200"
                 >
-                  지갑
+                  결제수단
                 </Link>
               </>
             )}
@@ -348,11 +348,11 @@ export function Header({
                     </Link>
 
                     <Link
-                      href="/wallet"
+                      href="/payment-methods"
                       className="rounded-lg px-3 py-3 text-neutral-700 transition-colors hover:bg-neutral-100"
                       onClick={() => setIsMenuOpen(false)}
                     >
-                      결제 관리
+                      결제수단
                     </Link>
                   </>
                 )}

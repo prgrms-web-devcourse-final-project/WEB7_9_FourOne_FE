@@ -1,10 +1,10 @@
-import { PaymentSuccessClient } from '@/components/features/payment/PaymentSuccessClient'
+import { PaymentSuccessPage } from '@/components/features/payment/PaymentSuccessPage'
 import { HomeLayout } from '@/components/layout/HomeLayout'
 import { PageHeader } from '@/components/layout/PageHeader'
 
 export const dynamic = 'force-dynamic'
 
-export default function PaymentSuccessPage() {
+export default function PaymentSuccessRoute() {
   return (
     <HomeLayout>
       <PageHeader
@@ -12,7 +12,7 @@ export default function PaymentSuccessPage() {
         description="결제 상태를 확인하고 있습니다"
         showBackButton={false}
       />
-      <PaymentSuccessClient />
+      <PaymentSuccessPage />
     </HomeLayout>
   )
 }
