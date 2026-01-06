@@ -171,13 +171,6 @@ export function PaymentMethodsPage({
           : '0000-****-****-0000'
       const cardNameValue = savedCardName || cardName || '새 카드'
 
-      console.log('🧪 테스트 데이터 생성:', {
-        billingKey,
-        cardCompany: cardCompanyValue,
-        cardNumberMasked,
-        cardName: cardNameValue,
-      })
-
       // 카드 등록 API 직접 호출
       await addMethod({
         billingKey,
@@ -185,8 +178,6 @@ export function PaymentMethodsPage({
         cardNumberMasked,
         cardName: cardNameValue,
       })
-
-      console.log('[결제] 카드 등록 성공')
 
       setIsAddingCard(false)
       setCardName('')

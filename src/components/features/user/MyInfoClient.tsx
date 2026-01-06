@@ -162,7 +162,7 @@ export function MyInfoClient({ user: propUser }: MyInfoClientProps) {
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
       {/* 프로필 헤더 */}
-      <div className="from-primary-100 via-primary-50 border-primary-200 relative mb-8 overflow-hidden rounded-2xl border bg-linear-to-br to-white p-8 shadow-lg">
+      <div className="relative mb-8 overflow-hidden rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm">
         <div className="relative">
           <div className="flex flex-col items-center space-y-6 lg:flex-row lg:items-start lg:space-y-0 lg:space-x-8">
             {/* 프로필 아바타 */}
@@ -210,16 +210,16 @@ export function MyInfoClient({ user: propUser }: MyInfoClientProps) {
             {/* 액션 버튼 */}
             <div className="flex w-full shrink-0 flex-col gap-2 lg:w-auto">
               <Button
-                variant="outline"
-                className="w-full lg:w-auto"
+                variant="ghost"
+                className="w-full hover:bg-blue-50 hover:text-blue-600 lg:w-auto"
                 onClick={() => router.push('/my-info/edit')}
               >
                 <Edit className="mr-2 h-4 w-4" />
                 수정
               </Button>
               <Button
-                variant="outline"
-                className="w-full border-red-300 bg-red-50 text-red-600 hover:bg-red-100 lg:w-auto"
+                variant="ghost"
+                className="w-full text-red-600 hover:bg-red-50 hover:text-red-700 lg:w-auto"
                 onClick={() => setShowDeleteModal(true)}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
@@ -336,7 +336,7 @@ export function MyInfoClient({ user: propUser }: MyInfoClientProps) {
       {/* 회원탈퇴 확인 모달 */}
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+          <div className="w-full max-w-md rounded-2xl border border-neutral-200 bg-white p-6 shadow-md">
             <div className="mb-6 text-center">
               <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
                 <AlertTriangle className="h-8 w-8 text-red-600" />
@@ -382,7 +382,7 @@ export function MyInfoClient({ user: propUser }: MyInfoClientProps) {
 
               <div className="flex space-x-3">
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   className="flex-1"
                   onClick={() => {
                     setShowDeleteModal(false)
@@ -393,7 +393,7 @@ export function MyInfoClient({ user: propUser }: MyInfoClientProps) {
                   취소
                 </Button>
                 <Button
-                  className="flex-1 bg-red-600 text-white hover:bg-red-700"
+                  className="flex-1 bg-red-500 text-white hover:bg-red-600"
                   onClick={handleDeleteAccount}
                   disabled={isDeleting || !deletePassword}
                 >

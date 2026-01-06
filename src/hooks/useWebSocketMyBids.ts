@@ -76,11 +76,6 @@ export function useWebSocketMyBids(
         setProductNames(newProductNames)
 
         setMyBidProducts(uniqueProductIds)
-        console.log('[WebSocket] 내가 입찰한 상품 목록:', uniqueProductIds)
-        console.log(
-          '[WebSocket] 상품명 정보:',
-          Object.fromEntries(newProductNames),
-        )
         return uniqueProductIds
       }
     } catch (error) {
@@ -97,21 +92,8 @@ export function useWebSocketMyBids(
       const subscriptionId = subscribeToBidUpdates(
         productId,
         (message: WebSocketMessage) => {
-          console.log(
-            `[WebSocket] 상품 ${productId} 브로드캐스트 수신:`,
-            message,
-          )
-
           // 브로드캐스트 메시지 처리 (실시간 입찰 현황)
           if (message.type === 'BID' && message.data) {
-            // 디버깅: 상품명 확인
-            console.log('[WebSocket] 브로드캐스트 상품명 디버깅:', {
-              productId,
-              messageData: message.data,
-              productNameFromMessage: message.data?.productName,
-              productNameFromMap: productNames.get(productId),
-              productNamesMap: Object.fromEntries(productNames),
-            })
 
             const bidData: MyBidUpdate = {
               productId: productId,

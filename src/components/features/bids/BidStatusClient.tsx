@@ -193,19 +193,14 @@ export function BidStatusClient({
     setPayingBidId(auctionId)
 
     try {
-      console.log('🔄 결제 플로우 시작:', { auctionId, winnerId, bidAmount })
-
       // 1단계: 결제 준비 (paymentId 및 결제 정보 획득)
       // 먼저 prepare를 호출하여 결제 가능 여부 확인
-      console.log('[결제] 결제 준비...')
       const prepareResult = await preparePayment({ winnerId })
-      console.log('[결제] 결제 준비 완료:', prepareResult)
 
       const { paymentId, autoPaid, status, toss } = prepareResult
 
       // 2-1. 자동결제 성공한 경우
       if (autoPaid && status === 'PAID') {
-        console.log('[결제] 자동결제 완료')
         showSuccessToast('결제가 완료되었습니다!')
         refresh()
         return
@@ -213,7 +208,6 @@ export function BidStatusClient({
 
       // 2-2. 수동 결제 필요한 경우 (Toss 결제창 호출)
       if (!autoPaid && toss) {
-        console.log('[결제] Toss 결제창 호출...')
         const { orderId, amount } = toss
 
         // Toss SDK 로드 확인
@@ -462,8 +456,6 @@ export function BidStatusClient({
                                 <Button
                                   size="md"
                                   onClick={() => {
-                                    console.log('📊 Bid 객체 전체:', bid)
-
                                     // winnerId 찾기 (여러 필드 확인)
                                     const winnerId =
                                       bid.winnerId ||
@@ -471,9 +463,6 @@ export function BidStatusClient({
                                       bid.bidderId ||
                                       bid.winningBidderId ||
                                       bid.auctionId // fallback으로 auctionId 사용
-
-                                    console.log('🔍 추출된 winnerId:', winnerId)
-                                    console.log('💰 결제 금액:', bid.myBid)
 
                                     if (!winnerId) {
                                       showErrorToast(

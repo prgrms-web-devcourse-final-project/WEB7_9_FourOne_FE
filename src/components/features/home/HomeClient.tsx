@@ -6,7 +6,6 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/contexts/AuthContext'
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll'
-import { useWebSocketHome } from '@/hooks/useWebSocketHome'
 import { auctionApi } from '@/lib/api'
 import {
   CATEGORIES,
@@ -115,11 +114,7 @@ export function HomeClient() {
     'ALL' | 'SCHEDULED' | 'LIVE' | 'ENDED'
   >('ALL')
 
-  // WebSocket 실시간 홈 데이터 구독
-  const { homeData: wsHomeData, isSubscribed: isHomeDataSubscribed } =
-    useWebSocketHome()
-
-  // 홈 데이터 로드 (마감 임박 & 인기 경매)
+  // 초기 홈 데이터 로드
   const loadHomeData = useCallback(async () => {
     setIsLoadingHome(true)
     try {

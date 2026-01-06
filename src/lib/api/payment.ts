@@ -149,8 +149,6 @@ export async function createPayment(
   winnerId: number,
   amount: number,
 ): Promise<void> {
-  console.log('💳 createPayment 호출:', { winnerId, amount })
-
   if (!winnerId || !amount) {
     throw new Error(
       `결제 생성 실패: winnerId(${winnerId})와 amount(${amount})가 필요합니다.`,

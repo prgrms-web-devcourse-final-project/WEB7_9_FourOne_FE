@@ -11,7 +11,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { useAuth } from '@/contexts/AuthContext'
-import { useWebSocketMyAuctions } from '@/hooks/useWebSocketMyAuctions'
 import { productApi } from '@/lib/api'
 import { handleApiError } from '@/lib/api/common'
 import { getFullImageUrl } from '@/lib/utils/image-url'
@@ -58,34 +57,6 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
       setApiError('') // 토스트 표시 후 초기화
     }
   }, [apiError])
-
-  // WebSocket 내 경매 실시간 모니터링
-  const { myAuctionUpdates, isSubscribed: isMyAuctionsSubscribed } =
-    useWebSocketMyAuctions(user?.id || null)
-
-  // 실시간 업데이트를 상품 목록에 반영
-  useEffect(() => {
-    if (myAuctionUpdates.length > 0) {
-      setProducts((prevProducts) => {
-        return prevProducts.map((product) => {
-          const update = myAuctionUpdates.find(
-            (update) => update.productId === product.productId,
-          )
-          if (update) {
-            // WebSocket 업데이트는 경매 상태만 업데이트
-            return {
-              ...product,
-              currentPrice: update.currentPrice,
-              bidCount: update.bidCount,
-              status: update.status, // 직접 사용
-            } as any
-          }
-          return product
-        })
-      })
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [myAuctionUpdates])
 
   // 내 상품 목록 조회
   const fetchMyProducts = async () => {
@@ -430,15 +401,6 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
           </div>
         </div>
       )}
-      {/* 실시간 연결 상태 */}
-      {isMyAuctionsSubscribed && (
-        <div className="mb-4 flex items-center justify-center space-x-2 rounded-lg bg-green-50 p-3">
-          <Zap className="h-4 w-4 animate-pulse text-green-500" />
-          <span className="text-sm text-green-700">
-            내 경매 실시간 모니터링 중
-          </span>
-        </div>
-      )}
       {/* 상품 목록 */}
       <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
         {filteredProducts.length === 0 ? (
@@ -590,9 +552,9 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
                       {/* QnA 관리 버튼 (모든 상태에서 표시) */}
                       <Button
                         size="sm"
-                        variant="outline"
+                        variant="ghost"
                         onClick={() => handleOpenQnaModal(product.productId)}
-                        className="border-primary-200 text-primary-600 hover:bg-primary-50 w-full"
+                        className="text-primary-600 hover:bg-primary-50 w-full"
                       >
                         <MessageSquare className="mr-2 h-4 w-4" />
                         QnA 관리
@@ -607,30 +569,30 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
                                 `/products/${product.productId}/register-auction`,
                               )
                             }
-                            className="bg-primary-600 hover:bg-primary-700 flex-1 shadow-sm"
+                            className="bg-primary-500 hover:bg-primary-600 flex-1 text-white"
                           >
-                            <Zap className="mr-2 h-4 w-4" />
+                            <TrendingUp className="mr-2 h-4 w-4" />
                             경매 등록
                           </Button>
                           <Button
                             size="sm"
-                            variant="outline"
+                            variant="ghost"
                             onClick={() =>
                               router.push(`/products/${product.productId}/edit`)
                             }
-                            className="flex-1"
+                            className="flex-1 text-neutral-600 hover:bg-neutral-100"
                           >
                             <Edit className="mr-2 h-4 w-4" />
                             수정
                           </Button>
                           <Button
                             size="sm"
-                            variant="outline"
+                            variant="ghost"
                             onClick={() =>
                               handleDeleteProduct(product.productId)
                             }
                             disabled={isLoading}
-                            className="border-red-200 text-red-600 hover:bg-red-50"
+                            className="text-red-600 hover:bg-red-50 hover:text-red-700"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -846,7 +808,7 @@ export function MyProductsClient({ initialProducts }: MyProductsClientProps) {
                               onClick={() => handleAddAnswer(qnaData.qnaId)}
                               disabled={!newAnswers[qnaData.qnaId]?.trim()}
                               size="sm"
-                              className="bg-primary-600 hover:bg-primary-700 w-full font-medium text-white transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50"
+                              className="bg-primary-500 hover:bg-primary-600 w-full text-white transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                               <Send className="mr-2 h-4 w-4" />
                               답변 등록

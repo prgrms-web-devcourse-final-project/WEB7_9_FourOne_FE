@@ -194,16 +194,8 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
   // SSE 실시간 최고가 스트림 구독 (백엔드 직접 연결 + 재연결 로직)
   useEffect(() => {
     if (!auctionData.auctionId) {
-      console.log('[SSE] auctionId 없음, SSE 연결 안 함')
       return
     }
-
-    console.log(
-      '[SSE] 경매 상태:',
-      auctionData.status,
-      '| auctionId:',
-      auctionData.auctionId,
-    )
 
     let es: EventSource | null = null
     const maxReconnectAttempts = 10 // 재연결 횟수 증가
@@ -216,21 +208,13 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
 
       setSseConnectionStatus('connecting')
       const sseUrl = `/api/sse/${auctionData.auctionId}`
-      console.log('[SSE] 연결 시도:', sseUrl)
-      console.log('[SSE] 인증 없이 연결 (withCredentials: false)')
 
       // 동일 도메인 프록시를 통해 CORS 403 회피
       es = new EventSource(sseUrl)
-      console.log('[SSE] EventSource 객체 생성됨:', {
-        url: es.url,
-        readyState: es.readyState,
-        withCredentials: es.withCredentials,
-      })
       bidStreamRef.current = es
 
       // 1. 연결 성공 (open 이벤트)
       es.onopen = () => {
-        console.log('[SSE] 연결 성공 (onopen) - 스트림 열림')
         ;(es as any).__connectTime = Date.now()
         setSseConnectionStatus('connected')
         setSseReconnectAttempts(0)
@@ -244,15 +228,12 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
 
       // 2. connect 이벤트 수신 (백엔드 초기 메시지)
       es.addEventListener('connect', (event) => {
-        console.log('[SSE] 🔗 connect 이벤트 수신:', event.data)
-        console.log('[SSE] 연결 유지 중... 입찰 이벤트 대기')
       })
 
       // 3. highestPrice 이벤트 수신 (백엔드에서 특정 이벤트 타입으로 전송하는 경우)
       es.addEventListener('highestPrice', (event) => {
         try {
           const price = Number(event.data)
-          console.log('[SSE] 💰 highestPrice 이벤트 수신:', price)
 
           if (!isNaN(price) && price > 0) {
             setCurrentHighestBid(price)
@@ -268,7 +249,6 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
         try {
           // JSON 파싱 시도
           const payload = JSON.parse(event.data) as AuctionBidUpdate
-          console.log('[SSE] 📨 기본 메시지 수신:', payload)
 
           if (payload.currentHighestBid !== undefined) {
             setCurrentHighestBid(payload.currentHighestBid)
@@ -281,11 +261,8 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
           // 숫자만 오는 경우 처리
           const price = Number(event.data)
           if (!isNaN(price) && price > 0) {
-            console.log('[SSE] 📨 숫자 형태 수신:', price)
             setCurrentHighestBid(price)
             setLastHighestBidSync(new Date().toISOString())
-          } else {
-            console.log('[SSE] 📨 알 수 없는 메시지:', event.data)
           }
         }
       }
@@ -297,11 +274,6 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
           ? now - (bidStreamRef.current as any).__connectTime || 0
           : 0
 
-        console.error('[SSE] ❌ 연결 에러 (백엔드가 60초 후 끊을 수 있음)', {
-          readyState: es?.readyState,
-          연결유지시간: `${Math.round(timeSinceConnect / 1000)}초`,
-          error,
-        })
         setSseConnectionStatus('disconnected')
 
         if (es) {
@@ -315,16 +287,12 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
             baseReconnectDelay * Math.pow(1.5, sseReconnectAttempts),
             30000,
           ) // 최대 30초
-          console.log(
-            `[SSE] ${delay}ms 후 재연결 시도 (${sseReconnectAttempts + 1}/${maxReconnectAttempts})`,
-          )
 
           reconnectTimeoutRef.current = setTimeout(() => {
             setSseReconnectAttempts((prev) => prev + 1)
             connectSSE()
           }, delay)
         } else {
-          console.log('[SSE] 최대 재연결 횟수 초과, 폴링으로 전환')
           // SSE 실패 시 폴링 fallback
           startPollingFallback()
         }
@@ -333,8 +301,6 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
 
     // 폴링 fallback (SSE 실패 시)
     const startPollingFallback = () => {
-      console.log('[Polling] SSE 실패로 폴링 시작 (5초 간격)')
-
       if (pollingIntervalRef.current) return // 이미 폴링 중
 
       pollingIntervalRef.current = setInterval(async () => {
@@ -351,8 +317,6 @@ export function AuctionDetailClient({ auctionData }: AuctionDetailClientProps) {
 
     // 클린업
     return () => {
-      console.log('[SSE] 클린업 - 연결 종료')
-
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current)
         reconnectTimeoutRef.current = null

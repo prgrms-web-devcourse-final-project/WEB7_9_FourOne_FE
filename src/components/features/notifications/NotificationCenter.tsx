@@ -3,10 +3,6 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import {
-  Notification,
-  useWebSocketNotifications,
-} from '@/hooks/useWebSocketNotifications'
 import { Bell, Check, Trash2, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
@@ -16,18 +12,22 @@ interface NotificationCenterProps {
   onClose: () => void
 }
 
+interface Notification {
+  id: string
+  type: string
+  message: string
+  productId?: number
+  isRead: boolean
+  createdAt: string
+}
+
 export function NotificationCenter({
   isOpen,
   onClose,
 }: NotificationCenterProps) {
   const router = useRouter()
-  const {
-    notifications,
-    unreadCount,
-    markAsRead,
-    markAllAsRead,
-    clearNotifications,
-  } = useWebSocketNotifications()
+  const [notifications] = useState<Notification[]>([])
+  const [unreadCount] = useState(0)
 
   const [filter, setFilter] = useState<'all' | 'unread'>('all')
 
@@ -144,92 +144,15 @@ export function NotificationCenter({
               </Button>
             </div>
 
-            <div className="flex space-x-1">
-              {unreadCount > 0 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={markAllAsRead}
-                  className="text-xs"
-                >
-                  <Check className="mr-1 h-3 w-3" />
-                  모두 읽음
-                </Button>
-              )}
-              {notifications.length > 0 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={clearNotifications}
-                  className="text-xs text-red-600 hover:text-red-700"
-                >
-                  <Trash2 className="mr-1 h-3 w-3" />
-                  모두 삭제
-                </Button>
-              )}
-            </div>
+            <div className="flex space-x-1"></div>
           </div>
 
           {/* 알림 목록 */}
           <div className="max-h-96 overflow-y-auto">
-            {filteredNotifications.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-neutral-500">
-                <Bell className="mb-4 h-12 w-12 opacity-50" />
-                <p className="text-sm">
-                  {filter === 'unread'
-                    ? '읽지 않은 알림이 없습니다'
-                    : '알림이 없습니다'}
-                </p>
-              </div>
-            ) : (
-              <div className="divide-y">
-                {filteredNotifications.map((notification) => (
-                  <div
-                    key={notification.id}
-                    className={`cursor-pointer p-4 transition-colors hover:bg-neutral-50 ${
-                      !notification.isRead ? 'bg-blue-50' : ''
-                    }`}
-                    onClick={() => {
-                      markAsRead(notification.id)
-                      handleNotificationClick(notification)
-                    }}
-                  >
-                    <div className="flex items-start space-x-3">
-                      <div className="text-lg">
-                        {getNotificationIcon(notification.type)}
-                      </div>
-
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center justify-between">
-                          <h4
-                            className={`text-sm font-medium ${getNotificationColor(notification.type)}`}
-                          >
-                            {notification.title}
-                          </h4>
-                          <span className="text-xs text-neutral-400">
-                            {formatTime(notification.timestamp)}
-                          </span>
-                        </div>
-
-                        <p className="mt-1 text-sm text-neutral-600">
-                          {notification.message}
-                        </p>
-
-                        {notification.productTitle && (
-                          <p className="mt-1 text-xs text-neutral-500">
-                            상품: {notification.productTitle}
-                          </p>
-                        )}
-
-                        {!notification.isRead && (
-                          <div className="mt-2 h-2 w-2 rounded-full bg-blue-500"></div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            <div className="flex flex-col items-center justify-center py-8 text-neutral-500">
+              <Bell className="mb-4 h-12 w-12 opacity-50" />
+              <p className="text-sm">알림이 없습니다</p>
+            </div>
           </div>
         </CardContent>
       </Card>

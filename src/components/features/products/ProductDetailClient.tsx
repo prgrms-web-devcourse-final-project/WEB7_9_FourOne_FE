@@ -13,8 +13,6 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/contexts/AuthContext'
-import { useWebSocketAuctionTimer } from '@/hooks/useWebSocketAuctionTimer'
-import { useWebSocketBid } from '@/hooks/useWebSocketBid'
 import { auctionApi, bidApi, productApi } from '@/lib/api'
 import { handleApiError } from '@/lib/api/common'
 import {
@@ -83,23 +81,6 @@ export function ProductDetailClient({
 
   const safeProductId = product.productId
   const safeAuctionId = product.auctionId
-
-  const {
-    bidUpdate,
-    auctionStatus,
-    isSubscribed,
-    error: wsErrorFromHook,
-  } = useWebSocketBid(safeAuctionId)
-
-  // wsError가 변경되면 토스트로 표시
-  useEffect(() => {
-    if (wsErrorFromHook) {
-      showErrorToast(wsErrorFromHook, '실시간 연결 오류')
-    }
-  }, [wsErrorFromHook])
-
-  const { timerData, isSubscribed: isTimerSubscribed } =
-    useWebSocketAuctionTimer(safeAuctionId)
 
   const mapStatusToKorean = (status: string): string => {
     switch (status) {
@@ -304,59 +285,6 @@ export function ProductDetailClient({
     }
   }
 
-  // 실시간 입찰 정보 업데이트
-  useEffect(() => {
-    if (bidUpdate) {
-      setBidStatus((prev: any) => {
-        const newStatus = {
-          ...prev,
-          currentPrice: bidUpdate.currentPrice,
-          bidCount: bidUpdate.bidCount,
-        }
-
-        // 가격이 업데이트되었는지 확인
-        if (prev?.currentPrice !== bidUpdate.currentPrice) {
-          setIsPriceUpdated(true)
-          setLastBidInfo({
-            price: bidUpdate.currentPrice,
-            bidder: bidUpdate.lastBidder || '익명',
-          })
-          setShowBidNotification(true)
-          setTimeout(() => {
-            setIsPriceUpdated(false)
-            setShowBidNotification(false)
-          }, 3000)
-        }
-
-        // 입찰자 수가 업데이트되었는지 확인
-        if (prev?.bidCount !== bidUpdate.bidCount) {
-          setIsBidCountUpdated(true)
-          setTimeout(() => {
-            setIsBidCountUpdated(false)
-          }, 3000)
-        }
-
-        return newStatus
-      })
-    }
-  }, [bidUpdate])
-
-  // 타이머 데이터 업데이트
-  useEffect(() => {
-    if (timerData && timerData.timeLeft) {
-      // timeLeft를 파싱하여 초 단위로 변환 (예: "1시간 30분" → 5400초)
-      // 간단하게 endAt과 현재 시간 차이로 계산
-      const endTime = toKstDate(productData.endAt)?.getTime() || 0
-      const now = Date.now()
-      const remainingSeconds = Math.max(0, Math.floor((endTime - now) / 1000))
-
-      setProductData((prev) => ({
-        ...prev,
-        remainingTimeSeconds: remainingSeconds || prev.remainingTimeSeconds,
-      }))
-    }
-  }, [timerData, productData.endAt])
-
   // 초기 데이터 로드
   useEffect(() => {
     // QnA 목록 로드
@@ -502,12 +430,9 @@ export function ProductDetailClient({
 
   // remainingTimeSeconds 계산
   const calculateRemainingSeconds = () => {
-    if (timerData && timerData.timeLeft) {
-      const endTime = toKstDate(productData.endAt)?.getTime() || 0
-      const now = Date.now()
-      return Math.max(0, Math.floor((endTime - now) / 1000))
-    }
-    return productData.remainingTimeSeconds
+    const endTime = toKstDate(productData.endAt)?.getTime() || 0
+    const now = Date.now()
+    return Math.max(0, Math.floor((endTime - now) / 1000))
   }
 
   const remainingTime = calculateRemainingSeconds()
@@ -528,22 +453,6 @@ export function ProductDetailClient({
           </div>
         </div>
       )}
-
-      {/* 실시간 연결 상태 표시 */}
-      <div className="mb-4 space-y-2">
-        {isSubscribed && (
-          <div className="flex items-center justify-center space-x-2 rounded-lg bg-green-50 px-4 py-2 text-sm text-green-700">
-            <Zap className="h-4 w-4 animate-pulse" />
-            <span>실시간 입찰 정보 연결됨</span>
-          </div>
-        )}
-        {isTimerSubscribed && (
-          <div className="flex items-center justify-center space-x-2 rounded-lg bg-blue-50 px-4 py-2 text-sm text-blue-700">
-            <Clock className="h-4 w-4 animate-pulse" />
-            <span>실시간 경매 타이머 연결됨</span>
-          </div>
-        )}
-      </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* 상품 이미지 */}
@@ -689,18 +598,6 @@ export function ProductDetailClient({
                   >
                     {formatPrice(currentPrice)}
                   </span>
-                  {bidUpdate && (
-                    <div className="flex items-center space-x-1">
-                      <span className="animate-pulse rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-700">
-                        🔴 실시간
-                      </span>
-                      {isPriceUpdated && (
-                        <span className="animate-bounce rounded-full bg-red-100 px-2 py-1 text-xs font-bold text-red-600">
-                          새 입찰!
-                        </span>
-                      )}
-                    </div>
-                  )}
                 </div>
               </div>
 
@@ -746,11 +643,6 @@ export function ProductDetailClient({
                 >
                   {formatRemainingTime(remainingTime)}
                 </div>
-                {isTimerSubscribed && (
-                  <span className="animate-pulse text-xs font-medium text-green-600">
-                    ✓ 실시간 연동
-                  </span>
-                )}
               </CardContent>
             </Card>
 
@@ -765,13 +657,8 @@ export function ProductDetailClient({
                     isBidCountUpdated ? 'animate-pulse text-blue-600' : ''
                   }`}
                 >
-                  {bidUpdate?.bidCount || productData.totalBidCount || 0}회
+                  {productData.totalBidCount || 0}회
                 </div>
-                {bidUpdate && (
-                  <span className="animate-pulse text-xs font-medium text-green-600">
-                    ✓ 실시간 연동
-                  </span>
-                )}
               </CardContent>
             </Card>
           </div>
