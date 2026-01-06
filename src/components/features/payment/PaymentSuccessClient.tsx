@@ -95,7 +95,7 @@ export function PaymentSuccessClient() {
         <Card>
           <CardContent className="py-16 text-center">
             <div className="mb-6 flex justify-center">
-              <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary-200 border-t-primary-600"></div>
+              <div className="border-primary-200 border-t-primary-600 h-10 w-10 animate-spin rounded-full border-2"></div>
             </div>
             <h3 className="mb-2 text-base font-semibold text-neutral-900">
               결제 진행 중입니다
@@ -123,11 +123,15 @@ export function PaymentSuccessClient() {
             <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
               <Button
                 onClick={handleRetry}
-                className="flex-1 bg-primary-600 hover:bg-primary-700"
+                className="bg-primary-600 hover:bg-primary-700 flex-1"
               >
                 다시 시도
               </Button>
-              <Button variant="outline" onClick={handleGoToMyPage} className="flex-1">
+              <Button
+                variant="outline"
+                onClick={handleGoToMyPage}
+                className="flex-1"
+              >
                 입찰 내역 확인
               </Button>
             </div>
@@ -144,12 +148,10 @@ export function PaymentSuccessClient() {
             <h1 className="mb-2 text-2xl font-bold text-neutral-900">
               낙찰이 확정되었습니다
             </h1>
-            <p className="mb-8 text-neutral-600">
-              입찰 결과를 확인해주세요
-            </p>
+            <p className="mb-8 text-neutral-600">입찰 결과를 확인해주세요</p>
 
             {winningBid.productImageUrl && (
-              <div className="mb-8 rounded-lg overflow-hidden bg-neutral-100">
+              <div className="mb-8 overflow-hidden rounded-lg bg-neutral-100">
                 <img
                   src={winningBid.productImageUrl}
                   alt={winningBid.productName}
@@ -159,20 +161,20 @@ export function PaymentSuccessClient() {
             )}
 
             <div className="mb-8 space-y-3 text-left">
-              <div className="flex justify-between rounded-lg bg-neutral-50 p-4 border border-neutral-200">
-                <span className="text-neutral-600 text-sm">상품명</span>
+              <div className="flex justify-between rounded-lg border border-neutral-200 bg-neutral-50 p-4">
+                <span className="text-sm text-neutral-600">상품명</span>
                 <span className="font-semibold text-neutral-900">
                   {winningBid.productName}
                 </span>
               </div>
-              <div className="flex justify-between rounded-lg bg-neutral-50 p-4 border border-neutral-200">
-                <span className="text-neutral-600 text-sm">낙찰가</span>
-                <span className="text-lg font-semibold text-primary-600">
+              <div className="flex justify-between rounded-lg border border-neutral-200 bg-neutral-50 p-4">
+                <span className="text-sm text-neutral-600">낙찰가</span>
+                <span className="text-primary-600 text-lg font-semibold">
                   {winningBid.finalBid?.toLocaleString()}원
                 </span>
               </div>
-              <div className="flex justify-between rounded-lg bg-neutral-50 p-4 border border-neutral-200">
-                <span className="text-neutral-600 text-sm">경매 종료</span>
+              <div className="flex justify-between rounded-lg border border-neutral-200 bg-neutral-50 p-4">
+                <span className="text-sm text-neutral-600">경매 종료</span>
                 <span className="font-mono text-sm text-neutral-900">
                   {new Date(winningBid.endAt).toLocaleDateString('ko-KR', {
                     year: 'numeric',
@@ -188,7 +190,7 @@ export function PaymentSuccessClient() {
             <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
               <Button
                 onClick={handleGoToMyPage}
-                className="flex-1 bg-primary-600 hover:bg-primary-700"
+                className="bg-primary-600 hover:bg-primary-700 flex-1"
               >
                 입찰 내역 확인
               </Button>

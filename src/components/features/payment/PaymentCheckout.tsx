@@ -150,11 +150,13 @@ export function PaymentCheckout({
             </div>
             <div className="flex justify-between border-b border-neutral-100 pb-3">
               <span className="text-neutral-600">주문번호</span>
-              <span className="text-xs text-neutral-500 font-mono">{orderId}</span>
+              <span className="font-mono text-xs text-neutral-500">
+                {orderId}
+              </span>
             </div>
             <div className="flex justify-between pt-2">
               <span className="text-neutral-600">결제 금액</span>
-              <span className="text-lg font-semibold text-primary-600">
+              <span className="text-primary-600 text-lg font-semibold">
                 {amount.toLocaleString('ko-KR')}원
               </span>
             </div>
@@ -170,12 +172,12 @@ export function PaymentCheckout({
               <h3 className="text-base font-semibold text-neutral-900">
                 결제 수단 선택
               </h3>
-              <span className="inline-flex items-center rounded-full bg-primary-50 px-3 py-1 text-xs font-medium text-primary-700">
+              <span className="bg-primary-50 text-primary-700 inline-flex items-center rounded-full px-3 py-1 text-xs font-medium">
                 단계 1
               </span>
             </div>
 
-            <div className="space-y-3 mb-6">
+            <div className="mb-6 space-y-3">
               {methods.map((method: CardResponse) => (
                 <div
                   key={method.id}
@@ -191,12 +193,12 @@ export function PaymentCheckout({
                       <p className="font-medium text-neutral-900">
                         {method.cardCompany || '카드'}
                       </p>
-                      <p className="text-sm text-neutral-600 font-mono">
+                      <p className="font-mono text-sm text-neutral-600">
                         {method.cardNumberMasked || '카드 번호 없음'}
                       </p>
                     </div>
                     {selectedMethod?.id === method.id && (
-                      <Check className="h-5 w-5 text-primary-600" />
+                      <Check className="text-primary-600 h-5 w-5" />
                     )}
                   </div>
                 </div>
@@ -222,7 +224,7 @@ export function PaymentCheckout({
               <h3 className="text-base font-semibold text-neutral-900">
                 결제 확인
               </h3>
-              <span className="inline-flex items-center rounded-full bg-primary-50 px-3 py-1 text-xs font-medium text-primary-700">
+              <span className="bg-primary-50 text-primary-700 inline-flex items-center rounded-full px-3 py-1 text-xs font-medium">
                 단계 2
               </span>
             </div>
@@ -236,12 +238,14 @@ export function PaymentCheckout({
               </div>
               <div className="flex justify-between">
                 <span className="text-neutral-600">카드 번호</span>
-                <span className="text-neutral-900 font-mono">{selectedMethod.cardNumberMasked || '카드 번호 없음'}</span>
+                <span className="font-mono text-neutral-900">
+                  {selectedMethod.cardNumberMasked || '카드 번호 없음'}
+                </span>
               </div>
-              <div className="border-t border-neutral-200 pt-3 mt-3">
+              <div className="mt-3 border-t border-neutral-200 pt-3">
                 <div className="flex justify-between">
                   <span className="text-neutral-600">결제 금액</span>
-                  <span className="text-base font-semibold text-primary-600">
+                  <span className="text-primary-600 text-base font-semibold">
                     {amount.toLocaleString('ko-KR')}원
                   </span>
                 </div>
@@ -260,11 +264,11 @@ export function PaymentCheckout({
               <Button
                 onClick={() => handlePreparePayment(1)}
                 disabled={loading}
-                className="flex-1 bg-primary-600 hover:bg-primary-700"
+                className="bg-primary-600 hover:bg-primary-700 flex-1"
               >
                 {loading ? (
                   <>
-                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-primary-200 border-t-white"></div>
+                    <div className="border-primary-200 mr-2 h-4 w-4 animate-spin rounded-full border-2 border-t-white"></div>
                     처리 중
                   </>
                 ) : (
@@ -282,8 +286,8 @@ export function PaymentCheckout({
       {step === 'processing' && paymentId && (
         <Card>
           <CardContent className="py-16 text-center">
-            <div className="flex justify-center mb-4">
-              <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary-200 border-t-primary-600"></div>
+            <div className="mb-4 flex justify-center">
+              <div className="border-primary-200 border-t-primary-600 h-10 w-10 animate-spin rounded-full border-2"></div>
             </div>
             <h3 className="mb-2 text-base font-semibold text-neutral-900">
               결제 진행 중
@@ -298,7 +302,9 @@ export function PaymentCheckout({
       {/* 하단 보안 안내 */}
       <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4 text-sm">
         <p className="text-neutral-700">
-          <span className="font-semibold">보안 안내:</span> 결제 진행 중에는 페이지를 새로고침하거나 뒤로 가기를 하지 마세요. 결제 정보는 암호화되어 안전하게 처리됩니다.
+          <span className="font-semibold">보안 안내:</span> 결제 진행 중에는
+          페이지를 새로고침하거나 뒤로 가기를 하지 마세요. 결제 정보는
+          암호화되어 안전하게 처리됩니다.
         </p>
       </div>
     </div>

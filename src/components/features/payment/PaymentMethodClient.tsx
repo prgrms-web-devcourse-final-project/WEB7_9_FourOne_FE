@@ -120,7 +120,7 @@ export function PaymentMethodClient({
       {isLoading ? (
         <Card>
           <CardContent className="py-12 text-center">
-            <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-primary-200 border-t-primary-600"></div>
+            <div className="border-primary-200 border-t-primary-600 mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2"></div>
             <h3 className="text-sm font-semibold text-neutral-900">
               로드 중...
             </h3>
@@ -160,16 +160,17 @@ export function PaymentMethodClient({
             <Card key={card.id}>
               <CardContent className="p-4">
                 <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-4 flex-1">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-50 shrink-0">
-                      <CreditCard className="h-5 w-5 text-primary-600" />
+                  <div className="flex flex-1 items-center gap-4">
+                    <div className="bg-primary-50 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg">
+                      <CreditCard className="text-primary-600 h-5 w-5" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-sm font-semibold text-neutral-900 truncate">
+                    <div className="min-w-0 flex-1">
+                      <h4 className="truncate text-sm font-semibold text-neutral-900">
                         {card.cardName}
                       </h4>
-                      <p className="text-xs text-neutral-600 mt-1">
-                        {getCardCompanyName(card.cardCompany)} · {card.cardNumberMasked}
+                      <p className="mt-1 text-xs text-neutral-600">
+                        {getCardCompanyName(card.cardCompany)} ·{' '}
+                        {card.cardNumberMasked}
                       </p>
                     </div>
                   </div>
@@ -191,19 +192,23 @@ export function PaymentMethodClient({
       {/* 안내 섹션 */}
       <div className="mt-8 rounded-lg border border-neutral-200 bg-neutral-50 p-4">
         <div className="flex gap-3">
-          <AlertCircle className="h-5 w-5 text-neutral-600 shrink-0 mt-0.5" />
+          <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-neutral-600" />
           <div>
-            <h4 className="text-sm font-semibold text-neutral-900 mb-2">
+            <h4 className="mb-2 text-sm font-semibold text-neutral-900">
               결제 수단 등록 안내
             </h4>
             <ul className="space-y-1 text-xs text-neutral-700">
               <li className="flex gap-2">
                 <span className="shrink-0">•</span>
-                <span>결제 수단은 Toss 결제 시스템을 통해 안전하게 등록됩니다</span>
+                <span>
+                  결제 수단은 Toss 결제 시스템을 통해 안전하게 등록됩니다
+                </span>
               </li>
               <li className="flex gap-2">
                 <span className="shrink-0">•</span>
-                <span>낙찰 후 결제 진행 시 새로운 카드를 등록할 수 있습니다</span>
+                <span>
+                  낙찰 후 결제 진행 시 새로운 카드를 등록할 수 있습니다
+                </span>
               </li>
               <li className="flex gap-2">
                 <span className="shrink-0">•</span>

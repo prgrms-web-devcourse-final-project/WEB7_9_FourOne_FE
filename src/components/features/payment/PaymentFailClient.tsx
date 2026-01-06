@@ -38,27 +38,25 @@ export function PaymentFailClient() {
           <h1 className="mb-2 text-2xl font-bold text-neutral-900">
             결제에 실패했습니다
           </h1>
-          <p className="mb-6 text-neutral-600">
-            {getErrorMessage(code)}
-          </p>
+          <p className="mb-6 text-neutral-600">{getErrorMessage(code)}</p>
 
           <div className="mb-8 space-y-3 text-left">
             {code && (
-              <div className="rounded-lg bg-neutral-50 p-3 border border-neutral-200">
-                <p className="text-xs text-neutral-600 mb-1">오류 코드</p>
-                <p className="text-sm font-mono text-neutral-900">{code}</p>
+              <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-3">
+                <p className="mb-1 text-xs text-neutral-600">오류 코드</p>
+                <p className="font-mono text-sm text-neutral-900">{code}</p>
               </div>
             )}
             {message && (
-              <div className="rounded-lg bg-neutral-50 p-3 border border-neutral-200">
-                <p className="text-xs text-neutral-600 mb-1">상세 정보</p>
+              <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-3">
+                <p className="mb-1 text-xs text-neutral-600">상세 정보</p>
                 <p className="text-sm text-neutral-900">{message}</p>
               </div>
             )}
             {orderId && (
-              <div className="rounded-lg bg-neutral-50 p-3 border border-neutral-200">
-                <p className="text-xs text-neutral-600 mb-1">주문 번호</p>
-                <p className="text-sm font-mono text-neutral-900">{orderId}</p>
+              <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-3">
+                <p className="mb-1 text-xs text-neutral-600">주문 번호</p>
+                <p className="font-mono text-sm text-neutral-900">{orderId}</p>
               </div>
             )}
           </div>
@@ -66,7 +64,7 @@ export function PaymentFailClient() {
           <div className="mb-8 flex flex-col gap-2 sm:flex-row sm:gap-3">
             <Button
               onClick={() => router.back()}
-              className="flex-1 bg-primary-600 hover:bg-primary-700"
+              className="bg-primary-600 hover:bg-primary-700 flex-1"
             >
               이전으로 돌아가기
             </Button>
@@ -85,19 +83,19 @@ export function PaymentFailClient() {
             </h3>
             <ul className="space-y-2 text-xs text-neutral-700">
               <li className="flex gap-2">
-                <span className="text-neutral-400 shrink-0">•</span>
+                <span className="shrink-0 text-neutral-400">•</span>
                 <span>카드사에 연락하여 거절 사유를 확인해주세요</span>
               </li>
               <li className="flex gap-2">
-                <span className="text-neutral-400 shrink-0">•</span>
+                <span className="shrink-0 text-neutral-400">•</span>
                 <span>다른 결제 수단으로 다시 시도해보세요</span>
               </li>
               <li className="flex gap-2">
-                <span className="text-neutral-400 shrink-0">•</span>
+                <span className="shrink-0 text-neutral-400">•</span>
                 <span>카드의 유효기간과 한도를 확인해주세요</span>
               </li>
               <li className="flex gap-2">
-                <span className="text-neutral-400 shrink-0">•</span>
+                <span className="shrink-0 text-neutral-400">•</span>
                 <span>결제 금액이 정확한지 다시 확인해주세요</span>
               </li>
             </ul>
