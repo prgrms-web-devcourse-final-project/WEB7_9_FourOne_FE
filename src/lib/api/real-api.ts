@@ -665,40 +665,38 @@ export const auctionApi = {
   // GET /api/v1/auctions?sort={newest|closing|popular}&cursor={cursor}
   // 또는
   // GET /api/v1/auctions?category={category}&subCategory={subCategory}&status={status}&cursor={cursor}
-  // TODO: 곧 배포 예정 - API가 준비되면 활성화
   getAuctions: async (params?: {
-    // 정렬 관련
-    sort?: 'newest' | 'closing' | 'popular' // 기본값: newest
+    // 정렬 관련 (Swagger: sortType)
+    sortType?: 'NEWEST' | 'CLOSING' | 'POPULAR'
     // 카테고리 필터
-    category?: 'ALL' | 'STARGOODS' | 'FIGURE' | 'CDLP' | 'GAME'
+    category?: 'STARGOODS' | 'FIGURE' | 'CDLP' | 'GAME'
     subCategory?:
-      | 'ALL'
       | 'ACC'
       | 'STATIONARY'
       | 'DAILY'
       | 'ELECTRONICS'
       | 'GAME'
       | 'ETC'
-    status?: 'ALL' | 'SCHEDULED' | 'LIVE' | 'ENDED'
+    status?: 'SCHEDULED' | 'LIVE' | 'ENDED' | 'CANCELLED'
     cursor?: string
     size?: number
     limit?: number // 호환성 유지
   }) => {
     const searchParams = new URLSearchParams()
 
-    // 정렬 파라미터
-    if (params?.sort) {
-      searchParams.append('sort', params.sort)
+    // 정렬 파라미터 (Swagger: sortType)
+    if (params?.sortType) {
+      searchParams.append('sortType', params.sortType)
     }
 
     // 카테고리 필터 파라미터
-    if (params?.category && params.category !== 'ALL') {
+    if (params?.category) {
       searchParams.append('category', params.category)
     }
-    if (params?.subCategory && params.subCategory !== 'ALL') {
+    if (params?.subCategory) {
       searchParams.append('subCategory', params.subCategory)
     }
-    if (params?.status && params.status !== 'ALL') {
+    if (params?.status) {
       searchParams.append('status', params.status)
     }
 

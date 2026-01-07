@@ -107,8 +107,8 @@ export function HomeClient() {
   const [isLoading, setIsLoading] = useState(false)
   const [pageSize, setPageSize] = useState(10)
 
-  const [sortBy, setSortBy] = useState<'newest' | 'closing' | 'popular'>(
-    'newest',
+  const [sortBy, setSortBy] = useState<'NEWEST' | 'CLOSING' | 'POPULAR'>(
+    'NEWEST',
   )
   const [statusFilter, setStatusFilter] = useState<
     'ALL' | 'SCHEDULED' | 'LIVE' | 'ENDED'
@@ -170,7 +170,7 @@ export function HomeClient() {
             status: statusParam,
             cursor: cursor,
             size: pageSize,
-            sort: sortBy,
+            sortType: sortBy,
           })
         }
 
@@ -412,7 +412,7 @@ export function HomeClient() {
                   size="sm"
                   className="group font-semibold"
                   onClick={() => {
-                    setSortBy('closing')
+                    setSortBy('CLOSING')
                     setStatusFilter('LIVE')
                   }}
                 >
@@ -527,7 +527,7 @@ export function HomeClient() {
                   size="sm"
                   className="group font-semibold"
                   onClick={() => {
-                    setSortBy('popular')
+                    setSortBy('POPULAR')
                     setStatusFilter('LIVE')
                   }}
                 >
@@ -689,13 +689,13 @@ export function HomeClient() {
             <select
               value={sortBy}
               onChange={(e) =>
-                setSortBy(e.target.value as 'newest' | 'closing' | 'popular')
+                setSortBy(e.target.value as 'NEWEST' | 'CLOSING' | 'POPULAR')
               }
               className="focus:border-primary-300 focus:ring-primary-200 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm"
             >
-              <option value="newest">최신 등록순</option>
-              <option value="closing">마감 임박순</option>
-              <option value="popular">인기순</option>
+              <option value="NEWEST">최신 등록순</option>
+              <option value="CLOSING">마감 임박순</option>
+              <option value="POPULAR">인기순</option>
             </select>
           </div>
         </div>
