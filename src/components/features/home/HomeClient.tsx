@@ -942,7 +942,6 @@ export function HomeClient() {
               {isLoading && hasMore && (
                 <div className="flex items-center space-x-2">
                   <div className="border-primary-200 border-t-primary-600 h-6 w-6 animate-spin rounded-full border-2"></div>
-                  <span className="text-sm text-neutral-600">로딩중...</span>
                 </div>
               )}
             </div>
